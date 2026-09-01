@@ -1,4 +1,5 @@
 import { PARSER_VERSION, PROGRAM_DOSSIER_TTL_DAYS } from "@/lib/program-matching/config";
+import { parseJsonArray } from "@/lib/parse-json-array";
 import type { ProgramFieldStatusMap } from "@/lib/program-matching/field-status";
 import {
   buildFieldStatusesFromDossier,
@@ -63,16 +64,6 @@ export type ProgramDossier = {
   isFresh: boolean;
   fieldStatuses: ProgramFieldStatusMap;
 };
-
-function parseJsonArray(raw: string | null | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const v = JSON.parse(raw);
-    return Array.isArray(v) ? v.map(String) : [];
-  } catch {
-    return [];
-  }
-}
 
 function parseFactValue(raw: string): Record<string, unknown> {
   try {

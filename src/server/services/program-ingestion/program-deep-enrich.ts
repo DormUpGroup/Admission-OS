@@ -4,7 +4,7 @@ import { universityWebsiteAdapter } from "@/server/services/program-ingestion/ad
 import {
   discoverBandoUrls,
   isClearlyNonAdmissionNotice,
-  isQualityPolicyDocument,
+  isRejectedEnrichmentCandidateUrl,
   pickFollowLinks,
   admissionSiblingUrls,
 } from "@/server/services/program-ingestion/bando-url-discover";
@@ -826,7 +826,7 @@ export async function deepEnrichProgram(
 
   const officialUrl = pay.program.officialUrl;
   const documentTraces: EnrichmentDocumentTrace[] = [];
-  const falseSourceRejections = unrelatedDocumentIds.length;
+  let falseSourceRejections = unrelatedDocumentIds.length;
 
   if (!officialUrl) {
     await persistEnrichmentTrace(
@@ -970,7 +970,7 @@ export async function deepEnrichProgram(
 
     for (const c of ordered) {
       if (fetchCount >= 5) break;
-      if (isQualityPolicyDocument(c.url) || isClearlyNonAdmissionNotice(c.url)) {
+      if (isRejectedEnrichmentCandidateUrl(c.url)) {
         falseSourceRejections += 1;
         continue;
       }

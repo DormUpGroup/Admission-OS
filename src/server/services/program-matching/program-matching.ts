@@ -1,3 +1,4 @@
+import { parseJsonArray } from "@/lib/parse-json-array";
 import { prisma } from "@/lib/db";
 import {
   LIGHT_ENRICH_CANDIDATE_CAP,
@@ -18,16 +19,6 @@ import {
   applyShortlistComposition,
   shareByInclusionKind,
 } from "./match-compose";
-
-function parseJsonArray(raw: string | null | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const v = JSON.parse(raw);
-    return Array.isArray(v) ? v.map(String) : [];
-  } catch {
-    return [];
-  }
-}
 
 export async function buildMatchingProfile(studentId: string): Promise<MatchingProfile | null> {
   const student = await prisma.student.findUnique({ where: { id: studentId } });

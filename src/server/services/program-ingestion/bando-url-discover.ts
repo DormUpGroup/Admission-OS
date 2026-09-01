@@ -90,6 +90,11 @@ export function isClearlyNonAdmissionNotice(hay: string): boolean {
   return NON_ADMISSION_NOTICE_RE.test(hay) && !ADMISSION_PURPOSE_RE.test(hay);
 }
 
+/** Skip during deep-enrich URL fetch (quality policy + welfare notices). */
+export function isRejectedEnrichmentCandidateUrl(url: string): boolean {
+  return isQualityPolicyDocument(url) || isClearlyNonAdmissionNotice(url);
+}
+
 function scoreCandidate(
   url: string,
   anchorText: string,
