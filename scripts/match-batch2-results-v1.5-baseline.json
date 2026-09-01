@@ -1,0 +1,2197 @@
+{
+  "at": "2026-08-28T10:04:10.304Z",
+  "engine": "v1.5-baseline",
+  "results": [
+    {
+      "email": "match-test-f@student.local",
+      "name": "Farid Psych",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Психология",
+          "Когнитивные науки"
+        ],
+        "cities": [
+          "Padova",
+          "Milano",
+          "Bologna"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Психология",
+            "bachelor": [
+              "L-24"
+            ],
+            "master": [
+              "LM-51",
+              "LM-55"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Когнитивные науки",
+            "bachelor": [
+              "L-24",
+              "L-13"
+            ],
+            "master": [
+              "LM-55",
+              "LM-51"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Психология",
+          "Когнитивные науки",
+          "Psychology"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 8,
+        "rawCount": 8,
+        "afterCityFilter": 8,
+        "afterSoftGate": 8,
+        "afterSynonym": 8,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Психология",
+          "Когнитивные науки"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-13",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Когнитивные науки"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-24",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Когнитивные науки",
+              "Психология"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 5,
+      "eligibility": {
+        "NEEDS_REVIEW": 5
+      },
+      "needsReviewCount": 5,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "fill": {
+        "n": 5,
+        "call": 4,
+        "access": 2,
+        "tuition": 3,
+        "seats": 0,
+        "exams": 1
+      },
+      "preGateTop20": [
+        {
+          "name": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Biology of Human and Environmental Health",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Marine Biology and Blue Biotechnologies",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Psycho-social Disciplines",
+          "university": "Università Telematica Internazionale UNINETTUNO",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychological Science",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychology",
+          "university": "Università Cattolica del Sacro Cuore",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychological science and techniques",
+          "university": "Università degli Studi \"Guglielmo Marconi\" - Telematica",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Techniques and methods in psychological science",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-24  "
+        }
+      ],
+      "postGateTop20": [
+        {
+          "name": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Biology of Human and Environmental Health",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Marine Biology and Blue Biotechnologies",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Psycho-social Disciplines",
+          "university": "Università Telematica Internazionale UNINETTUNO",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychological Science",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychology",
+          "university": "Università Cattolica del Sacro Cuore",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Psychological science and techniques",
+          "university": "Università degli Studi \"Guglielmo Marconi\" - Telematica",
+          "city": null,
+          "degreeClass": "L-24  "
+        },
+        {
+          "name": "Techniques and methods in psychological science",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-24  "
+        }
+      ],
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Psychological Science",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Techniques and methods in psychological science",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 67,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Biology for One-health",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 67,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Biology of Human and Environmental Health",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 67,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Marine Biology and Blue Biotechnologies",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-g@student.local",
+      "name": "Greta Bio",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Биология",
+          "Промышленные биотехнологии"
+        ],
+        "cities": [
+          "Bologna",
+          "Milano",
+          "Pavia"
+        ],
+        "english": "C1",
+        "miur": [
+          {
+            "direction": "Биология",
+            "bachelor": [
+              "L-13",
+              "L-2"
+            ],
+            "master": [
+              "LM-6",
+              "LM-9"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Промышленные биотехнологии",
+            "bachelor": [
+              "L-2",
+              "L-13"
+            ],
+            "master": [
+              "LM-8",
+              "LM-9"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Биология",
+          "Промышленные биотехнологии",
+          "Biology"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 13,
+        "rawCount": 13,
+        "afterCityFilter": 13,
+        "afterSoftGate": 13,
+        "afterSynonym": 13,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Биология",
+          "Промышленные биотехнологии"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-13",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Биология",
+              "Промышленные биотехнологии"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-2",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Биология",
+              "Промышленные биотехнологии"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 8,
+      "eligibility": {
+        "NEEDS_REVIEW": 8
+      },
+      "needsReviewCount": 8,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "fill": {
+        "n": 8,
+        "call": 5,
+        "access": 4,
+        "tuition": 3,
+        "seats": 0,
+        "exams": 5
+      },
+      "preGateTop20": [
+        {
+          "name": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Biology of Human and Environmental Health",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Marine Biology and Blue Biotechnologies",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Bioinformatics",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biosciences and Biotechnology",
+          "university": "Università degli Studi di CAMERINO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotech Engineering For Health",
+          "university": "Università degli Studi di SIENA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi di TERAMO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi del PIEMONTE ORIENTALE",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "BIOTECHNOLOGY",
+          "university": "Università degli Studi di TORINO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Medical Biotechnology",
+          "university": "Università degli Studi di MILANO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Genomics",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biomolecular Sciences and Technology",
+          "university": "Università degli Studi di TRENTO",
+          "city": null,
+          "degreeClass": "L-2  "
+        }
+      ],
+      "postGateTop20": [
+        {
+          "name": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Biology of Human and Environmental Health",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Marine Biology and Blue Biotechnologies",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-13  "
+        },
+        {
+          "name": "Bioinformatics",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biosciences and Biotechnology",
+          "university": "Università degli Studi di CAMERINO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotech Engineering For Health",
+          "university": "Università degli Studi di SIENA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi di TERAMO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi del PIEMONTE ORIENTALE",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "BIOTECHNOLOGY",
+          "university": "Università degli Studi di TORINO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biotechnology",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Medical Biotechnology",
+          "university": "Università degli Studi di MILANO",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Genomics",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "L-2  "
+        },
+        {
+          "name": "Biomolecular Sciences and Technology",
+          "university": "Università degli Studi di TRENTO",
+          "city": null,
+          "degreeClass": "L-2  "
+        }
+      ],
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Biology for One-health",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Biology of Human and Environmental Health",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Marine Biology and Blue Biotechnologies",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Точный класс MIUR L-13",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Bioinformatics",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di CAMERINO",
+          "program": "Biosciences and Biotechnology",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di SIENA",
+          "program": "Biotech Engineering For Health",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Università degli Studi di TERAMO",
+          "program": "Biotechnology",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 83,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Genomics",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-h@student.local",
+      "name": "Hasan Civil",
+      "questionnaire": {
+        "level": "Магистратура",
+        "language": "Английский",
+        "directions": [
+          "Гражданское строительство",
+          "Инженерия строительных систем"
+        ],
+        "cities": [
+          "Torino",
+          "Milano",
+          "Genova"
+        ],
+        "english": "C1",
+        "miur": [
+          {
+            "direction": "Гражданское строительство",
+            "bachelor": [
+              "L-7",
+              "L-23"
+            ],
+            "master": [
+              "LM-23",
+              "LM-24"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Инженерия строительных систем",
+            "bachelor": [
+              "L-23",
+              "L-7"
+            ],
+            "master": [
+              "LM-24",
+              "LM-23"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "MASTER",
+        "fields": [
+          "Гражданское строительство",
+          "Инженерия строительных систем",
+          "Engineering"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 35,
+        "rawCount": 35,
+        "afterCityFilter": 35,
+        "afterSoftGate": 35,
+        "afterSynonym": 35,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Гражданское строительство",
+          "Инженерия строительных систем"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "LM-23",
+            "lingua": "EN",
+            "durata": "2",
+            "sourceDirections": [
+              "Гражданское строительство",
+              "Инженерия строительных систем"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "LM-24",
+            "lingua": "EN",
+            "durata": "2",
+            "sourceDirections": [
+              "Гражданское строительство",
+              "Инженерия строительных систем"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 14,
+      "eligibility": {
+        "NEEDS_REVIEW": 14
+      },
+      "needsReviewCount": 14,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "fill": {
+        "n": 14,
+        "call": 8,
+        "access": 10,
+        "tuition": 7,
+        "seats": 0,
+        "exams": 4
+      },
+      "preGateTop20": [
+        {
+          "name": "Civil and Environmental Engineering",
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università degli Studi di PERUGIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+          "university": "Università della CALABRIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering for Risk Mitigation",
+          "university": "Politecnico di MILANO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di TRIESTE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Politecnico di TORINO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università Politecnica delle MARCHE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di CAGLIARI",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil engineering",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil  Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università degli Studi di TRENTO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università della CALABRIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Politecnico di MILANO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Sustainable coastal and ocean engineering",
+          "university": "Università degli Studi ROMA TRE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Infrastructure Engineering",
+          "university": "Università degli Studi dell'AQUILA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        }
+      ],
+      "postGateTop20": [
+        {
+          "name": "Civil and Environmental Engineering",
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università degli Studi di PERUGIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+          "university": "Università della CALABRIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering for Risk Mitigation",
+          "university": "Politecnico di MILANO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di TRIESTE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Politecnico di TORINO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università Politecnica delle MARCHE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di CAGLIARI",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil engineering",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil  Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università degli Studi di TRENTO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "CIVIL ENGINEERING",
+          "university": "Università della CALABRIA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Civil Engineering",
+          "university": "Politecnico di MILANO",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Sustainable coastal and ocean engineering",
+          "university": "Università degli Studi ROMA TRE",
+          "city": null,
+          "degreeClass": "LM-23  "
+        },
+        {
+          "name": "Infrastructure Engineering",
+          "university": "Università degli Studi dell'AQUILA",
+          "city": null,
+          "degreeClass": "LM-23  "
+        }
+      ],
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Civil and Environmental Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Civil Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università della CALABRIA",
+          "program": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi ROMA TRE",
+          "program": "Sustainable coastal and ocean engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Politecnico di MILANO",
+          "program": "Architectural Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Engineering for Historic Building Rehabilitation",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Environmental and Sustainable Building Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Politecnico di MILANO",
+          "program": "Management of Built Environment",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Intelligent civil infrastructures engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università IUAV di VENEZIA",
+          "program": "Sustainable transportation and smart maritime mobility",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Sustainable and Resilient Pavement Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Transport Systems Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "TRANSPORTATION ENGINEERING AND MOBILITY",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-i@student.local",
+      "name": "Irina Lingua",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Итальянский",
+        "directions": [
+          "Современная филология",
+          "Лингвистика"
+        ],
+        "cities": [
+          "Roma",
+          "Firenze",
+          "Bologna"
+        ],
+        "english": "B1",
+        "miur": [
+          {
+            "direction": "Современная филология",
+            "bachelor": [
+              "L-10",
+              "L-11"
+            ],
+            "master": [
+              "LM-14",
+              "LM-15"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Лингвистика",
+            "bachelor": [
+              "L-11",
+              "L-12"
+            ],
+            "master": [
+              "LM-39",
+              "LM-37"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Современная филология",
+          "Лингвистика",
+          "Languages"
+        ],
+        "langs": [
+          "Italian"
+        ],
+        "missing": [
+          "English certificate / IELTS score",
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 100,
+        "rawCount": 100,
+        "afterCityFilter": 100,
+        "afterSoftGate": 100,
+        "afterSynonym": 100,
+        "warning": "Results capped across 3 queries (10 pages).",
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Современная филология",
+          "Лингвистика"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-10",
+            "lingua": "IT",
+            "durata": "3",
+            "sourceDirections": [
+              "Современная филология"
+            ],
+            "pagesAllocated": 4
+          },
+          {
+            "classeCode": "L-11",
+            "lingua": "IT",
+            "durata": "3",
+            "sourceDirections": [
+              "Лингвистика",
+              "Современная филология"
+            ],
+            "pagesAllocated": 3
+          },
+          {
+            "classeCode": "L-12",
+            "lingua": "IT",
+            "durata": "3",
+            "sourceDirections": [
+              "Лингвистика"
+            ],
+            "pagesAllocated": 3
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "fill": {
+        "n": 20,
+        "call": 12,
+        "access": 20,
+        "tuition": 4,
+        "seats": 0,
+        "exams": 9
+      },
+      "preGateTop20": [
+        {
+          "name": "Modern cultures and literatures",
+          "university": "Università degli Studi di TORINO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Digital Humanities",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Italian medieval and renaissance studies",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Literature Music Performing Arts",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Letters, Art, Music, Theatre and  Cinema",
+          "university": "Università Telematica \"E-CAMPUS\"",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di SALERNO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi \"Guglielmo Marconi\" - Telematica",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "HUMANITIES",
+          "university": "UKE - Università Kore di ENNA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PARMA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "LANGUAGE AND LITERATURE STUDIES",
+          "university": "Università degli Studi di FIRENZE",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi \"G. d'Annunzio\" CHIETI-PESCARA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di MILANO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università Cattolica del Sacro Cuore",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Arts",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di BARI ALDO MORO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "HUMANITIES",
+          "university": "Università degli Studi di FOGGIA",
+          "city": null,
+          "degreeClass": "L-10  "
+        }
+      ],
+      "postGateTop20": [
+        {
+          "name": "Modern cultures and literatures",
+          "university": "Università degli Studi di TORINO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Digital Humanities",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Italian medieval and renaissance studies",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Literature Music Performing Arts",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Letters, Art, Music, Theatre and  Cinema",
+          "university": "Università Telematica \"E-CAMPUS\"",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di SALERNO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi \"Guglielmo Marconi\" - Telematica",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "HUMANITIES",
+          "university": "UKE - Università Kore di ENNA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PARMA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "LANGUAGE AND LITERATURE STUDIES",
+          "university": "Università degli Studi di FIRENZE",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi \"G. d'Annunzio\" CHIETI-PESCARA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di MILANO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università Cattolica del Sacro Cuore",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Arts",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "Humanities",
+          "university": "Università degli Studi di BARI ALDO MORO",
+          "city": null,
+          "degreeClass": "L-10  "
+        },
+        {
+          "name": "HUMANITIES",
+          "university": "Università degli Studi di FOGGIA",
+          "city": null,
+          "degreeClass": "L-10  "
+        }
+      ],
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di TORINO",
+          "program": "Modern cultures and literatures",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università di PISA",
+          "program": "Digital Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Literature Music Performing Arts",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università Telematica \"E-CAMPUS\"",
+          "program": "Letters, Art, Music, Theatre and  Cinema",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PARMA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di SALERNO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi del PIEMONTE ORIENTALE",
+          "program": "Literature and humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università di PISA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di FIRENZE",
+          "program": "LANGUAGE AND LITERATURE STUDIES",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi \"G. d'Annunzio\" CHIETI-PESCARA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di FOGGIA",
+          "program": "HUMANITIES",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di BARI ALDO MORO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Arts",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di MILANO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università Cattolica del Sacro Cuore",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi ROMA TRE",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di BERGAMO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-j@student.local",
+      "name": "Julia CompEng",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Компьютерная инженерия",
+          "IT безопасность"
+        ],
+        "cities": [
+          "Вся Италия"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Компьютерная инженерия",
+            "bachelor": [
+              "L-8",
+              "L-31"
+            ],
+            "master": [
+              "LM-32",
+              "LM-18"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "IT безопасность",
+            "bachelor": [
+              "L-31",
+              "L-8"
+            ],
+            "master": [
+              "LM-66",
+              "LM-18"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Компьютерная инженерия",
+          "IT безопасность",
+          "Computer Science",
+          "Engineering"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "English certificate / IELTS score",
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 25,
+        "rawCount": 25,
+        "afterCityFilter": 25,
+        "afterSoftGate": 25,
+        "afterSynonym": 25,
+        "warning": "Synonym keyword fallback merged (relevant pool below 30). Results capped across 2 queries (10 pages).",
+        "usedSynonymFallback": true,
+        "directionsSearched": [
+          "Компьютерная инженерия",
+          "IT безопасность"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-31",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "IT безопасность",
+              "Компьютерная инженерия"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-8",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "IT безопасность",
+              "Компьютерная инженерия"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 10,
+      "eligibility": {
+        "NEEDS_REVIEW": 10
+      },
+      "needsReviewCount": 10,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "fill": {
+        "n": 10,
+        "call": 5,
+        "access": 7,
+        "tuition": 1,
+        "seats": 0,
+        "exams": 4
+      },
+      "preGateTop20": [
+        {
+          "name": "Applied Computer Science and Artificial Intelligence",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Artificial intelligence",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer Science",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer science",
+          "university": "Università Ca' Foscari VENEZIA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer Science",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Informatics and Management of Digital Business",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Biomedical Engineering",
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering",
+          "university": "Università degli Studi di GENOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering",
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "DIGITAL TECHNOLOGIES ENGINEERING",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electrical Engineering and Information Technology",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronic and Communications Engineering",
+          "university": "Politecnico di TORINO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Engineering management ",
+          "university": "Università degli Studi di PERUGIA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Industrial and Information Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Information Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering for Robotic and Intelligent Systems",
+          "university": "Università degli Studi di VERONA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Automation and System Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Internet, Multimedia and Telecommunications Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronics Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronic and Information Engineering",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-8  "
+        }
+      ],
+      "postGateTop20": [
+        {
+          "name": "Applied Computer Science and Artificial Intelligence",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Artificial intelligence",
+          "university": "Università degli Studi di PAVIA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer Science",
+          "university": "Università degli Studi di MESSINA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer science",
+          "university": "Università Ca' Foscari VENEZIA",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Computer Science",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Informatics and Management of Digital Business",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-31  "
+        },
+        {
+          "name": "Biomedical Engineering",
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering",
+          "university": "Università degli Studi di GENOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering",
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "DIGITAL TECHNOLOGIES ENGINEERING",
+          "university": "Università di PISA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electrical Engineering and Information Technology",
+          "university": "Università degli Studi di Napoli Federico II",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronic and Communications Engineering",
+          "university": "Politecnico di TORINO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Engineering management ",
+          "university": "Università degli Studi di PERUGIA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Industrial and Information Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Information Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Computer Engineering for Robotic and Intelligent Systems",
+          "university": "Università degli Studi di VERONA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Automation and System Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Internet, Multimedia and Telecommunications Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronics Engineering",
+          "university": "Università degli Studi di PALERMO",
+          "city": null,
+          "degreeClass": "L-8  "
+        },
+        {
+          "name": "Electronic and Information Engineering",
+          "university": "Libera Università di BOLZANO",
+          "city": null,
+          "degreeClass": "L-8  "
+        }
+      ],
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Artificial intelligence",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Industrial and Information Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Information Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "program": "Biomedical Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di GENOVA",
+          "program": "Computer Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Computer Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Electrical Engineering and Information Technology",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Politecnico di TORINO",
+          "program": "Electronic and Communications Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 90,
+          "university": "Università degli Studi di PERUGIA",
+          "program": "Engineering management",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    }
+  ]
+}

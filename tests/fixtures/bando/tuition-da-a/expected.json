@@ -1,0 +1,12 @@
+{
+  "tuitionMin": 156,
+  "tuitionMax": 3500,
+  "accessMode": "CLOSED",
+  "nonEuSeats": 35,
+  "exams": ["SAT", "TOLC"],
+  "examAlternatives": ["SAT", "TOLC"],
+  "deadlines": ["15/05/2027"],
+  "languageLevel": "B2",
+  "careerOutcomesContains": "finance",
+  "quality": "OK"
+}

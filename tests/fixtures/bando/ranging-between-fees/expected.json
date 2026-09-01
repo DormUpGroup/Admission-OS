@@ -1,0 +1,9 @@
+{
+  "tuitionMin": 200,
+  "tuitionMax": 3200,
+  "accessMode": "CLOSED",
+  "deadlines": [
+    "2027-04-18"
+  ],
+  "quality": "OK"
+}

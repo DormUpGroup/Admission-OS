@@ -1,0 +1,16 @@
+{
+  "accessMode": "CLOSED",
+  "nonEuSeats": 30,
+  "exams": [
+    "SAT",
+    "TOLC"
+  ],
+  "examAlternatives": [
+    "SAT",
+    "TOLC"
+  ],
+  "deadlines": [
+    "22/04/2027"
+  ],
+  "quality": "OK"
+}

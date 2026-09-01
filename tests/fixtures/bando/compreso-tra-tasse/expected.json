@@ -1,0 +1,10 @@
+{
+  "tuitionMin": 156,
+  "tuitionMax": 2700,
+  "accessMode": "CLOSED",
+  "deadlines": [
+    "12/05/2027"
+  ],
+  "languageLevel": "B2",
+  "quality": "OK"
+}

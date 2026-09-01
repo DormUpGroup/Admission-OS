@@ -1,0 +1,511 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  curatedStudents  Student[]  @relation("CuratorStudents")
+  acceptedStudents Student[]  @relation("StudentAcceptedBy")
+  studentProfile   Student?   @relation("StudentUser")
+  assignedTasks    Task[]     @relation("TaskAssignee")
+  reviewedDocs     Document[]  @relation("DocumentReviewer")
+  activities       Activity[]
+}
+
+model Student {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  firstName         String
+  lastName          String
+  email             String   @unique
+  phone             String?
+  country           String?
+  nationality       String?
+  studyLevel        String   @default("BACHELOR")
+  intake            String
+  targetField       String?
+  preferredLanguage String?
+  preferredCities   String?
+  questionnaireAt   DateTime?
+  questionnairePersonalJson String?
+  questionnaireProgramsJson String?
+  questionnaireProgramsAt DateTime?
+  status            String   @default("ACTIVE")
+  journeyStage      String   @default("PROFILE")
+  curatorId         String?
+  riskLevel         String   @default("NONE")
+  nextActionJson    String?
+  accompanimentStatus String @default("NONE")
+  acceptedAt        DateTime?
+  acceptedById      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user         User?         @relation("StudentUser", fields: [userId], references: [id])
+  curator      User?         @relation("CuratorStudents", fields: [curatorId], references: [id])
+  acceptedBy   User?         @relation("StudentAcceptedBy", fields: [acceptedById], references: [id])
+  applications Application[]
+  documents    Document[]
+  tasks        Task[]
+  deadlines    Deadline[]
+  activities   Activity[]
+  programMatches ProgramMatch[]
+  shortlistItems StudentShortlistItem[]
+}
+
+model IntakeCohort {
+  id        String   @id @default(cuid())
+  intake    String   @unique
+  seatLimit Int?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model University {
+  id                     String    @id @default(cuid())
+  name                   String
+  slug                   String    @unique
+  city                   String?
+  region                 String?
+  country                String    @default("IT")
+  publicPrivate          String?
+  website                String?
+  universitalyExternalId String?
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  programs               Program[]
+  sourceDocuments        SourceDocument[]
+}
+
+model Program {
+  id                     String   @id @default(cuid())
+  universityId           String
+  name                   String
+  slug                   String
+  titleOfficial          String?
+  titleEnglish           String?
+  degreeLevel            String   @default("BACHELOR")
+  degreeClass            String?
+  field                  String?
+  fieldTagsJson          String?
+  language               String?
+  teachingLanguagesJson  String?
+  deliveryMode           String?
+  durationYears          Int?
+  ects                   Int?
+  campusCity             String?
+  region                 String?
+  officialUrl            String?
+  universitalyUrl        String?
+  universitalyExternalId String?
+  aliasesJson            String?
+  active                 Boolean  @default(true)
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  university     University            @relation(fields: [universityId], references: [id])
+  applications   Application[]
+  templates      ApplicationTemplate[]
+  academicYears  ProgramAcademicYear[]
+  facts          ProgramFact[]
+  sourceDocuments SourceDocument[]
+
+  @@unique([universityId, slug])
+}
+
+model Application {
+  id                         String    @id @default(cuid())
+  studentId                  String
+  programId                  String
+  status                     String    @default("SELECTED")
+  intake                     String
+  applicationRound           String?
+  admissionType              String?
+  requiredExam               String?
+  requiredEnglish            String?
+  applicationFee             String?
+  hardDeadline               DateTime?
+  targetSubmissionDate       DateTime?
+  submittedAt                DateTime?
+  applicationIdExternal      String?
+  submissionConfirmationNote String?
+  applicationFeePaid         Boolean   @default(false)
+  readinessPercent           Int       @default(0)
+  riskLevel                  String    @default("NONE")
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  program      Program       @relation(fields: [programId], references: [id])
+  requirements Requirement[]
+  tasks        Task[]
+  deadlines    Deadline[]
+  activities   Activity[]
+}
+
+model Requirement {
+  id                String    @id @default(cuid())
+  applicationId     String
+  name              String
+  type              String
+  status            String    @default("MISSING")
+  isCritical        Boolean   @default(false)
+  notes             String?
+  relatedDocumentId String?
+  dueDate           DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  relatedDocument Document?   @relation(fields: [relatedDocumentId], references: [id])
+  deadlines       Deadline[]
+}
+
+model Document {
+  id              String    @id @default(cuid())
+  studentId       String
+  name            String
+  category        String    @default("OTHER")
+  status          String    @default("MISSING")
+  storagePath     String?
+  fileUrl         String?
+  version         Int       @default(1)
+  uploadedAt      DateTime?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  expiryDate      DateTime?
+  notesInternal   String?
+  studentFeedback String?
+  requestedAt     DateTime?
+  lastReminderAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reviewedBy   User?         @relation("DocumentReviewer", fields: [reviewedById], references: [id])
+  requirements Requirement[]
+  tasks        Task[]
+}
+
+model Task {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  status          String    @default("TODO")
+  priority        String    @default("MEDIUM")
+  assigneeId      String?
+  studentId       String
+  applicationId   String?
+  documentId      String?
+  dueDate         DateTime?
+  isStudentFacing Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id])
+  document    Document?    @relation(fields: [documentId], references: [id])
+  deadlines   Deadline[]
+}
+
+model Deadline {
+  id             String   @id @default(cuid())
+  title          String
+  date           DateTime
+  type           String   @default("OTHER")
+  studentId      String
+  applicationId  String?
+  requirementId  String?
+  taskId         String?
+  isHardDeadline Boolean  @default(false)
+  isInternal     Boolean  @default(false)
+  riskWeight     Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id])
+  requirement Requirement? @relation(fields: [requirementId], references: [id])
+  task        Task?        @relation(fields: [taskId], references: [id])
+}
+
+model Activity {
+  id            String   @id @default(cuid())
+  type          String
+  studentId     String
+  applicationId String?
+  userId        String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+
+  student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+}
+
+model ApplicationTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  programId String?
+  intake    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  program Program?                  @relation(fields: [programId], references: [id])
+  items   ApplicationTemplateItem[]
+}
+
+model ApplicationTemplateItem {
+  id         String  @id @default(cuid())
+  templateId String
+  name       String
+  type       String
+  isCritical Boolean @default(false)
+
+  template ApplicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model ProgramAcademicYear {
+  id                String   @id @default(cuid())
+  programId         String
+  academicYear      String
+  status            String   @default("ACTIVE")
+  applicationStatus String   @default("UNKNOWN")
+  dataConfidence    String   @default("LOW")
+  indicativeFromYear String?
+  // OPEN | CLOSED | UNKNOWN
+  accessMode        String   @default("UNKNOWN")
+  // Last successful deep HTML dossier enrich (shared across students)
+  dossierEnrichedAt DateTime?
+  verifiedAt        DateTime?
+  lastUpdatedAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  program      Program               @relation(fields: [programId], references: [id], onDelete: Cascade)
+  cycles       AdmissionCycle[]
+  requirements AdmissionRequirement[]
+  tuition      TuitionInfo?
+  matches      ProgramMatch[]
+  shortlistItems StudentShortlistItem[]
+  facts        ProgramFact[]
+  sourceDocuments SourceDocument[]
+
+  @@unique([programId, academicYear])
+}
+
+model AdmissionCycle {
+  id                       String    @id @default(cuid())
+  programAcademicYearId    String
+  roundName                String    @default("Round 1")
+  applicationOpen          DateTime?
+  applicationDeadline      DateTime?
+  rankingDate              DateTime?
+  enrollmentDeadline       DateTime?
+  startDate                DateTime?
+  totalSeats               Int?
+  euSeats                  Int?
+  nonEuSeats               Int?
+  nonEuResidentAbroadSeats Int?
+  applicantCategory        String?
+  notes                    String?
+
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+}
+
+model AdmissionRequirement {
+  id                    String  @id @default(cuid())
+  programAcademicYearId String
+  type                  String
+  required              Boolean @default(true)
+  operator              String?
+  valueJson             String?
+  description           String?
+  sourceFactId          String?
+  hardExclusion         Boolean @default(false)
+
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+  sourceFact          ProgramFact?        @relation(fields: [sourceFactId], references: [id])
+}
+
+model TuitionInfo {
+  id                    String  @id @default(cuid())
+  programAcademicYearId String  @unique
+  minTuition            Int?
+  maxTuition            Int?
+  fixedTuition          Int?
+  currency              String  @default("EUR")
+  incomeBased           Boolean @default(false)
+  internationalFlatTax  Boolean @default(false)
+  notes                 String?
+  sourceFactId          String?
+
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+}
+
+model SourceDocument {
+  id               String    @id @default(cuid())
+  sourceType       String
+  sourceAuthority  String?
+  url              String
+  title            String?
+  academicYear     String?
+  universityId     String?
+  programId        String?
+  programAcademicYearId String?
+  contentType      String    @default("html")
+  retrievedAt      DateTime  @default(now())
+  publishedAt      DateTime?
+  contentHash      String
+  rawStoragePath   String?
+  rawText          String?
+  parserVersion    String    @default("v1")
+  status           String    @default("FETCHED")
+  extractionQuality String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  university          University?          @relation(fields: [universityId], references: [id])
+  program             Program?             @relation(fields: [programId], references: [id])
+  programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
+  facts               ProgramFact[]
+  changeEvents        ProgramChangeEvent[]
+
+  @@index([contentHash])
+  @@index([url])
+}
+
+model ProgramFact {
+  id                 String    @id @default(cuid())
+  programId          String
+  programAcademicYearId String?
+  field              String
+  normalizedValueJson String
+  rawValue           String?
+  sourceDocumentId   String?
+  sourceUrl          String?
+  sourceType         String
+  academicYear       String?
+  retrievedAt        DateTime  @default(now())
+  confidence         String    @default("MEDIUM")
+  extractionMethod   String    @default("MANUAL")
+  verificationStatus String    @default("UNVERIFIED")
+  verifiedById       String?
+  verifiedAt         DateTime?
+  verificationNote   String?
+  superseded         Boolean   @default(false)
+
+  program             Program              @relation(fields: [programId], references: [id], onDelete: Cascade)
+  programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
+  sourceDocument      SourceDocument?      @relation(fields: [sourceDocumentId], references: [id])
+  requirements        AdmissionRequirement[]
+}
+
+model ProgramMatch {
+  id                    String    @id @default(cuid())
+  studentId             String
+  programAcademicYearId String
+  eligibilityStatus     String
+  fitScore              Int
+  scoreBreakdownJson    String?
+  requirementsSummaryJson String?
+  reasonsJson           String?
+  risksJson             String?
+  missingInformationJson String?
+  discoveryMetaJson     String?
+  dataConfidence        String    @default("LOW")
+  generatedAt           DateTime  @default(now())
+  matchingEngineVersion String
+  curatorStatus         String    @default("AUTO_MATCHED")
+  curatorNotes          String?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  student             Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, programAcademicYearId])
+}
+
+model StudentShortlistItem {
+  id                    String   @id @default(cuid())
+  studentId             String
+  programAcademicYearId String
+  programMatchId        String?
+  curatorNote           String?
+  studentStatus         String   @default("PENDING")
+  visibleToStudent      Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  student             Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id])
+
+  @@unique([studentId, programAcademicYearId])
+}
+
+model ScholarshipProgram {
+  id           String   @id @default(cuid())
+  region       String
+  authority    String
+  name         String
+  academicYear String
+  sourceUrl    String?
+  verifiedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rules        ScholarshipRule[]
+
+  @@unique([authority, academicYear, name])
+}
+
+model ScholarshipRule {
+  id                    String  @id @default(cuid())
+  scholarshipProgramId  String
+  iseeThreshold         Int?
+  ispeThreshold         Int?
+  residencyNotes        String?
+  internationalDocsJson String?
+  deadline              DateTime?
+  amountMin             Int?
+  amountMax             Int?
+  notes                 String?
+  sourceUrl             String?
+
+  scholarshipProgram ScholarshipProgram @relation(fields: [scholarshipProgramId], references: [id], onDelete: Cascade)
+}
+
+model ProgramChangeEvent {
+  id               String   @id @default(cuid())
+  sourceDocumentId String?
+  programId        String?
+  programAcademicYearId String?
+  field            String
+  oldValue         String?
+  newValue         String?
+  severity         String   @default("INFO")
+  alerted          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+}

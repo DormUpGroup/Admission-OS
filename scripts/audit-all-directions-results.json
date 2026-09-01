@@ -1,0 +1,3528 @@
+{
+  "generatedAt": "2026-08-27T14:28:17.013Z",
+  "directions": 75,
+  "uniqueMiurCodes": 110,
+  "unresolvedCodes": [],
+  "counts": {
+    "directionsWithIssues": 6,
+    "bachelorEnEmpty": 3,
+    "masterEnEmpty": 6,
+    "healthyEnBachelorGe5": 60,
+    "healthyEnMasterGe5": 58
+  },
+  "bachelorEnEmpty": [
+    {
+      "label": "Медицина и хирургия",
+      "codes": [
+        "LM-41"
+      ],
+      "it3": 0
+    },
+    {
+      "label": "Ветеринария",
+      "codes": [
+        "LM-42"
+      ],
+      "it3": 0
+    },
+    {
+      "label": "Стоматология и протезирование зубов",
+      "codes": [
+        "LM-46"
+      ],
+      "it3": 0
+    }
+  ],
+  "masterEnEmpty": [
+    {
+      "label": "Фармацевтика",
+      "codes": [
+        "LM-13"
+      ],
+      "it2": 0
+    },
+    {
+      "label": "Медицина и хирургия",
+      "codes": [
+        "LM-41"
+      ],
+      "it2": 0
+    },
+    {
+      "label": "Ветеринария",
+      "codes": [
+        "LM-42"
+      ],
+      "it2": 0
+    },
+    {
+      "label": "Стоматология и протезирование зубов",
+      "codes": [
+        "LM-46"
+      ],
+      "it2": 0
+    },
+    {
+      "label": "Планирование и управление образовательными услугами",
+      "codes": [
+        "LM-50",
+        "LM-85"
+      ],
+      "it2": 51
+    },
+    {
+      "label": "Науки об образовании взрослых и непрерывном образовании",
+      "codes": [
+        "LM-85",
+        "LM-50"
+      ],
+      "it2": 51
+    }
+  ],
+  "hotSharedCodes": [
+    {
+      "code": "L-9",
+      "owners": 16,
+      "sample": [
+        "Аэрокосмическая и астронавтическая инженерия",
+        "Биомедицинская инженерия",
+        "Химическая инженерия",
+        "Автоматизация",
+        "Техника безопасности"
+      ],
+      "live": {
+        "code": "L-9",
+        "id": 3209,
+        "en3": 17,
+        "en2": 0,
+        "it3": 151,
+        "it2": 0,
+        "sampleEn": [
+          "Engineering Science",
+          "Engineering Sciences",
+          "Industrial Engineering"
+        ]
+      }
+    },
+    {
+      "code": "L-8",
+      "owners": 11,
+      "sample": [
+        "Компьютерные технологии",
+        "Аэрокосмическая и астронавтическая инженерия",
+        "Биомедицинская инженерия",
+        "Автоматизация",
+        "Телекоммуникационная техника"
+      ],
+      "live": {
+        "code": "L-8",
+        "id": 3208,
+        "en3": 19,
+        "en2": 0,
+        "it3": 135,
+        "it2": 0,
+        "sampleEn": [
+          "Biomedical Engineering",
+          "Computer Engineering",
+          "Computer Engineering"
+        ]
+      }
+    },
+    {
+      "code": "L-1",
+      "owners": 8,
+      "sample": [
+        "Культурная антропология и этнология",
+        "Археология",
+        "Архивное и библиотечное дело",
+        "Сохранение архитектурного и экологического наследия",
+        "Сохранение и восстановление культурного наследия"
+      ],
+      "live": {
+        "code": "L-1",
+        "id": 2001,
+        "en3": 2,
+        "en2": 0,
+        "it3": 44,
+        "it2": 0,
+        "sampleEn": [
+          "Ancient Civilizations for the Contemporary World  ",
+          "SCIENZE DEI BENI CULTURALI"
+        ]
+      }
+    },
+    {
+      "code": "L-13",
+      "owners": 8,
+      "sample": [
+        "Биология",
+        "Сельскохозяйственная биотехнология",
+        "Промышленные биотехнологии",
+        "Медицинские, ветеринарные и фармацевтические биотехнологии",
+        "Психология"
+      ],
+      "live": {
+        "code": "L-13",
+        "id": 3213,
+        "en3": 3,
+        "en2": 0,
+        "it3": 48,
+        "it2": 0,
+        "sampleEn": [
+          "Biology for One-health",
+          "Biology of Human and Environmental Health",
+          "Marine Biology and Blue Biotechnologies"
+        ]
+      }
+    },
+    {
+      "code": "L-18",
+      "owners": 8,
+      "sample": [
+        "Финансы",
+        "Управленческая инженерия",
+        "Организация и управление услугами для спорта и моторной деятельности",
+        "Планирование и управление туристическими системами",
+        "Экономические науки"
+      ],
+      "live": {
+        "code": "L-18",
+        "id": 3218,
+        "en3": 47,
+        "en2": 0,
+        "it3": 129,
+        "it2": 0,
+        "sampleEn": [
+          "AMMINISTRAZIONE AZIENDALE",
+          "BUSINESS & MANAGEMENT",
+          "Business (World Bachelor in Business)"
+        ]
+      }
+    },
+    {
+      "code": "L-7",
+      "owners": 7,
+      "sample": [
+        "Гражданское строительство",
+        "Инженерия строительных систем",
+        "Техника безопасности",
+        "Энергетика и ядерная инженерия",
+        "Военно-морское дело"
+      ],
+      "live": {
+        "code": "L-7",
+        "id": 3207,
+        "en3": 8,
+        "en2": 0,
+        "it3": 61,
+        "it2": 0,
+        "sampleEn": [
+          "Civil and Environmental Engineering",
+          "Civil and environmental engineering",
+          "Civil and Environmental Engineering"
+        ]
+      }
+    },
+    {
+      "code": "L-32",
+      "owners": 6,
+      "sample": [
+        "Инжиниринг для окружающей среды и территории",
+        "Науки о Вселенной",
+        "Наука о природе",
+        "Лесоводство и экологические науки и технологии",
+        "Геологические науки и технологии"
+      ],
+      "live": {
+        "code": "L-32",
+        "id": 3232,
+        "en3": 1,
+        "en2": 0,
+        "it3": 40,
+        "it2": 0,
+        "sampleEn": [
+          "ENVIRONMENTAL SCIENCES AND CIVIL PROTECTION"
+        ]
+      }
+    },
+    {
+      "code": "L-2",
+      "owners": 5,
+      "sample": [
+        "Биология",
+        "Сельскохозяйственная биотехнология",
+        "Промышленные биотехнологии",
+        "Медицинские, ветеринарные и фармацевтические биотехнологии",
+        "Фармацевтика"
+      ],
+      "live": {
+        "code": "L-2",
+        "id": 3202,
+        "en3": 10,
+        "en2": 0,
+        "it3": 48,
+        "it2": 0,
+        "sampleEn": [
+          "Bioinformatics",
+          "Bioscienze e Biotecnologia -  Biosciences and Biotechnology",
+          "Biotech Engineering For Health"
+        ]
+      }
+    },
+    {
+      "code": "L-11",
+      "owners": 5,
+      "sample": [
+        "Современная филология",
+        "Языки Африки и Азии",
+        "Современные европейские и американские языки",
+        "Современные языки международного общения и сотрудничества",
+        "Лингвистика"
+      ],
+      "live": {
+        "code": "L-11",
+        "id": 3211,
+        "en3": 2,
+        "en2": 0,
+        "it3": 53,
+        "it2": 0,
+        "sampleEn": [
+          "Lingue e civiltà orientali",
+          "Lingue, culture e società dell'Asia e dell'Africa mediterranea"
+        ]
+      }
+    },
+    {
+      "code": "L-31",
+      "owners": 5,
+      "sample": [
+        "Компьютерные технологии",
+        "Информационно-издательские системы",
+        "Компьютерная инженерия",
+        "Компьютерные методологии для гуманитарных наук",
+        "IT безопасность"
+      ],
+      "live": {
+        "code": "L-31",
+        "id": 3231,
+        "en3": 6,
+        "en2": 0,
+        "it3": 52,
+        "it2": 0,
+        "sampleEn": [
+          "Applied Computer Science and Artificial Intelligence",
+          "Artificial intelligence",
+          "Informatica"
+        ]
+      }
+    },
+    {
+      "code": "L-24",
+      "owners": 5,
+      "sample": [
+        "Планирование и управление образовательными услугами",
+        "Психология",
+        "Когнитивные науки",
+        "Науки об образовании взрослых и непрерывном образовании",
+        "Науки и методы профилактической и адаптированной двигательной активности"
+      ],
+      "live": {
+        "code": "L-24",
+        "id": 3224,
+        "en3": 5,
+        "en2": 0,
+        "it3": 62,
+        "it2": 0,
+        "sampleEn": [
+          "Discipline psicosociali",
+          "Psychological Science",
+          "Scienze e tecniche psicologiche"
+        ]
+      }
+    },
+    {
+      "code": "LM-11",
+      "owners": 4,
+      "sample": [
+        "Археология",
+        "Сохранение архитектурного и экологического наследия",
+        "Сохранение и восстановление культурного наследия",
+        "Музыковедение и культурное наследие"
+      ],
+      "live": {
+        "code": "LM-11",
+        "id": 3312,
+        "en3": 0,
+        "en2": 4,
+        "it3": 0,
+        "it2": 4,
+        "sampleEn": [
+          "Archaeological Materials Science",
+          "Conservation Science and Technology for Cultural Heritage",
+          "Science for the Conservation-Restoration of Cultural Heritage "
+        ]
+      }
+    },
+    {
+      "code": "L-17",
+      "owners": 4,
+      "sample": [
+        "Ландшафтная архитектура",
+        "Архитектура и строительная инженерия-архитектура",
+        "Сохранение архитектурного и экологического наследия",
+        "Территориальное градостроительное и экологическое планирование"
+      ],
+      "live": {
+        "code": "L-17",
+        "id": 3217,
+        "en3": 5,
+        "en2": 0,
+        "it3": 16,
+        "it2": 0,
+        "sampleEn": [
+          "Architecture Sciences for Heritage",
+          "Architettura",
+          "Progettazione dell’Architettura"
+        ]
+      }
+    },
+    {
+      "code": "L-10",
+      "owners": 4,
+      "sample": [
+        "Архивное и библиотечное дело",
+        "Современная филология",
+        "Филология, литература и история древности",
+        "Информационно-издательские системы"
+      ],
+      "live": {
+        "code": "L-10",
+        "id": 3210,
+        "en3": 3,
+        "en2": 0,
+        "it3": 57,
+        "it2": 0,
+        "sampleEn": [
+          "Classics",
+          "Italian and Mediterranean Studies",
+          "Italian medieval and renaissance studies"
+        ]
+      }
+    },
+    {
+      "code": "LM-9",
+      "owners": 4,
+      "sample": [
+        "Биология",
+        "Сельскохозяйственная биотехнология",
+        "Промышленные биотехнологии",
+        "Медицинские, ветеринарные и фармацевтические биотехнологии"
+      ],
+      "live": {
+        "code": "LM-9",
+        "id": 3310,
+        "en3": 0,
+        "en2": 36,
+        "it3": 0,
+        "it2": 35,
+        "sampleEn": [
+          "Advanced Biotechnology",
+          "Biochemistry",
+          "Biomedical Omics"
+        ]
+      }
+    }
+  ],
+  "worstBachelorEn": [
+    {
+      "label": "Медицина и хирургия",
+      "en": 0,
+      "it": 0,
+      "codes": [
+        "LM-41"
+      ]
+    },
+    {
+      "label": "Ветеринария",
+      "en": 0,
+      "it": 0,
+      "codes": [
+        "LM-42"
+      ]
+    },
+    {
+      "label": "Стоматология и протезирование зубов",
+      "en": 0,
+      "it": 0,
+      "codes": [
+        "LM-46"
+      ]
+    },
+    {
+      "label": "Археология",
+      "en": 2,
+      "it": 50,
+      "codes": [
+        "L-1",
+        "L-43"
+      ]
+    },
+    {
+      "label": "Сохранение и восстановление культурного наследия",
+      "en": 2,
+      "it": 50,
+      "codes": [
+        "L-43",
+        "L-1"
+      ]
+    },
+    {
+      "label": "Культурная антропология и этнология",
+      "en": 3,
+      "it": 80,
+      "codes": [
+        "L-1",
+        "L-5"
+      ]
+    },
+    {
+      "label": "Языки Африки и Азии",
+      "en": 3,
+      "it": 86,
+      "codes": [
+        "L-11",
+        "L-12"
+      ]
+    },
+    {
+      "label": "Современные европейские и американские языки",
+      "en": 3,
+      "it": 86,
+      "codes": [
+        "L-11",
+        "L-12"
+      ]
+    },
+    {
+      "label": "Современные языки международного общения и сотрудничества",
+      "en": 3,
+      "it": 86,
+      "codes": [
+        "L-11",
+        "L-12"
+      ]
+    },
+    {
+      "label": "Лингвистика",
+      "en": 3,
+      "it": 86,
+      "codes": [
+        "L-11",
+        "L-12"
+      ]
+    },
+    {
+      "label": "Музыковедение и культурное наследие",
+      "en": 3,
+      "it": 70,
+      "codes": [
+        "L-3",
+        "L-1"
+      ]
+    },
+    {
+      "label": "Науки о религиях",
+      "en": 3,
+      "it": 80,
+      "codes": [
+        "L-5",
+        "L-1"
+      ]
+    },
+    {
+      "label": "Науки о Вселенной",
+      "en": 4,
+      "it": 85,
+      "codes": [
+        "L-30",
+        "L-32"
+      ]
+    },
+    {
+      "label": "Наука о природе",
+      "en": 4,
+      "it": 88,
+      "codes": [
+        "L-32",
+        "L-13"
+      ]
+    },
+    {
+      "label": "Лесоводство и экологические науки и технологии",
+      "en": 4,
+      "it": 98,
+      "codes": [
+        "L-25",
+        "L-32"
+      ]
+    }
+  ],
+  "bestBachelorEn": [
+    {
+      "label": "Финансы",
+      "en": 73,
+      "codes": [
+        "L-18",
+        "L-33"
+      ]
+    },
+    {
+      "label": "Экономические науки",
+      "en": 73,
+      "codes": [
+        "L-33",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Экономические науки для окружающей среды и культуры",
+      "en": 73,
+      "codes": [
+        "L-33",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Управленческая инженерия",
+      "en": 64,
+      "codes": [
+        "L-9",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Планирование и управление туристическими системами",
+      "en": 51,
+      "codes": [
+        "L-15",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Науки о публичных, деловых и рекламных коммуникациях",
+      "en": 51,
+      "codes": [
+        "L-20",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Организация и управление услугами для спорта и моторной деятельности",
+      "en": 47,
+      "codes": [
+        "L-22",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Спортивные науки и техники",
+      "en": 47,
+      "codes": [
+        "L-22",
+        "L-18"
+      ]
+    },
+    {
+      "label": "Аэрокосмическая и астронавтическая инженерия",
+      "en": 36,
+      "codes": [
+        "L-9",
+        "L-8"
+      ]
+    },
+    {
+      "label": "Биомедицинская инженерия",
+      "en": 36,
+      "codes": [
+        "L-8",
+        "L-9"
+      ]
+    }
+  ],
+  "directionReports": [
+    {
+      "label": "Культурная антропология и этнология",
+      "bachelorCodes": [
+        "L-1",
+        "L-5"
+      ],
+      "masterCodes": [
+        "LM-1",
+        "LM-64"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 80,
+      "masterEn": 2,
+      "masterIt": 15,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Археология",
+      "bachelorCodes": [
+        "L-1",
+        "L-43"
+      ],
+      "masterCodes": [
+        "LM-2",
+        "LM-11"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 2,
+      "bachelorIt": 50,
+      "masterEn": 10,
+      "masterIt": 39,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Ландшафтная архитектура",
+      "bachelorCodes": [
+        "L-21",
+        "L-17"
+      ],
+      "masterCodes": [
+        "LM-3",
+        "LM-48"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 28,
+      "masterEn": 7,
+      "masterIt": 11,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Архитектура и строительная инженерия-архитектура",
+      "bachelorCodes": [
+        "L-17",
+        "L-23"
+      ],
+      "masterCodes": [
+        "LM-4"
+      ],
+      "singleCycleCodes": [
+        "LM-4"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 29,
+      "masterEn": 16,
+      "masterIt": 21,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Архивное и библиотечное дело",
+      "bachelorCodes": [
+        "L-1",
+        "L-10"
+      ],
+      "masterCodes": [
+        "LM-5",
+        "LM-14"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 101,
+      "masterEn": 2,
+      "masterIt": 63,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Биология",
+      "bachelorCodes": [
+        "L-13",
+        "L-2"
+      ],
+      "masterCodes": [
+        "LM-6",
+        "LM-9"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 96,
+      "masterEn": 73,
+      "masterIt": 104,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Сельскохозяйственная биотехнология",
+      "bachelorCodes": [
+        "L-2",
+        "L-13",
+        "L-25"
+      ],
+      "masterCodes": [
+        "LM-7",
+        "LM-9"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 16,
+      "bachelorIt": 154,
+      "masterEn": 40,
+      "masterIt": 47,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Промышленные биотехнологии",
+      "bachelorCodes": [
+        "L-2",
+        "L-13"
+      ],
+      "masterCodes": [
+        "LM-8",
+        "LM-9"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 96,
+      "masterEn": 47,
+      "masterIt": 53,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Медицинские, ветеринарные и фармацевтические биотехнологии",
+      "bachelorCodes": [
+        "L-2",
+        "L-13",
+        "L-29"
+      ],
+      "masterCodes": [
+        "LM-9",
+        "LM-6"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 14,
+      "bachelorIt": 123,
+      "masterEn": 73,
+      "masterIt": 104,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Сохранение архитектурного и экологического наследия",
+      "bachelorCodes": [
+        "L-17",
+        "L-43",
+        "L-1"
+      ],
+      "masterCodes": [
+        "LM-11",
+        "LM-4"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 7,
+      "bachelorIt": 66,
+      "masterEn": 20,
+      "masterIt": 25,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Сохранение и восстановление культурного наследия",
+      "bachelorCodes": [
+        "L-43",
+        "L-1"
+      ],
+      "masterCodes": [
+        "LM-11"
+      ],
+      "singleCycleCodes": [
+        "LMR/02"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 2,
+      "bachelorIt": 50,
+      "masterEn": 4,
+      "masterIt": 4,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Дизайн",
+      "bachelorCodes": [
+        "L-4",
+        "L-3"
+      ],
+      "masterCodes": [
+        "LM-12",
+        "LM-65"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 57,
+      "masterEn": 19,
+      "masterIt": 41,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Фармацевтика",
+      "bachelorCodes": [
+        "L-29",
+        "L-2"
+      ],
+      "masterCodes": [
+        "LM-13"
+      ],
+      "singleCycleCodes": [
+        "LM-13"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 11,
+      "bachelorIt": 75,
+      "masterEn": 0,
+      "masterIt": 0,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": true,
+      "issues": [
+        "master-EN-empty"
+      ]
+    },
+    {
+      "label": "Современная филология",
+      "bachelorCodes": [
+        "L-10",
+        "L-11"
+      ],
+      "masterCodes": [
+        "LM-14",
+        "LM-15"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 110,
+      "masterEn": 2,
+      "masterIt": 74,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Филология, литература и история древности",
+      "bachelorCodes": [
+        "L-10",
+        "L-1"
+      ],
+      "masterCodes": [
+        "LM-15",
+        "LM-14"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 101,
+      "masterEn": 2,
+      "masterIt": 74,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Финансы",
+      "bachelorCodes": [
+        "L-18",
+        "L-33"
+      ],
+      "masterCodes": [
+        "LM-16",
+        "LM-56",
+        "LM-77"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 73,
+      "bachelorIt": 181,
+      "masterEn": 162,
+      "masterIt": 205,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Физика",
+      "bachelorCodes": [
+        "L-30",
+        "L-35"
+      ],
+      "masterCodes": [
+        "LM-17",
+        "LM-79"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 87,
+      "masterEn": 35,
+      "masterIt": 21,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Компьютерные технологии",
+      "bachelorCodes": [
+        "L-31",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-18",
+        "LM-32"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 187,
+      "masterEn": 57,
+      "masterIt": 52,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Информационно-издательские системы",
+      "bachelorCodes": [
+        "L-20",
+        "L-10",
+        "L-31"
+      ],
+      "masterCodes": [
+        "LM-19",
+        "LM-91"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 170,
+      "masterEn": 8,
+      "masterIt": 23,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Аэрокосмическая и астронавтическая инженерия",
+      "bachelorCodes": [
+        "L-9",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-20",
+        "LM-33"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 40,
+      "masterIt": 53,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Биомедицинская инженерия",
+      "bachelorCodes": [
+        "L-8",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-21"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 14,
+      "masterIt": 20,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Химическая инженерия",
+      "bachelorCodes": [
+        "L-9",
+        "L-27"
+      ],
+      "masterCodes": [
+        "LM-22",
+        "LM-71"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 17,
+      "bachelorIt": 196,
+      "masterEn": 22,
+      "masterIt": 24,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Гражданское строительство",
+      "bachelorCodes": [
+        "L-7",
+        "L-23"
+      ],
+      "masterCodes": [
+        "LM-23",
+        "LM-24"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 11,
+      "bachelorIt": 74,
+      "masterEn": 35,
+      "masterIt": 57,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Инженерия строительных систем",
+      "bachelorCodes": [
+        "L-23",
+        "L-7"
+      ],
+      "masterCodes": [
+        "LM-24",
+        "LM-23"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 11,
+      "bachelorIt": 74,
+      "masterEn": 35,
+      "masterIt": 57,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Автоматизация",
+      "bachelorCodes": [
+        "L-8",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-25",
+        "LM-32"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 45,
+      "masterIt": 40,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Техника безопасности",
+      "bachelorCodes": [
+        "L-7",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-26"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 212,
+      "masterEn": 10,
+      "masterIt": 7,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Телекоммуникационная техника",
+      "bachelorCodes": [
+        "L-8",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-27",
+        "LM-29"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 40,
+      "masterIt": 29,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Электротехника",
+      "bachelorCodes": [
+        "L-9",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-28",
+        "LM-29"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 34,
+      "masterIt": 34,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Электронная инженерия",
+      "bachelorCodes": [
+        "L-8",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-29",
+        "LM-27"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 40,
+      "masterIt": 29,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Энергетика и ядерная инженерия",
+      "bachelorCodes": [
+        "L-9",
+        "L-7"
+      ],
+      "masterCodes": [
+        "LM-30",
+        "LM-35"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 212,
+      "masterEn": 36,
+      "masterIt": 38,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Управленческая инженерия",
+      "bachelorCodes": [
+        "L-9",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-31",
+        "LM-77"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 64,
+      "bachelorIt": 280,
+      "masterEn": 108,
+      "masterIt": 173,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Компьютерная инженерия",
+      "bachelorCodes": [
+        "L-8",
+        "L-31"
+      ],
+      "masterCodes": [
+        "LM-32",
+        "LM-18"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 187,
+      "masterEn": 57,
+      "masterIt": 52,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Инженерное дело",
+      "bachelorCodes": [
+        "L-9",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-33",
+        "LM-25"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 36,
+      "bachelorIt": 286,
+      "masterEn": 45,
+      "masterIt": 52,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Военно-морское дело",
+      "bachelorCodes": [
+        "L-9",
+        "L-7"
+      ],
+      "masterCodes": [
+        "LM-34"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 212,
+      "masterEn": 1,
+      "masterIt": 4,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Инжиниринг для окружающей среды и территории",
+      "bachelorCodes": [
+        "L-7",
+        "L-32"
+      ],
+      "masterCodes": [
+        "LM-35",
+        "LM-75"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 9,
+      "bachelorIt": 101,
+      "masterEn": 30,
+      "masterIt": 42,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Языки Африки и Азии",
+      "bachelorCodes": [
+        "L-11",
+        "L-12"
+      ],
+      "masterCodes": [
+        "LM-37",
+        "LM-38"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 86,
+      "masterEn": 20,
+      "masterIt": 71,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Современные европейские и американские языки",
+      "bachelorCodes": [
+        "L-11",
+        "L-12"
+      ],
+      "masterCodes": [
+        "LM-37",
+        "LM-38"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 86,
+      "masterEn": 20,
+      "masterIt": 71,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Современные языки международного общения и сотрудничества",
+      "bachelorCodes": [
+        "L-11",
+        "L-12"
+      ],
+      "masterCodes": [
+        "LM-38",
+        "LM-37"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 86,
+      "masterEn": 20,
+      "masterIt": 71,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Лингвистика",
+      "bachelorCodes": [
+        "L-11",
+        "L-12"
+      ],
+      "masterCodes": [
+        "LM-39",
+        "LM-37"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 86,
+      "masterEn": 14,
+      "masterIt": 54,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Математика",
+      "bachelorCodes": [
+        "L-35",
+        "L-30"
+      ],
+      "masterCodes": [
+        "LM-40",
+        "LM-44"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 87,
+      "masterEn": 24,
+      "masterIt": 31,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Медицина и хирургия",
+      "bachelorCodes": [
+        "LM-41"
+      ],
+      "masterCodes": [
+        "LM-41"
+      ],
+      "singleCycleCodes": [
+        "LM-41"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 0,
+      "bachelorIt": 0,
+      "masterEn": 0,
+      "masterIt": 0,
+      "bachelorEnEmpty": true,
+      "masterEnEmpty": true,
+      "issues": [
+        "bachelor-EN-empty",
+        "master-EN-empty",
+        "bachelor-IT-empty"
+      ]
+    },
+    {
+      "label": "Ветеринария",
+      "bachelorCodes": [
+        "LM-42"
+      ],
+      "masterCodes": [
+        "LM-42"
+      ],
+      "singleCycleCodes": [
+        "LM-42"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 0,
+      "bachelorIt": 0,
+      "masterEn": 0,
+      "masterIt": 0,
+      "bachelorEnEmpty": true,
+      "masterEnEmpty": true,
+      "issues": [
+        "bachelor-EN-empty",
+        "master-EN-empty",
+        "bachelor-IT-empty"
+      ]
+    },
+    {
+      "label": "Компьютерные методологии для гуманитарных наук",
+      "bachelorCodes": [
+        "L-31",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-43",
+        "LM-18"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 187,
+      "masterEn": 33,
+      "masterIt": 30,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Математико-физическое моделирование в инженерии",
+      "bachelorCodes": [
+        "L-35",
+        "L-30",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-44",
+        "LM-40"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 22,
+      "bachelorIt": 238,
+      "masterEn": 24,
+      "masterIt": 31,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Музыковедение и культурное наследие",
+      "bachelorCodes": [
+        "L-3",
+        "L-1"
+      ],
+      "masterCodes": [
+        "LM-45",
+        "LM-11"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 70,
+      "masterEn": 4,
+      "masterIt": 11,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Стоматология и протезирование зубов",
+      "bachelorCodes": [
+        "LM-46"
+      ],
+      "masterCodes": [
+        "LM-46"
+      ],
+      "singleCycleCodes": [
+        "LM-46"
+      ],
+      "unresolvedCodes": [],
+      "bachelorEn": 0,
+      "bachelorIt": 0,
+      "masterEn": 0,
+      "masterIt": 0,
+      "bachelorEnEmpty": true,
+      "masterEnEmpty": true,
+      "issues": [
+        "bachelor-EN-empty",
+        "master-EN-empty",
+        "bachelor-IT-empty"
+      ]
+    },
+    {
+      "label": "Организация и управление услугами для спорта и моторной деятельности",
+      "bachelorCodes": [
+        "L-22",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-47",
+        "LM-68"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 47,
+      "bachelorIt": 192,
+      "masterEn": 4,
+      "masterIt": 25,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Территориальное градостроительное и экологическое планирование",
+      "bachelorCodes": [
+        "L-21",
+        "L-17"
+      ],
+      "masterCodes": [
+        "LM-48",
+        "LM-3"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 28,
+      "masterEn": 7,
+      "masterIt": 11,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Планирование и управление туристическими системами",
+      "bachelorCodes": [
+        "L-15",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-49",
+        "LM-76"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 51,
+      "bachelorIt": 160,
+      "masterEn": 19,
+      "masterIt": 22,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Планирование и управление образовательными услугами",
+      "bachelorCodes": [
+        "L-19",
+        "L-24"
+      ],
+      "masterCodes": [
+        "LM-50",
+        "LM-85"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 6,
+      "bachelorIt": 121,
+      "masterEn": 0,
+      "masterIt": 51,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": true,
+      "issues": [
+        "master-EN-empty"
+      ]
+    },
+    {
+      "label": "Психология",
+      "bachelorCodes": [
+        "L-24",
+        "L-13"
+      ],
+      "masterCodes": [
+        "LM-51",
+        "LM-55"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 110,
+      "masterEn": 29,
+      "masterIt": 93,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Международные отношения",
+      "bachelorCodes": [
+        "L-36",
+        "L-16"
+      ],
+      "masterCodes": [
+        "LM-52",
+        "LM-62"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 79,
+      "masterEn": 40,
+      "masterIt": 57,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Материаловедение и инженерия",
+      "bachelorCodes": [
+        "L-9",
+        "L-27"
+      ],
+      "masterCodes": [
+        "LM-53.",
+        "LM-33"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 17,
+      "bachelorIt": 196,
+      "masterEn": 37,
+      "masterIt": 50,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Химические науки",
+      "bachelorCodes": [
+        "L-27",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-54",
+        "LM-71"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 17,
+      "bachelorIt": 196,
+      "masterEn": 22,
+      "masterIt": 45,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Когнитивные науки",
+      "bachelorCodes": [
+        "L-24",
+        "L-13"
+      ],
+      "masterCodes": [
+        "LM-55",
+        "LM-51"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 110,
+      "masterEn": 29,
+      "masterIt": 93,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Экономические науки",
+      "bachelorCodes": [
+        "L-33",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-56",
+        "LM-77"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 73,
+      "bachelorIt": 181,
+      "masterEn": 146,
+      "masterIt": 192,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки об образовании взрослых и непрерывном образовании",
+      "bachelorCodes": [
+        "L-19",
+        "L-24"
+      ],
+      "masterCodes": [
+        "LM-85",
+        "LM-50"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 6,
+      "bachelorIt": 121,
+      "masterEn": 0,
+      "masterIt": 51,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": true,
+      "issues": [
+        "master-EN-empty"
+      ]
+    },
+    {
+      "label": "Науки о Вселенной",
+      "bachelorCodes": [
+        "L-30",
+        "L-32"
+      ],
+      "masterCodes": [
+        "LM-17",
+        "LM-79"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 4,
+      "bachelorIt": 85,
+      "masterEn": 35,
+      "masterIt": 21,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки о публичных, деловых и рекламных коммуникациях",
+      "bachelorCodes": [
+        "L-20",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-59",
+        "LM-77"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 51,
+      "bachelorIt": 190,
+      "masterEn": 96,
+      "masterIt": 166,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Наука о природе",
+      "bachelorCodes": [
+        "L-32",
+        "L-13"
+      ],
+      "masterCodes": [
+        "LM-60",
+        "LM-75"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 4,
+      "bachelorIt": 88,
+      "masterEn": 13,
+      "masterIt": 36,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки о питании человека",
+      "bachelorCodes": [
+        "L-26",
+        "L-13"
+      ],
+      "masterCodes": [
+        "LM-61",
+        "LM-70"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 84,
+      "masterEn": 17,
+      "masterIt": 45,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Политические науки",
+      "bachelorCodes": [
+        "L-36",
+        "L-16"
+      ],
+      "masterCodes": [
+        "LM-62",
+        "LM-52"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 79,
+      "masterEn": 40,
+      "masterIt": 57,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки о государственном управлении",
+      "bachelorCodes": [
+        "L-16",
+        "L-36"
+      ],
+      "masterCodes": [
+        "LM-63",
+        "LM-62"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 13,
+      "bachelorIt": 79,
+      "masterEn": 14,
+      "masterIt": 56,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки о религиях",
+      "bachelorCodes": [
+        "L-5",
+        "L-1"
+      ],
+      "masterCodes": [
+        "LM-64",
+        "LM-1"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 3,
+      "bachelorIt": 80,
+      "masterEn": 2,
+      "masterIt": 15,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Развлекательные науки и мультимедийное производство",
+      "bachelorCodes": [
+        "L-3",
+        "L-20"
+      ],
+      "masterCodes": [
+        "LM-65",
+        "LM-12"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 87,
+      "masterEn": 19,
+      "masterIt": 41,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "IT безопасность",
+      "bachelorCodes": [
+        "L-31",
+        "L-8"
+      ],
+      "masterCodes": [
+        "LM-66",
+        "LM-18"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 25,
+      "bachelorIt": 187,
+      "masterEn": 33,
+      "masterIt": 24,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки и методы профилактической и адаптированной двигательной активности",
+      "bachelorCodes": [
+        "L-22",
+        "L-24"
+      ],
+      "masterCodes": [
+        "LM-67",
+        "LM-68"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 5,
+      "bachelorIt": 125,
+      "masterEn": 3,
+      "masterIt": 53,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Спортивные науки и техники",
+      "bachelorCodes": [
+        "L-22",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-68",
+        "LM-47"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 47,
+      "bachelorIt": 192,
+      "masterEn": 4,
+      "masterIt": 25,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Сельскохозяйственные науки и технологии",
+      "bachelorCodes": [
+        "L-25",
+        "L-26"
+      ],
+      "masterCodes": [
+        "LM-69",
+        "LM-73"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 94,
+      "masterEn": 23,
+      "masterIt": 41,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Пищевая наука и технологии",
+      "bachelorCodes": [
+        "L-26",
+        "L-25"
+      ],
+      "masterCodes": [
+        "LM-70",
+        "LM-61"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 8,
+      "bachelorIt": 94,
+      "masterEn": 17,
+      "masterIt": 45,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки и технологии промышленной химии",
+      "bachelorCodes": [
+        "L-27",
+        "L-9"
+      ],
+      "masterCodes": [
+        "LM-71",
+        "LM-54"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 17,
+      "bachelorIt": 196,
+      "masterEn": 22,
+      "masterIt": 45,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Лесоводство и экологические науки и технологии",
+      "bachelorCodes": [
+        "L-25",
+        "L-32"
+      ],
+      "masterCodes": [
+        "LM-73",
+        "LM-75"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 4,
+      "bachelorIt": 98,
+      "masterEn": 15,
+      "masterIt": 31,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Геологические науки и технологии",
+      "bachelorCodes": [
+        "L-34",
+        "L-32"
+      ],
+      "masterCodes": [
+        "LM-74",
+        "LM-79"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 6,
+      "bachelorIt": 68,
+      "masterEn": 17,
+      "masterIt": 28,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Науки и технологии для окружающей среды и территории",
+      "bachelorCodes": [
+        "L-32",
+        "L-7"
+      ],
+      "masterCodes": [
+        "LM-75",
+        "LM-35"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 9,
+      "bachelorIt": 101,
+      "masterEn": 30,
+      "masterIt": 42,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    },
+    {
+      "label": "Экономические науки для окружающей среды и культуры",
+      "bachelorCodes": [
+        "L-33",
+        "L-18"
+      ],
+      "masterCodes": [
+        "LM-76",
+        "LM-56"
+      ],
+      "singleCycleCodes": [],
+      "unresolvedCodes": [],
+      "bachelorEn": 73,
+      "bachelorIt": 181,
+      "masterEn": 66,
+      "masterIt": 57,
+      "bachelorEnEmpty": false,
+      "masterEnEmpty": false,
+      "issues": []
+    }
+  ],
+  "classeLive": {
+    "L-1": {
+      "code": "L-1",
+      "id": 2001,
+      "en3": 2,
+      "en2": 0,
+      "it3": 44,
+      "it2": 0,
+      "sampleEn": [
+        "Ancient Civilizations for the Contemporary World  ",
+        "SCIENZE DEI BENI CULTURALI"
+      ]
+    },
+    "L-10": {
+      "code": "L-10",
+      "id": 3210,
+      "en3": 3,
+      "en2": 0,
+      "it3": 57,
+      "it2": 0,
+      "sampleEn": [
+        "Classics",
+        "Italian and Mediterranean Studies",
+        "Italian medieval and renaissance studies"
+      ]
+    },
+    "L-11": {
+      "code": "L-11",
+      "id": 3211,
+      "en3": 2,
+      "en2": 0,
+      "it3": 53,
+      "it2": 0,
+      "sampleEn": [
+        "Lingue e civiltà orientali",
+        "Lingue, culture e società dell'Asia e dell'Africa mediterranea"
+      ]
+    },
+    "L-12": {
+      "code": "L-12",
+      "id": 3212,
+      "en3": 1,
+      "en2": 0,
+      "it3": 33,
+      "it2": 0,
+      "sampleEn": [
+        "Lingue e comunicazione per l'impresa e il turismo"
+      ]
+    },
+    "L-13": {
+      "code": "L-13",
+      "id": 3213,
+      "en3": 3,
+      "en2": 0,
+      "it3": 48,
+      "it2": 0,
+      "sampleEn": [
+        "Biology for One-health",
+        "Biology of Human and Environmental Health",
+        "Marine Biology and Blue Biotechnologies"
+      ]
+    },
+    "L-15": {
+      "code": "L-15",
+      "id": 3215,
+      "en3": 4,
+      "en2": 0,
+      "it3": 31,
+      "it2": 0,
+      "sampleEn": [
+        "Hospitality Innovation and e-Tourism",
+        "Scienze del Turismo",
+        "Scienze del turismo per il management e i beni culturali"
+      ]
+    },
+    "L-16": {
+      "code": "L-16",
+      "id": 3216,
+      "en3": 3,
+      "en2": 0,
+      "it3": 23,
+      "it2": 0,
+      "sampleEn": [
+        "Global Governance",
+        "Scienze dell'amministrazione e dell'organizzazione",
+        "Social sciences for global challenges"
+      ]
+    },
+    "L-17": {
+      "code": "L-17",
+      "id": 3217,
+      "en3": 5,
+      "en2": 0,
+      "it3": 16,
+      "it2": 0,
+      "sampleEn": [
+        "Architecture Sciences for Heritage",
+        "Architettura",
+        "Progettazione dell’Architettura"
+      ]
+    },
+    "L-18": {
+      "code": "L-18",
+      "id": 3218,
+      "en3": 47,
+      "en2": 0,
+      "it3": 129,
+      "it2": 0,
+      "sampleEn": [
+        "AMMINISTRAZIONE AZIENDALE",
+        "BUSINESS & MANAGEMENT",
+        "Business (World Bachelor in Business)"
+      ]
+    },
+    "L-19": {
+      "code": "L-19",
+      "id": 3219,
+      "en3": 1,
+      "en2": 0,
+      "it3": 59,
+      "it2": 0,
+      "sampleEn": [
+        "Scienze dell'educazione"
+      ]
+    },
+    "L-2": {
+      "code": "L-2",
+      "id": 3202,
+      "en3": 10,
+      "en2": 0,
+      "it3": 48,
+      "it2": 0,
+      "sampleEn": [
+        "Bioinformatics",
+        "Bioscienze e Biotecnologia -  Biosciences and Biotechnology",
+        "Biotech Engineering For Health"
+      ]
+    },
+    "L-20": {
+      "code": "L-20",
+      "id": 3220,
+      "en3": 4,
+      "en2": 0,
+      "it3": 61,
+      "it2": 0,
+      "sampleEn": [
+        "Comunicazione d'impresa e relazioni pubbliche",
+        "Comunicazione e società",
+        "Scienze della Comunicazione e Cultura"
+      ]
+    },
+    "L-21": {
+      "code": "L-21",
+      "id": 3221,
+      "en3": 0,
+      "en2": 0,
+      "it3": 12,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "L-22": {
+      "code": "L-22",
+      "id": 3222,
+      "en3": 0,
+      "en2": 0,
+      "it3": 63,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "L-23": {
+      "code": "L-23",
+      "id": 3223,
+      "en3": 3,
+      "en2": 0,
+      "it3": 13,
+      "it2": 0,
+      "sampleEn": [
+        "Building Construction Engineering",
+        "Heritage Innovation Engineering",
+        "Sustainable Building Engineering"
+      ]
+    },
+    "L-24": {
+      "code": "L-24",
+      "id": 3224,
+      "en3": 5,
+      "en2": 0,
+      "it3": 62,
+      "it2": 0,
+      "sampleEn": [
+        "Discipline psicosociali",
+        "Psychological Science",
+        "Scienze e tecniche psicologiche"
+      ]
+    },
+    "L-25": {
+      "code": "L-25",
+      "id": 3225,
+      "en3": 3,
+      "en2": 0,
+      "it3": 58,
+      "it2": 0,
+      "sampleEn": [
+        "Agricoltura sostenibile e gestione forestale in ambiente montano ",
+        "Scienze agrarie e ambientali",
+        "Scienze Forestali e Ambientali"
+      ]
+    },
+    "L-26": {
+      "code": "L-26",
+      "id": 3226,
+      "en3": 5,
+      "en2": 0,
+      "it3": 36,
+      "it2": 0,
+      "sampleEn": [
+        "Scienze alimentari ed enogastronomiche",
+        "Scienze dell'Alimentazione e Gastronomia",
+        "Scienze e tecnologie alimentari"
+      ]
+    },
+    "L-27": {
+      "code": "L-27",
+      "id": 3227,
+      "en3": 0,
+      "en2": 0,
+      "it3": 45,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "L-29": {
+      "code": "L-29",
+      "id": 3229,
+      "en3": 1,
+      "en2": 0,
+      "it3": 27,
+      "it2": 0,
+      "sampleEn": [
+        "Molecular Biology, Medicinal Chemistry and Computer Science for Pharmaceutical Applications"
+      ]
+    },
+    "L-3": {
+      "code": "L-3",
+      "id": 3203,
+      "en3": 1,
+      "en2": 0,
+      "it3": 26,
+      "it2": 0,
+      "sampleEn": [
+        "DISCIPLINE DELLO SPETTACOLO E DELLA COMUNICAZIONE"
+      ]
+    },
+    "L-30": {
+      "code": "L-30",
+      "id": 3230,
+      "en3": 3,
+      "en2": 0,
+      "it3": 45,
+      "it2": 0,
+      "sampleEn": [
+        "Fisica",
+        "Ottica e Optometria",
+        "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES"
+      ]
+    },
+    "L-31": {
+      "code": "L-31",
+      "id": 3231,
+      "en3": 6,
+      "en2": 0,
+      "it3": 52,
+      "it2": 0,
+      "sampleEn": [
+        "Applied Computer Science and Artificial Intelligence",
+        "Artificial intelligence",
+        "Informatica"
+      ]
+    },
+    "L-32": {
+      "code": "L-32",
+      "id": 3232,
+      "en3": 1,
+      "en2": 0,
+      "it3": 40,
+      "it2": 0,
+      "sampleEn": [
+        "ENVIRONMENTAL SCIENCES AND CIVIL PROTECTION"
+      ]
+    },
+    "L-33": {
+      "code": "L-33",
+      "id": 3233,
+      "en3": 26,
+      "en2": 0,
+      "it3": 52,
+      "it2": 0,
+      "sampleEn": [
+        "DIGITAL ECONOMICS AND BUSINESS",
+        "ECONOMIA",
+        "Economia"
+      ]
+    },
+    "L-34": {
+      "code": "L-34",
+      "id": 3234,
+      "en3": 5,
+      "en2": 0,
+      "it3": 28,
+      "it2": 0,
+      "sampleEn": [
+        "Earth and climate dynamics ",
+        "Earth Sciences for Sustainable Development ",
+        "Earth System and Global Changes"
+      ]
+    },
+    "L-35": {
+      "code": "L-35",
+      "id": 3235,
+      "en3": 2,
+      "en2": 0,
+      "it3": 42,
+      "it2": 0,
+      "sampleEn": [
+        "Matematica per l’Economia, la Finanza e l'Assicurazione",
+        "Mathematical and Computing Sciences for Artificial Intelligence"
+      ]
+    },
+    "L-36": {
+      "code": "L-36",
+      "id": 3236,
+      "en3": 10,
+      "en2": 0,
+      "it3": 56,
+      "it2": 0,
+      "sampleEn": [
+        "European Studies ",
+        "International Politics and Government",
+        "International Politics, Law and Economics"
+      ]
+    },
+    "L-4": {
+      "code": "L-4",
+      "id": 3204,
+      "en3": 4,
+      "en2": 0,
+      "it3": 31,
+      "it2": 0,
+      "sampleEn": [
+        "Design",
+        "Design e Arti",
+        "Design per la comunita'"
+      ]
+    },
+    "L-43": {
+      "code": "L-43",
+      "id": 3244,
+      "en3": 0,
+      "en2": 0,
+      "it3": 6,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "L-5": {
+      "code": "L-5",
+      "id": 3205,
+      "en3": 1,
+      "en2": 0,
+      "it3": 36,
+      "it2": 0,
+      "sampleEn": [
+        "Philosophy, International and Economic Studies"
+      ]
+    },
+    "L-7": {
+      "code": "L-7",
+      "id": 3207,
+      "en3": 8,
+      "en2": 0,
+      "it3": 61,
+      "it2": 0,
+      "sampleEn": [
+        "Civil and Environmental Engineering",
+        "Civil and environmental engineering",
+        "Civil and Environmental Engineering"
+      ]
+    },
+    "L-8": {
+      "code": "L-8",
+      "id": 3208,
+      "en3": 19,
+      "en2": 0,
+      "it3": 135,
+      "it2": 0,
+      "sampleEn": [
+        "Biomedical Engineering",
+        "Computer Engineering",
+        "Computer Engineering"
+      ]
+    },
+    "L-9": {
+      "code": "L-9",
+      "id": 3209,
+      "en3": 17,
+      "en2": 0,
+      "it3": 151,
+      "it2": 0,
+      "sampleEn": [
+        "Engineering Science",
+        "Engineering Sciences",
+        "Industrial Engineering"
+      ]
+    },
+    "LM-1": {
+      "code": "LM-1",
+      "id": 3302,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 9,
+      "sampleEn": [
+        "Environmental Humanities"
+      ]
+    },
+    "LM-11": {
+      "code": "LM-11",
+      "id": 3312,
+      "en3": 0,
+      "en2": 4,
+      "it3": 0,
+      "it2": 4,
+      "sampleEn": [
+        "Archaeological Materials Science",
+        "Conservation Science and Technology for Cultural Heritage",
+        "Science for the Conservation-Restoration of Cultural Heritage "
+      ]
+    },
+    "LM-12": {
+      "code": "LM-12",
+      "id": 3313,
+      "en3": 0,
+      "en2": 15,
+      "it3": 0,
+      "it2": 20,
+      "sampleEn": [
+        "Design & Engineering - Progetto e ingegnerizzazione del prodotto industriale",
+        "Design della comunicazione",
+        "Design for Cultural and Productive Context"
+      ]
+    },
+    "LM-13": {
+      "code": "LM-13",
+      "id": 3314,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "LM-14": {
+      "code": "LM-14",
+      "id": 3015,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 53,
+      "sampleEn": [
+        "Filologia moderna - Francesistica e Italianistica"
+      ]
+    },
+    "LM-15": {
+      "code": "LM-15",
+      "id": 3016,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 21,
+      "sampleEn": [
+        "Filologia, letterature e storia del mondo antico"
+      ]
+    },
+    "LM-16": {
+      "code": "LM-16",
+      "id": 3317,
+      "en3": 0,
+      "en2": 16,
+      "it3": 0,
+      "it2": 13,
+      "sampleEn": [
+        "Banca e finanza",
+        "Computational Finance ",
+        "Economics and Finance"
+      ]
+    },
+    "LM-17": {
+      "code": "LM-17",
+      "id": 3318,
+      "en3": 0,
+      "en2": 30,
+      "it3": 0,
+      "it2": 21,
+      "sampleEn": [
+        "Advanced Methods in Particle Physics",
+        "Astrophysics and cosmology",
+        "Atmospheric Science and Technology for Meteorology and Climate"
+      ]
+    },
+    "LM-18": {
+      "code": "LM-18",
+      "id": 3019,
+      "en3": 0,
+      "en2": 28,
+      "it3": 0,
+      "it2": 19,
+      "sampleEn": [
+        "Artificial Intelligence",
+        "Artificial intelligence",
+        "Artificial Intelligence"
+      ]
+    },
+    "LM-19": {
+      "code": "LM-19",
+      "id": 3320,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 18,
+      "sampleEn": [
+        "Comunicazione per l'impresa, i media e le organizzazioni complesse"
+      ]
+    },
+    "LM-2": {
+      "code": "LM-2",
+      "id": 3303,
+      "en3": 0,
+      "en2": 6,
+      "it3": 0,
+      "it2": 35,
+      "sampleEn": [
+        "Archeologia",
+        "Classical Archaeology",
+        "Cultural Heritage in the Near and Middle East, and in Africa"
+      ]
+    },
+    "LM-20": {
+      "code": "LM-20",
+      "id": 3321,
+      "en3": 0,
+      "en2": 11,
+      "it3": 0,
+      "it2": 8,
+      "sampleEn": [
+        "Aeronautical Engineering",
+        "AEROSPACE ENGINEERING",
+        "Aerospace Engineering"
+      ]
+    },
+    "LM-21": {
+      "code": "LM-21",
+      "id": 3322,
+      "en3": 0,
+      "en2": 14,
+      "it3": 0,
+      "it2": 20,
+      "sampleEn": [
+        "Bioengineering",
+        "Bioengineering for Personalized Medicine",
+        "Bioingegneria"
+      ]
+    },
+    "LM-22": {
+      "code": "LM-22",
+      "id": 3323,
+      "en3": 0,
+      "en2": 14,
+      "it3": 0,
+      "it2": 13,
+      "sampleEn": [
+        "Chemical and Process Engineering",
+        "Chemical Engineering - Ingegneria Chimica",
+        "Chemical engineering for industrial sustainability (Ingegneria chimica per la sostenibilita' industriale)"
+      ]
+    },
+    "LM-23": {
+      "code": "LM-23",
+      "id": 3324,
+      "en3": 0,
+      "en2": 27,
+      "it3": 0,
+      "it2": 45,
+      "sampleEn": [
+        "Civil and Environmental Engineering",
+        "Civil Engineering",
+        "CIVIL ENGINEERING"
+      ]
+    },
+    "LM-24": {
+      "code": "LM-24",
+      "id": 3025,
+      "en3": 0,
+      "en2": 8,
+      "it3": 0,
+      "it2": 12,
+      "sampleEn": [
+        "Architectural Engineering",
+        "Building Engineering",
+        "Building Engineering"
+      ]
+    },
+    "LM-25": {
+      "code": "LM-25",
+      "id": 3026,
+      "en3": 0,
+      "en2": 16,
+      "it3": 0,
+      "it2": 7,
+      "sampleEn": [
+        "Automation and Control Engineering ",
+        "Automation and Robotics Engineering",
+        "Automation and Systems Engineering"
+      ]
+    },
+    "LM-26": {
+      "code": "LM-26",
+      "id": 3327,
+      "en3": 0,
+      "en2": 10,
+      "it3": 0,
+      "it2": 7,
+      "sampleEn": [
+        "Agricultural Engineering",
+        "Construction Management and Safety ",
+        "Engineering for Natural Risk Management "
+      ]
+    },
+    "LM-27": {
+      "code": "LM-27",
+      "id": 3028,
+      "en3": 0,
+      "en2": 18,
+      "it3": 0,
+      "it2": 6,
+      "sampleEn": [
+        "Communication  Engineering",
+        "Communications Engineering",
+        "COMMUNICATIONS ENGINEERING"
+      ]
+    },
+    "LM-28": {
+      "code": "LM-28",
+      "id": 3029,
+      "en3": 0,
+      "en2": 12,
+      "it3": 0,
+      "it2": 11,
+      "sampleEn": [
+        "Electric vehicle engineering",
+        "Electrical Engineering",
+        "Electrical Engineering"
+      ]
+    },
+    "LM-29": {
+      "code": "LM-29",
+      "id": 3030,
+      "en3": 0,
+      "en2": 22,
+      "it3": 0,
+      "it2": 23,
+      "sampleEn": [
+        "Electronic Engineering",
+        "Electronic Engineering",
+        "Electronic Engineering"
+      ]
+    },
+    "LM-3": {
+      "code": "LM-3",
+      "id": 3304,
+      "en3": 0,
+      "en2": 2,
+      "it3": 0,
+      "it2": 5,
+      "sampleEn": [
+        "Architettura del paesaggio ",
+        "Landscape Architecture - Land Landscape Heritage"
+      ]
+    },
+    "LM-30": {
+      "code": "LM-30",
+      "id": 3331,
+      "en3": 0,
+      "en2": 15,
+      "it3": 0,
+      "it2": 14,
+      "sampleEn": [
+        "Energy Engineering",
+        "Energy Engineering",
+        "Energy Engineering"
+      ]
+    },
+    "LM-31": {
+      "code": "LM-31",
+      "id": 3032,
+      "en3": 0,
+      "en2": 19,
+      "it3": 0,
+      "it2": 30,
+      "sampleEn": [
+        "Engineering management",
+        "Engineering Management",
+        "Industrial Engineering for Sustainable Manufacturing"
+      ]
+    },
+    "LM-32": {
+      "code": "LM-32",
+      "id": 3033,
+      "en3": 0,
+      "en2": 29,
+      "it3": 0,
+      "it2": 33,
+      "sampleEn": [
+        "Artificial Intelligence",
+        "Artificial Intelligence and Automation Engineering",
+        "ARTIFICIAL INTELLIGENCE AND DATA ENGINEERING "
+      ]
+    },
+    "LM-33": {
+      "code": "LM-33",
+      "id": 3034,
+      "en3": 0,
+      "en2": 29,
+      "it3": 0,
+      "it2": 45,
+      "sampleEn": [
+        "Advanced Automotive Engineering",
+        "Automotive Engineering",
+        "Autonomous Vehicle Engineering"
+      ]
+    },
+    "LM-34": {
+      "code": "LM-34",
+      "id": 3035,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 4,
+      "sampleEn": [
+        "Yacht Design"
+      ]
+    },
+    "LM-35": {
+      "code": "LM-35",
+      "id": 3336,
+      "en3": 0,
+      "en2": 21,
+      "it3": 0,
+      "it2": 24,
+      "sampleEn": [
+        "Civil and Environmental Engineering - Ingegneria Civile e Ambientale",
+        "Environmental engineering",
+        "Environmental Engineering"
+      ]
+    },
+    "LM-37": {
+      "code": "LM-37",
+      "id": 3338,
+      "en3": 0,
+      "en2": 10,
+      "it3": 0,
+      "it2": 41,
+      "sampleEn": [
+        "ENGLISH AND AMERICAN STUDIES",
+        "English and Anglo-American Studies",
+        "INTERCULTURAL STUDIES IN LANGUAGES AND LITERATURES"
+      ]
+    },
+    "LM-38": {
+      "code": "LM-38",
+      "id": 3339,
+      "en3": 0,
+      "en2": 10,
+      "it3": 0,
+      "it2": 30,
+      "sampleEn": [
+        "European Languages, Cultures and Societies in Contact",
+        "Language and Management to China",
+        "LANGUAGE, SOCIETY AND COMMUNICATION"
+      ]
+    },
+    "LM-39": {
+      "code": "LM-39",
+      "id": 3040,
+      "en3": 0,
+      "en2": 4,
+      "it3": 0,
+      "it2": 13,
+      "sampleEn": [
+        "Language and mind: Linguistics and cognitive studies - Mente e linguaggio: linguistica e studi cognitivi",
+        "Language Sciences and Cultural Studies for Special Needs",
+        "Linguistic computing "
+      ]
+    },
+    "LM-4": {
+      "code": "LM-4",
+      "id": 3305,
+      "en3": 0,
+      "en2": 16,
+      "it3": 0,
+      "it2": 21,
+      "sampleEn": [
+        "Architectural composition",
+        "Architectural Design and History",
+        "Architecture"
+      ]
+    },
+    "LM-40": {
+      "code": "LM-40",
+      "id": 3341,
+      "en3": 0,
+      "en2": 13,
+      "it3": 0,
+      "it2": 28,
+      "sampleEn": [
+        "Applied Mathematics",
+        "MATEMATICA",
+        "Matematica"
+      ]
+    },
+    "LM-41": {
+      "code": "LM-41",
+      "id": 3342,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "LM-42": {
+      "code": "LM-42",
+      "id": 3343,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "LM-43": {
+      "code": "LM-43",
+      "id": 3344,
+      "en3": 0,
+      "en2": 5,
+      "it3": 0,
+      "it2": 11,
+      "sampleEn": [
+        "Digital and Public Humanities",
+        "Digital Heritage",
+        "Digital humanities and digital knowledge "
+      ]
+    },
+    "LM-44": {
+      "code": "LM-44",
+      "id": 3345,
+      "en3": 0,
+      "en2": 11,
+      "it3": 0,
+      "it2": 3,
+      "sampleEn": [
+        "Engineering Physics",
+        "Engineering Physics",
+        "Ingegneria computazionale e modellistica per materiali, strutture e tecnologie sostenibili"
+      ]
+    },
+    "LM-45": {
+      "code": "LM-45",
+      "id": 3346,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 7,
+      "sampleEn": []
+    },
+    "LM-46": {
+      "code": "LM-46",
+      "id": 3347,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": []
+    },
+    "LM-47": {
+      "code": "LM-47",
+      "id": 3348,
+      "en3": 0,
+      "en2": 2,
+      "it3": 0,
+      "it2": 10,
+      "sampleEn": [
+        "Sport Management",
+        "Sustainable Sport Management"
+      ]
+    },
+    "LM-48": {
+      "code": "LM-48",
+      "id": 3349,
+      "en3": 0,
+      "en2": 5,
+      "it3": 0,
+      "it2": 6,
+      "sampleEn": [
+        "Pianificazione e progettazione per la sostenibilità urbana e territoriale",
+        "Pianificazione urbanistica e territoriale",
+        "Spatial Planning"
+      ]
+    },
+    "LM-49": {
+      "code": "LM-49",
+      "id": 3350,
+      "en3": 0,
+      "en2": 10,
+      "it3": 0,
+      "it2": 14,
+      "sampleEn": [
+        "Cultural Heritage and Creativity for tourism and territorial development",
+        "Design of sustainable tourism systems – Progettazione dei sistemi turistici",
+        "Hospitality and Tourism Management"
+      ]
+    },
+    "LM-5": {
+      "code": "LM-5",
+      "id": 3306,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 10,
+      "sampleEn": [
+        "Archival science and AI"
+      ]
+    },
+    "LM-50": {
+      "code": "LM-50",
+      "id": 3351,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 16,
+      "sampleEn": []
+    },
+    "LM-51": {
+      "code": "LM-51",
+      "id": 3352,
+      "en3": 0,
+      "en2": 18,
+      "it3": 0,
+      "it2": 89,
+      "sampleEn": [
+        "Applied Child and Adolescent Psychology",
+        "Applied Dynamic and Clinical Psychology",
+        "Applied experimental psychological sciences "
+      ]
+    },
+    "LM-52": {
+      "code": "LM-52",
+      "id": 3353,
+      "en3": 0,
+      "en2": 29,
+      "it3": 0,
+      "it2": 31,
+      "sampleEn": [
+        "Diplomazia e Cooperazione internazionale",
+        "East European and Eurasian Studies",
+        "EUROPEAN AND INTERNATIONAL STUDIES - STUDI EUROPEI E INTERNAZIONALI"
+      ]
+    },
+    "LM-53.": {
+      "code": "LM-53.",
+      "id": 3137,
+      "en3": 0,
+      "en2": 8,
+      "it3": 0,
+      "it2": 5,
+      "sampleEn": [
+        "INGEGNERIA DEI MATERIALI E DEI PROCESSI SOSTENIBILI",
+        "INGEGNERIA DEI MATERIALI E NANOTECNOLOGIE",
+        "Ingegneria dei materiali per l'Industria 4.0"
+      ]
+    },
+    "LM-54": {
+      "code": "LM-54",
+      "id": 3355,
+      "en3": 0,
+      "en2": 14,
+      "it3": 0,
+      "it2": 34,
+      "sampleEn": [
+        "Advanced Chemical Sciences & Technologies",
+        "Advanced Cosmetic Sciences",
+        "Advanced Molecular Sciences for Health Products"
+      ]
+    },
+    "LM-55": {
+      "code": "LM-55",
+      "id": 3356,
+      "en3": 0,
+      "en2": 11,
+      "it3": 0,
+      "it2": 4,
+      "sampleEn": [
+        "Cognitive Forensic Sciences",
+        "Cognitive Science - Scienze Cognitive",
+        "Cognitive science and theory of communication"
+      ]
+    },
+    "LM-56": {
+      "code": "LM-56",
+      "id": 3357,
+      "en3": 0,
+      "en2": 57,
+      "it3": 0,
+      "it2": 49,
+      "sampleEn": [
+        "Applied Economics ",
+        "Applied Economics and Markets",
+        "Economia"
+      ]
+    },
+    "LM-59": {
+      "code": "LM-59",
+      "id": 3360,
+      "en3": 0,
+      "en2": 7,
+      "it3": 0,
+      "it2": 23,
+      "sampleEn": [
+        "AI for Marketing and Communication",
+        "Comunicazione Digitale",
+        "Comunicazione pubblica e d'impresa"
+      ]
+    },
+    "LM-6": {
+      "code": "LM-6",
+      "id": 3307,
+      "en3": 0,
+      "en2": 37,
+      "it3": 0,
+      "it2": 69,
+      "sampleEn": [
+        "Biodiversity, Conservation and Environmental Quality",
+        "Biologia ",
+        "BIOLOGIA"
+      ]
+    },
+    "LM-60": {
+      "code": "LM-60",
+      "id": 3361,
+      "en3": 0,
+      "en2": 4,
+      "it3": 0,
+      "it2": 18,
+      "sampleEn": [
+        "Conservazione e Gestione della Natura e dell'Ambiente",
+        "Environmental Sustainability and Education",
+        "Scienze e Didattica dei Sistemi Naturali"
+      ]
+    },
+    "LM-61": {
+      "code": "LM-61",
+      "id": 3362,
+      "en3": 0,
+      "en2": 5,
+      "it3": 0,
+      "it2": 23,
+      "sampleEn": [
+        "Food and Health",
+        "Food, nutrition and health",
+        "Scienza della Nutrizione"
+      ]
+    },
+    "LM-62": {
+      "code": "LM-62",
+      "id": 3363,
+      "en3": 0,
+      "en2": 11,
+      "it3": 0,
+      "it2": 26,
+      "sampleEn": [
+        "Computational Social and Political Science",
+        "Global affairs: geopolitics and sustainability ",
+        "Global Politics and Euro-Mediterranean Relations"
+      ]
+    },
+    "LM-63": {
+      "code": "LM-63",
+      "id": 3364,
+      "en3": 0,
+      "en2": 3,
+      "it3": 0,
+      "it2": 30,
+      "sampleEn": [
+        "POLITICA, AMMINISTRAZIONE E ORGANIZZAZIONE",
+        "POLITICHE PUBBLICHE E GOVERNANCE INNOVATIVA ",
+        "Scienze delle amministrazioni e delle organizzazioni complesse"
+      ]
+    },
+    "LM-64": {
+      "code": "LM-64",
+      "id": 3065,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 6,
+      "sampleEn": [
+        "Buddhism and Asian Religions"
+      ]
+    },
+    "LM-65": {
+      "code": "LM-65",
+      "id": 3366,
+      "en3": 0,
+      "en2": 4,
+      "it3": 0,
+      "it2": 21,
+      "sampleEn": [
+        "Critical Creative Practices",
+        "Fashion Studies",
+        "Fashion theory and practices "
+      ]
+    },
+    "LM-66": {
+      "code": "LM-66",
+      "id": 3367,
+      "en3": 0,
+      "en2": 5,
+      "it3": 0,
+      "it2": 5,
+      "sampleEn": [
+        "CYBERSECURITY",
+        "Cybersecurity",
+        "Cybersecurity"
+      ]
+    },
+    "LM-67": {
+      "code": "LM-67",
+      "id": 3368,
+      "en3": 0,
+      "en2": 1,
+      "it3": 0,
+      "it2": 38,
+      "sampleEn": [
+        "Health and Physical Activity"
+      ]
+    },
+    "LM-68": {
+      "code": "LM-68",
+      "id": 3369,
+      "en3": 0,
+      "en2": 2,
+      "it3": 0,
+      "it2": 15,
+      "sampleEn": [
+        "Scienze, Tecniche e Management dello Sport e delle Organizzazioni Sportive",
+        "Sport and Health Promotion"
+      ]
+    },
+    "LM-69": {
+      "code": "LM-69",
+      "id": 3370,
+      "en3": 0,
+      "en2": 17,
+      "it3": 0,
+      "it2": 28,
+      "sampleEn": [
+        "Agri-food sustainability",
+        "Agricultural and food economics",
+        "Agricultural science and technology "
+      ]
+    },
+    "LM-7": {
+      "code": "LM-7",
+      "id": 3308,
+      "en3": 0,
+      "en2": 4,
+      "it3": 0,
+      "it2": 12,
+      "sampleEn": [
+        "AGRICULTURAL AND ENVIRONMENTAL BIOTECHNOLOGY",
+        "Biotechnology for the bioeconomy ",
+        "Biotecnologie per la Gestione Ambientale e l'Agricoltura Sostenibile"
+      ]
+    },
+    "LM-70": {
+      "code": "LM-70",
+      "id": 3371,
+      "en3": 0,
+      "en2": 12,
+      "it3": 0,
+      "it2": 22,
+      "sampleEn": [
+        "Food and Beverage Innovation and Management",
+        "Food processing: innovation and tradition",
+        "Food Safety and Food Risk Management"
+      ]
+    },
+    "LM-71": {
+      "code": "LM-71",
+      "id": 3372,
+      "en3": 0,
+      "en2": 8,
+      "it3": 0,
+      "it2": 11,
+      "sampleEn": [
+        "Advanced spectroscopy in chemistry",
+        "Chemical Nano-Engineering",
+        "Cosmetic Industrial Science "
+      ]
+    },
+    "LM-73": {
+      "code": "LM-73",
+      "id": 3374,
+      "en3": 0,
+      "en2": 6,
+      "it3": 0,
+      "it2": 13,
+      "sampleEn": [
+        "Forest Sciences",
+        "Forestry and Environmental Sciences",
+        "Gestione sostenibile dell'ambiente montano"
+      ]
+    },
+    "LM-74": {
+      "code": "LM-74",
+      "id": 3375,
+      "en3": 0,
+      "en2": 12,
+      "it3": 0,
+      "it2": 28,
+      "sampleEn": [
+        "Geoenvironmental Resources and Risks",
+        "Geologia per lo Sviluppo Sostenibile",
+        "Geology for Energy Resources"
+      ]
+    },
+    "LM-75": {
+      "code": "LM-75",
+      "id": 3376,
+      "en3": 0,
+      "en2": 9,
+      "it3": 0,
+      "it2": 18,
+      "sampleEn": [
+        "Environmental Change and Global Sustainability ",
+        "Environmental Conservation, Restoration and Sustainability ",
+        "ENVIRONMENTAL HAZARD AND DISASTER RISK MANAGEMENT"
+      ]
+    },
+    "LM-76": {
+      "code": "LM-76",
+      "id": 3377,
+      "en3": 0,
+      "en2": 9,
+      "it3": 0,
+      "it2": 8,
+      "sampleEn": [
+        "CIRCULAR ECONOMY",
+        "Economia e gestione delle arti e delle attività culturali",
+        "ECONOMICS AND MANAGEMENT OF CULTURAL RESOURCES AND TERRITORIES"
+      ]
+    },
+    "LM-77": {
+      "code": "LM-77",
+      "id": 3378,
+      "en3": 0,
+      "en2": 89,
+      "it3": 0,
+      "it2": 143,
+      "sampleEn": [
+        "Accounting and Financial Management",
+        "Accounting e Finanza",
+        "Accounting, Finance and Business Consulting "
+      ]
+    },
+    "LM-79": {
+      "code": "LM-79",
+      "id": 3380,
+      "en3": 0,
+      "en2": 5,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": [
+        "EXPLORATION AND APPLIED GEOPHYSICS",
+        "Geophysical Sciences for Seismic Risk",
+        "Geophysics"
+      ]
+    },
+    "LM-8": {
+      "code": "LM-8",
+      "id": 3309,
+      "en3": 0,
+      "en2": 11,
+      "it3": 0,
+      "it2": 18,
+      "sampleEn": [
+        "Bioinformatics for Computational Genomics",
+        "Biotechnological and Chemical Sciences in Diagnostics",
+        "Biotechnology for Industry and Health"
+      ]
+    },
+    "LM-85": {
+      "code": "LM-85",
+      "id": 3386,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 35,
+      "sampleEn": []
+    },
+    "LM-9": {
+      "code": "LM-9",
+      "id": 3310,
+      "en3": 0,
+      "en2": 36,
+      "it3": 0,
+      "it2": 35,
+      "sampleEn": [
+        "Advanced Biotechnology",
+        "Biochemistry",
+        "Biomedical Omics"
+      ]
+    },
+    "LM-91": {
+      "code": "LM-91",
+      "id": 3392,
+      "en3": 0,
+      "en2": 7,
+      "it3": 0,
+      "it2": 5,
+      "sampleEn": [
+        "Artificial intelligence for banking and finance",
+        "ARTIFICIAL INTELLIGENCE FOR BIOMEDICINE AND HEALTHCARE",
+        "ARTIFICIAL INTELLIGENCE FOR SCIENCE AND TECHNOLOGY"
+      ]
+    },
+    "LMR/02": {
+      "code": "LMR/02",
+      "id": 3124,
+      "en3": 0,
+      "en2": 0,
+      "it3": 0,
+      "it2": 0,
+      "sampleEn": []
+    }
+  }
+}

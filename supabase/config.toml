@@ -1,0 +1,22 @@
+# Supabase local config placeholder.
+# When Docker is available, run: npx supabase init && npx supabase start
+# Then point DATABASE_URL to the local Postgres connection string
+# and set NEXT_PUBLIC_SUPABASE_URL / keys in .env
+
+[project]
+id = "immigrome-os"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true

@@ -1,0 +1,10 @@
+{
+  "accessMode": "OPEN",
+  "languageLevel": "C1",
+  "deadlines": [
+    "2027-06-30"
+  ],
+  "tuitionMin": 0,
+  "tuitionMax": 2500,
+  "quality": "OK"
+}

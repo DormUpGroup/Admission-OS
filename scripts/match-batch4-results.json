@@ -1,0 +1,2884 @@
+{
+  "at": "2026-08-28T14:43:16.228Z",
+  "engine": "v1.8",
+  "overallPrecisionTop5": 87,
+  "avgSingleSphere": 72,
+  "avgMultiSphere": 93,
+  "precisionSummary": [
+    {
+      "email": "match-test-p@student.local",
+      "sphere": "Architecture",
+      "mixType": "single",
+      "directions": [
+        "Архитектура и строительная инженерия-архитектура"
+      ],
+      "avgTop5": 63,
+      "exactInTop5": 1,
+      "secondaryInTop5": 3,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Architecture Sciences for Heritage",
+          "university": "Politecnico di BARI",
+          "kind": "exact_classe",
+          "degreeClass": "L-17",
+          "score": 100
+        },
+        {
+          "program": "Sustainable Building Engineering",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "secondary_classe",
+          "degreeClass": "L-23",
+          "score": 50
+        },
+        {
+          "program": "Building Construction Engineering",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-23",
+          "score": 50
+        },
+        {
+          "program": "Heritage Innovation Engineering",
+          "university": "Università degli Studi di MESSINA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-23",
+          "score": 50
+        }
+      ]
+    },
+    {
+      "email": "match-test-q@student.local",
+      "sphere": "Economics + Finance",
+      "mixType": "multi",
+      "directions": [
+        "Экономические науки",
+        "Финансы"
+      ],
+      "avgTop5": 100,
+      "exactInTop5": 5,
+      "secondaryInTop5": 0,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Business (World Bachelor in Business)",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-18",
+          "score": 100
+        },
+        {
+          "program": "Business Administration & Economics",
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-18",
+          "score": 100
+        },
+        {
+          "program": "Economic and Social Sciences",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "Economics of Tourism and Cities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "International Economics and Management",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-18",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "email": "match-test-r@student.local",
+      "sphere": "CompEng + IT Security",
+      "mixType": "multi",
+      "directions": [
+        "Компьютерная инженерия",
+        "IT безопасность"
+      ],
+      "avgTop5": 90,
+      "exactInTop5": 4,
+      "secondaryInTop5": 1,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Artificial intelligence",
+          "university": "Università degli Studi di PAVIA",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Computer Engineering",
+          "university": "Università degli Studi di GENOVA",
+          "kind": "exact_classe",
+          "degreeClass": "L-8",
+          "score": 100
+        },
+        {
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Computer Engineering",
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "kind": "exact_classe",
+          "degreeClass": "L-8",
+          "score": 100
+        },
+        {
+          "program": "Electronic and Communications Engineering",
+          "university": "Politecnico di TORINO",
+          "kind": "secondary_classe",
+          "degreeClass": "L-8",
+          "score": 50
+        }
+      ]
+    },
+    {
+      "email": "match-test-s@student.local",
+      "sphere": "International Relations",
+      "mixType": "single",
+      "directions": [
+        "Международные отношения"
+      ],
+      "avgTop5": 90,
+      "exactInTop5": 4,
+      "secondaryInTop5": 1,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "European Studies",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-36",
+          "score": 100
+        },
+        {
+          "program": "International Politics and Government",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-36",
+          "score": 100
+        },
+        {
+          "program": "International Politics, Law and Economics",
+          "university": "Università degli Studi di MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-36",
+          "score": 100
+        },
+        {
+          "program": "POLITICS: PHILOSOPHY AND ECONOMICS",
+          "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+          "kind": "exact_classe",
+          "degreeClass": "L-36",
+          "score": 100
+        },
+        {
+          "program": "Global Governance",
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "kind": "secondary_classe",
+          "degreeClass": "L-16",
+          "score": 50
+        }
+      ]
+    },
+    {
+      "email": "match-test-t@student.local",
+      "sphere": "Psychology + Cognitive",
+      "mixType": "multi",
+      "directions": [
+        "Психология",
+        "Когнитивные науки"
+      ],
+      "avgTop5": 70,
+      "exactInTop5": 2,
+      "secondaryInTop5": 3,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Psychological Science",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "exact_classe",
+          "degreeClass": "L-24",
+          "score": 100
+        },
+        {
+          "program": "Techniques and methods in psychological science",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "exact_classe",
+          "degreeClass": "L-24",
+          "score": 100
+        },
+        {
+          "program": "Biology of Human and Environmental Health",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-13",
+          "score": 50
+        },
+        {
+          "program": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "kind": "secondary_classe",
+          "degreeClass": "L-13",
+          "score": 50
+        },
+        {
+          "program": "Marine Biology and Blue Biotechnologies",
+          "university": "Università degli Studi di MESSINA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-13",
+          "score": 50
+        }
+      ]
+    },
+    {
+      "email": "match-test-u@student.local",
+      "sphere": "Mathematics",
+      "mixType": "single",
+      "directions": [
+        "Математика"
+      ],
+      "avgTop5": 63,
+      "exactInTop5": 1,
+      "secondaryInTop5": 1,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-35",
+          "score": 100
+        },
+        {
+          "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-30",
+          "score": 25
+        }
+      ]
+    },
+    {
+      "email": "match-test-v@student.local",
+      "sphere": "Biology + Biotech",
+      "mixType": "multi",
+      "directions": [
+        "Биология",
+        "Промышленные биотехнологии"
+      ],
+      "avgTop5": 90,
+      "exactInTop5": 4,
+      "secondaryInTop5": 1,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Biosciences and Biotechnology",
+          "university": "Università degli Studi di CAMERINO",
+          "kind": "exact_classe",
+          "degreeClass": "L-2",
+          "score": 100
+        },
+        {
+          "program": "Biotech Engineering For Health",
+          "university": "Università degli Studi di SIENA",
+          "kind": "exact_classe",
+          "degreeClass": "L-2",
+          "score": 100
+        },
+        {
+          "program": "Bioinformatics",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-2",
+          "score": 100
+        },
+        {
+          "program": "Biotechnology",
+          "university": "Università degli Studi di TERAMO",
+          "kind": "exact_classe",
+          "degreeClass": "L-2",
+          "score": 100
+        },
+        {
+          "program": "Biology for One-health",
+          "university": "Università degli Studi di Napoli Federico II",
+          "kind": "secondary_classe",
+          "degreeClass": "L-13",
+          "score": 50
+        }
+      ]
+    },
+    {
+      "email": "match-test-w@student.local",
+      "sphere": "Civil Engineering (Master)",
+      "mixType": "multi",
+      "directions": [
+        "Гражданское строительство",
+        "Инженерия строительных систем"
+      ],
+      "avgTop5": 100,
+      "exactInTop5": 5,
+      "secondaryInTop5": 0,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Architectural Engineering",
+          "university": "Politecnico di MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "LM-24",
+          "score": 100
+        },
+        {
+          "program": "Management of Built Environment",
+          "university": "Politecnico di MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "LM-24",
+          "score": 100
+        },
+        {
+          "program": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+          "university": "Università degli Studi di PAVIA",
+          "kind": "exact_classe",
+          "degreeClass": "LM-23",
+          "score": 100
+        },
+        {
+          "program": "Civil Engineering",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "LM-23",
+          "score": 100
+        },
+        {
+          "program": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+          "university": "Università della CALABRIA",
+          "kind": "exact_classe",
+          "degreeClass": "LM-23",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "email": "match-test-x@student.local",
+      "sphere": "Philology + Linguistics (IT)",
+      "mixType": "multi",
+      "directions": [
+        "Современная филология",
+        "Лингвистика"
+      ],
+      "avgTop5": 100,
+      "exactInTop5": 5,
+      "secondaryInTop5": 0,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "LANGUAGE AND LITERATURE STUDIES",
+          "university": "Università degli Studi di FIRENZE",
+          "kind": "exact_classe",
+          "degreeClass": "L-10",
+          "score": 100
+        },
+        {
+          "program": "Humanities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-10",
+          "score": 100
+        },
+        {
+          "program": "FOREIGN LANGUAGES AND LITERATURE",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-11",
+          "score": 100
+        },
+        {
+          "program": "Modern Languages and Literatures",
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-11",
+          "score": 100
+        },
+        {
+          "program": "Humanities",
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-10",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "email": "match-test-y@student.local",
+      "sphere": "Economics + CS (stress mix)",
+      "mixType": "multi",
+      "directions": [
+        "Экономические науки",
+        "Компьютерные технологии"
+      ],
+      "avgTop5": 100,
+      "exactInTop5": 5,
+      "secondaryInTop5": 0,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Economic and Social Sciences",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "ECONOMICS AND FINANCE WITH DATA SCIENCE",
+          "university": "Università degli Studi di TORINO",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "Artificial intelligence",
+          "university": "Università degli Studi di PAVIA",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Economics of Tourism and Cities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "email": "match-test-p@student.local",
+      "name": "Pavel Arch",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Архитектура и строительная инженерия-архитектура"
+        ],
+        "cities": [
+          "Milano",
+          "Roma",
+          "Firenze"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Архитектура и строительная инженерия-архитектура",
+            "bachelor": [
+              "L-17",
+              "L-23"
+            ],
+            "master": [
+              "LM-4"
+            ],
+            "singleCycle": [
+              "LM-4"
+            ]
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Архитектура и строительная инженерия-архитектура",
+          "Engineering",
+          "Architecture"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 8,
+        "rawCount": 8,
+        "afterSoftGate": 8,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": true,
+        "coverageDeferred": []
+      },
+      "matchCount": 4,
+      "eligibility": {
+        "NEEDS_REVIEW": 4
+      },
+      "needsReviewCount": 4,
+      "preferredCityShareTop20": 25,
+      "precision": {
+        "avgTop5": 63,
+        "exactInTop5": 1,
+        "secondaryInTop5": 3,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Architecture Sciences for Heritage",
+            "university": "Politecnico di BARI",
+            "kind": "exact_classe",
+            "degreeClass": "L-17",
+            "score": 100
+          },
+          {
+            "program": "Sustainable Building Engineering",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "secondary_classe",
+            "degreeClass": "L-23",
+            "score": 50
+          },
+          {
+            "program": "Building Construction Engineering",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-23",
+            "score": 50
+          },
+          {
+            "program": "Heritage Innovation Engineering",
+            "university": "Università degli Studi di MESSINA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-23",
+            "score": 50
+          }
+        ]
+      },
+      "fill": {
+        "n": 4,
+        "call": 1,
+        "access": 2,
+        "tuition": 1,
+        "seats": 1,
+        "exams": 1
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Politecnico di BARI",
+          "program": "Architecture Sciences for Heritage",
+          "city": "Bari",
+          "year": "2026/2027",
+          "degreeClass": "L-17",
+          "whyIncluded": "Точный класс MIUR L-17",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Sustainable Building Engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-23",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-23",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Building Construction Engineering",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-23",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-23",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Heritage Innovation Engineering",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-23",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-23",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-q@student.local",
+      "name": "Qira EconFin",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Экономические науки",
+          "Финансы"
+        ],
+        "cities": [
+          "Bologna",
+          "Milano",
+          "Roma"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Экономические науки",
+            "bachelor": [
+              "L-33",
+              "L-18"
+            ],
+            "master": [
+              "LM-56",
+              "LM-77"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Финансы",
+            "bachelor": [
+              "L-18",
+              "L-33"
+            ],
+            "master": [
+              "LM-16",
+              "LM-56",
+              "LM-77"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Экономические науки",
+          "Финансы",
+          "Economics",
+          "Finance"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 73,
+        "rawCount": 73,
+        "afterSoftGate": 73,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "thinPoolRetry": false,
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 55,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 5,
+        "secondaryInTop5": 0,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Business (World Bachelor in Business)",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-18",
+            "score": 100
+          },
+          {
+            "program": "Business Administration & Economics",
+            "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-18",
+            "score": 100
+          },
+          {
+            "program": "Economic and Social Sciences",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "Economics of Tourism and Cities",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "International Economics and Management",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-18",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 20,
+        "call": 17,
+        "access": 13,
+        "tuition": 11,
+        "seats": 1,
+        "exams": 8
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Business (World Bachelor in Business)",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Business Administration & Economics",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Economic and Social Sciences",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics of Tourism and Cities",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "International Economics and Management",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Management and Economics",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Economics, Management and Computer Science",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics, Politics and Social Sciences",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di MILANO",
+          "program": "Economics: Behavior, Data and Policy",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "International Economics and Finance",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di BRESCIA",
+          "program": "Business and Economics",
+          "city": "Brescia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Economics with data science",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di TORINO",
+          "program": "BUSINESS & MANAGEMENT",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Business Administration and Management",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Cattolica del Sacro Cuore",
+          "program": "Business and finance",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "LUM \"Giuseppe Degennaro\"",
+          "program": "Business Economics and Organization",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Digital Management",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Точный класс MIUR L-18",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Politecnica delle MARCHE",
+          "program": "Digital Economics and Business",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Economics and Business",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-r@student.local",
+      "name": "Rustam CompSec",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Компьютерная инженерия",
+          "IT безопасность"
+        ],
+        "cities": [
+          "Torino",
+          "Milano",
+          "Bologna"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Компьютерная инженерия",
+            "bachelor": [
+              "L-8",
+              "L-31"
+            ],
+            "master": [
+              "LM-32",
+              "LM-18"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "IT безопасность",
+            "bachelor": [
+              "L-31",
+              "L-8"
+            ],
+            "master": [
+              "LM-66",
+              "LM-18"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Компьютерная инженерия",
+          "IT безопасность",
+          "Computer Science",
+          "Engineering"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 25,
+        "rawCount": 25,
+        "afterSoftGate": 25,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "thinPoolRetry": false,
+        "coverageDeferred": []
+      },
+      "matchCount": 10,
+      "eligibility": {
+        "NEEDS_REVIEW": 10
+      },
+      "needsReviewCount": 10,
+      "preferredCityShareTop20": 10,
+      "precision": {
+        "avgTop5": 90,
+        "exactInTop5": 4,
+        "secondaryInTop5": 1,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Artificial intelligence",
+            "university": "Università degli Studi di PAVIA",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Computer Engineering",
+            "university": "Università degli Studi di GENOVA",
+            "kind": "exact_classe",
+            "degreeClass": "L-8",
+            "score": 100
+          },
+          {
+            "program": "Applied Computer Science and Artificial Intelligence",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Computer Engineering",
+            "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+            "kind": "exact_classe",
+            "degreeClass": "L-8",
+            "score": 100
+          },
+          {
+            "program": "Electronic and Communications Engineering",
+            "university": "Politecnico di TORINO",
+            "kind": "secondary_classe",
+            "degreeClass": "L-8",
+            "score": 50
+          }
+        ]
+      },
+      "fill": {
+        "n": 10,
+        "call": 5,
+        "access": 6,
+        "tuition": 2,
+        "seats": 0,
+        "exams": 4
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 93,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Artificial intelligence",
+          "city": "Pavia",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di GENOVA",
+          "program": "Computer Engineering",
+          "city": "Genova",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Computer Engineering",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Точный класс MIUR L-8",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Politecnico di TORINO",
+          "program": "Electronic and Communications Engineering",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "program": "Biomedical Engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PERUGIA",
+          "program": "Engineering management",
+          "city": "Perugia",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Information Engineering",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Industrial and Information Engineering",
+          "city": "Palermo",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Electrical Engineering and Information Technology",
+          "city": "Napoli",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-s@student.local",
+      "name": "Sara IR",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Международные отношения"
+        ],
+        "cities": [
+          "Roma",
+          "Bologna",
+          "Milano"
+        ],
+        "english": "C1",
+        "miur": [
+          {
+            "direction": "Международные отношения",
+            "bachelor": [
+              "L-36",
+              "L-16"
+            ],
+            "master": [
+              "LM-52",
+              "LM-62"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Международные отношения",
+          "International Relations"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 13,
+        "rawCount": 13,
+        "afterSoftGate": 13,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": true,
+        "coverageDeferred": []
+      },
+      "matchCount": 6,
+      "eligibility": {
+        "NEEDS_REVIEW": 6
+      },
+      "needsReviewCount": 6,
+      "preferredCityShareTop20": 67,
+      "precision": {
+        "avgTop5": 90,
+        "exactInTop5": 4,
+        "secondaryInTop5": 1,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "European Studies",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-36",
+            "score": 100
+          },
+          {
+            "program": "International Politics and Government",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-36",
+            "score": 100
+          },
+          {
+            "program": "International Politics, Law and Economics",
+            "university": "Università degli Studi di MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-36",
+            "score": 100
+          },
+          {
+            "program": "POLITICS: PHILOSOPHY AND ECONOMICS",
+            "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+            "kind": "exact_classe",
+            "degreeClass": "L-36",
+            "score": 100
+          },
+          {
+            "program": "Global Governance",
+            "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+            "kind": "secondary_classe",
+            "degreeClass": "L-16",
+            "score": 50
+          }
+        ]
+      },
+      "fill": {
+        "n": 6,
+        "call": 5,
+        "access": 5,
+        "tuition": 3,
+        "seats": 1,
+        "exams": 3
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "European Studies",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-36",
+          "whyIncluded": "Точный класс MIUR L-36",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "International Politics and Government",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-36",
+          "whyIncluded": "Точный класс MIUR L-36",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di MILANO",
+          "program": "International Politics, Law and Economics",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-36",
+          "whyIncluded": "Точный класс MIUR L-36",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+          "program": "POLITICS: PHILOSOPHY AND ECONOMICS",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-36",
+          "whyIncluded": "Точный класс MIUR L-36",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Global Governance",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-16",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-16",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 79,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Social sciences for global challenges",
+          "city": "Pavia",
+          "year": "2026/2027",
+          "degreeClass": "L-16",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-16",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-t@student.local",
+      "name": "Tamara PsychCog",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Психология",
+          "Когнитивные науки"
+        ],
+        "cities": [
+          "Padova",
+          "Milano",
+          "Bologna"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Психология",
+            "bachelor": [
+              "L-24"
+            ],
+            "master": [
+              "LM-51",
+              "LM-55"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Когнитивные науки",
+            "bachelor": [
+              "L-24",
+              "L-13"
+            ],
+            "master": [
+              "LM-55",
+              "LM-51"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Психология",
+          "Когнитивные науки",
+          "Psychology"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 8,
+        "rawCount": 8,
+        "afterSoftGate": 8,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": true,
+        "coverageDeferred": []
+      },
+      "matchCount": 5,
+      "eligibility": {
+        "NEEDS_REVIEW": 5
+      },
+      "needsReviewCount": 5,
+      "preferredCityShareTop20": 60,
+      "precision": {
+        "avgTop5": 70,
+        "exactInTop5": 2,
+        "secondaryInTop5": 3,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Psychological Science",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "exact_classe",
+            "degreeClass": "L-24",
+            "score": 100
+          },
+          {
+            "program": "Techniques and methods in psychological science",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "exact_classe",
+            "degreeClass": "L-24",
+            "score": 100
+          },
+          {
+            "program": "Biology of Human and Environmental Health",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-13",
+            "score": 50
+          },
+          {
+            "program": "Biology for One-health",
+            "university": "Università degli Studi di Napoli Federico II",
+            "kind": "secondary_classe",
+            "degreeClass": "L-13",
+            "score": 50
+          },
+          {
+            "program": "Marine Biology and Blue Biotechnologies",
+            "university": "Università degli Studi di MESSINA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-13",
+            "score": 50
+          }
+        ]
+      },
+      "fill": {
+        "n": 5,
+        "call": 4,
+        "access": 2,
+        "tuition": 3,
+        "seats": 0,
+        "exams": 2
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Psychological Science",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Techniques and methods in psychological science",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Biology of Human and Environmental Health",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Biology for One-health",
+          "city": "Napoli",
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Marine Biology and Blue Biotechnologies",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-u@student.local",
+      "name": "Ulugbek Math",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Математика"
+        ],
+        "cities": [
+          "Pisa",
+          "Torino",
+          "Milano"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Математика",
+            "bachelor": [
+              "L-35",
+              "L-30"
+            ],
+            "master": [
+              "LM-40",
+              "LM-44"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Математика",
+          "Mathematics"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 5,
+        "rawCount": 5,
+        "afterSoftGate": 5,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": true,
+        "coverageDeferred": []
+      },
+      "matchCount": 2,
+      "eligibility": {
+        "NEEDS_REVIEW": 2
+      },
+      "needsReviewCount": 2,
+      "preferredCityShareTop20": 100,
+      "precision": {
+        "avgTop5": 63,
+        "exactInTop5": 1,
+        "secondaryInTop5": 1,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-35",
+            "score": 100
+          },
+          {
+            "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+            "university": "Università degli Studi di MILANO-BICOCCA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-30",
+            "score": 25
+          }
+        ]
+      },
+      "fill": {
+        "n": 2,
+        "call": 2,
+        "access": 1,
+        "tuition": 1,
+        "seats": 0,
+        "exams": 0
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 96,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-35",
+          "whyIncluded": "Точный класс MIUR L-35",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-30",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-30",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-v@student.local",
+      "name": "Vera BioTech",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Биология",
+          "Промышленные биотехнологии"
+        ],
+        "cities": [
+          "Bologna",
+          "Milano",
+          "Pavia"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Биология",
+            "bachelor": [
+              "L-13",
+              "L-2"
+            ],
+            "master": [
+              "LM-6",
+              "LM-9"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Промышленные биотехнологии",
+            "bachelor": [
+              "L-2",
+              "L-13"
+            ],
+            "master": [
+              "LM-8",
+              "LM-9"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Биология",
+          "Промышленные биотехнологии",
+          "Biology"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 13,
+        "rawCount": 13,
+        "afterSoftGate": 13,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": true,
+        "coverageDeferred": []
+      },
+      "matchCount": 7,
+      "eligibility": {
+        "NEEDS_REVIEW": 7
+      },
+      "needsReviewCount": 7,
+      "preferredCityShareTop20": 0,
+      "precision": {
+        "avgTop5": 90,
+        "exactInTop5": 4,
+        "secondaryInTop5": 1,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Biosciences and Biotechnology",
+            "university": "Università degli Studi di CAMERINO",
+            "kind": "exact_classe",
+            "degreeClass": "L-2",
+            "score": 100
+          },
+          {
+            "program": "Biotech Engineering For Health",
+            "university": "Università degli Studi di SIENA",
+            "kind": "exact_classe",
+            "degreeClass": "L-2",
+            "score": 100
+          },
+          {
+            "program": "Bioinformatics",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-2",
+            "score": 100
+          },
+          {
+            "program": "Biotechnology",
+            "university": "Università degli Studi di TERAMO",
+            "kind": "exact_classe",
+            "degreeClass": "L-2",
+            "score": 100
+          },
+          {
+            "program": "Biology for One-health",
+            "university": "Università degli Studi di Napoli Federico II",
+            "kind": "secondary_classe",
+            "degreeClass": "L-13",
+            "score": 50
+          }
+        ]
+      },
+      "fill": {
+        "n": 7,
+        "call": 4,
+        "access": 5,
+        "tuition": 2,
+        "seats": 0,
+        "exams": 5
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di CAMERINO",
+          "program": "Biosciences and Biotechnology",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di SIENA",
+          "program": "Biotech Engineering For Health",
+          "city": "Siena",
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Bioinformatics",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di TERAMO",
+          "program": "Biotechnology",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-2",
+          "whyIncluded": "Точный класс MIUR L-2",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Biology for One-health",
+          "city": "Napoli",
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Biology of Human and Environmental Health",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 66,
+          "university": "Università degli Studi di MESSINA",
+          "program": "Marine Biology and Blue Biotechnologies",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-13",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-13",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-w@student.local",
+      "name": "Waleed CivilM",
+      "questionnaire": {
+        "level": "Магистратура",
+        "language": "Английский",
+        "directions": [
+          "Гражданское строительство",
+          "Инженерия строительных систем"
+        ],
+        "cities": [
+          "Torino",
+          "Genova",
+          "Milano"
+        ],
+        "english": "C1",
+        "miur": [
+          {
+            "direction": "Гражданское строительство",
+            "bachelor": [
+              "L-7",
+              "L-23"
+            ],
+            "master": [
+              "LM-23",
+              "LM-24"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Инженерия строительных систем",
+            "bachelor": [
+              "L-23",
+              "L-7"
+            ],
+            "master": [
+              "LM-24",
+              "LM-23"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "MASTER",
+        "fields": [
+          "Гражданское строительство",
+          "Инженерия строительных систем",
+          "Engineering"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 35,
+        "rawCount": 35,
+        "afterSoftGate": 35,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "thinPoolRetry": false,
+        "coverageDeferred": []
+      },
+      "matchCount": 14,
+      "eligibility": {
+        "NEEDS_REVIEW": 14
+      },
+      "needsReviewCount": 14,
+      "preferredCityShareTop20": 14,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 5,
+        "secondaryInTop5": 0,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Architectural Engineering",
+            "university": "Politecnico di MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "LM-24",
+            "score": 100
+          },
+          {
+            "program": "Management of Built Environment",
+            "university": "Politecnico di MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "LM-24",
+            "score": 100
+          },
+          {
+            "program": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+            "university": "Università degli Studi di PAVIA",
+            "kind": "exact_classe",
+            "degreeClass": "LM-23",
+            "score": 100
+          },
+          {
+            "program": "Civil Engineering",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "LM-23",
+            "score": 100
+          },
+          {
+            "program": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+            "university": "Università della CALABRIA",
+            "kind": "exact_classe",
+            "degreeClass": "LM-23",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 14,
+        "call": 9,
+        "access": 3,
+        "tuition": 8,
+        "seats": 0,
+        "exams": 0
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Architectural Engineering",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Management of Built Environment",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Civil Engineering for Mitigation of Risk from Natural Hazards",
+          "city": "Pavia",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Civil Engineering",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università della CALABRIA",
+          "program": "CIVIL ENGINEERING FOR INFRASTRUCTURAL REGENERATION",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Intelligent civil infrastructures engineering",
+          "city": "Padova",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università IUAV di VENEZIA",
+          "program": "Sustainable transportation and smart maritime mobility",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "TRANSPORTATION ENGINEERING AND MOBILITY",
+          "city": "Napoli",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Engineering for Historic Building Rehabilitation",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Sustainable and Resilient Pavement Engineering",
+          "city": "Palermo",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi ROMA TRE",
+          "program": "Sustainable coastal and ocean engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Transport Systems Engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Environmental and Sustainable Building Engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "LM-24",
+          "whyIncluded": "Точный класс MIUR LM-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Civil and Environmental Engineering",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "LM-23",
+          "whyIncluded": "Точный класс MIUR LM-23",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-x@student.local",
+      "name": "Xenia Lingua",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Итальянский",
+        "directions": [
+          "Современная филология",
+          "Лингвистика"
+        ],
+        "cities": [
+          "Roma",
+          "Firenze",
+          "Bologna"
+        ],
+        "english": "B1",
+        "miur": [
+          {
+            "direction": "Современная филология",
+            "bachelor": [
+              "L-10",
+              "L-11"
+            ],
+            "master": [
+              "LM-14",
+              "LM-15"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Лингвистика",
+            "bachelor": [
+              "L-11",
+              "L-12"
+            ],
+            "master": [
+              "LM-39",
+              "LM-37"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Современная филология",
+          "Лингвистика",
+          "Languages"
+        ],
+        "langs": [
+          "Italian"
+        ],
+        "missing": [
+          "English certificate / IELTS score",
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 100,
+        "rawCount": 100,
+        "afterSoftGate": 100,
+        "warning": "Results capped across 3 queries (10 pages).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": false,
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 45,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 5,
+        "secondaryInTop5": 0,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "LANGUAGE AND LITERATURE STUDIES",
+            "university": "Università degli Studi di FIRENZE",
+            "kind": "exact_classe",
+            "degreeClass": "L-10",
+            "score": 100
+          },
+          {
+            "program": "Humanities",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-10",
+            "score": 100
+          },
+          {
+            "program": "FOREIGN LANGUAGES AND LITERATURE",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-11",
+            "score": 100
+          },
+          {
+            "program": "Modern Languages and Literatures",
+            "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-11",
+            "score": 100
+          },
+          {
+            "program": "Humanities",
+            "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-10",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 20,
+        "call": 12,
+        "access": 9,
+        "tuition": 2,
+        "seats": 0,
+        "exams": 6
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di FIRENZE",
+          "program": "LANGUAGE AND LITERATURE STUDIES",
+          "city": "Firenze",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Humanities",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "FOREIGN LANGUAGES AND LITERATURE",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Modern Languages and Literatures",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Humanities",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi ROMA TRE",
+          "program": "Humanities",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Communication and Interpretation in Italian Sign Language (LIS and LISt)",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Literature Music Performing Arts",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 92,
+          "university": "Università Telematica San Raffaele Roma",
+          "program": "Foreign Languages and Cultures for the Digital Age",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di FERRARA",
+          "program": "Modern Languages and Literatures",
+          "city": "Ferrara",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università di PISA",
+          "program": "Digital Humanities",
+          "city": "Pisa",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di PARMA",
+          "program": "Humanities",
+          "city": "Parma",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "HUMANITIES",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di PARMA",
+          "program": "Modern Foreign Languages and Civilisations",
+          "city": "Parma",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Modern Languages and Literatures",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "L-11",
+          "whyIncluded": "Точный класс MIUR L-11",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di TORINO",
+          "program": "Modern cultures and literatures",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Telematica \"E-CAMPUS\"",
+          "program": "Letters, Art, Music, Theatre and  Cinema",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "UKE - Università Kore di ENNA",
+          "program": "HUMANITIES",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di SALERNO",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi \"G. d'Annunzio\" CHIETI-PESCARA",
+          "program": "Humanities",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-10",
+          "whyIncluded": "Точный класс MIUR L-10",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-y@student.local",
+      "name": "Yana EconCS",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Экономические науки",
+          "Компьютерные технологии"
+        ],
+        "cities": [
+          "Milano",
+          "Bologna",
+          "Torino"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Экономические науки",
+            "bachelor": [
+              "L-33",
+              "L-18"
+            ],
+            "master": [
+              "LM-56",
+              "LM-77"
+            ],
+            "singleCycle": []
+          },
+          {
+            "direction": "Компьютерные технологии",
+            "bachelor": [
+              "L-31",
+              "L-8"
+            ],
+            "master": [
+              "LM-18",
+              "LM-32"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Экономические науки",
+          "Компьютерные технологии",
+          "Economics",
+          "Computer Science"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 75,
+        "rawCount": 75,
+        "afterSoftGate": 75,
+        "warning": "Results capped across 4 queries (8 pages).",
+        "usedSynonymFallback": false,
+        "thinPoolRetry": false,
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 35,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 5,
+        "secondaryInTop5": 0,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Economic and Social Sciences",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "ECONOMICS AND FINANCE WITH DATA SCIENCE",
+            "university": "Università degli Studi di TORINO",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "Artificial intelligence",
+            "university": "Università degli Studi di PAVIA",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Applied Computer Science and Artificial Intelligence",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Economics of Tourism and Cities",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 20,
+        "call": 14,
+        "access": 13,
+        "tuition": 6,
+        "seats": 2,
+        "exams": 11
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 96,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Economic and Social Sciences",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 96,
+          "university": "Università degli Studi di TORINO",
+          "program": "ECONOMICS AND FINANCE WITH DATA SCIENCE",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 93,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Artificial intelligence",
+          "city": "Pavia",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 96,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics of Tourism and Cities",
+          "city": "Bologna",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 96,
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università Politecnica delle MARCHE",
+          "program": "Digital Economics and Business",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Economics and Business",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+          "program": "ECONOMICS AND BUSINESS",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Economics with data science",
+          "city": "Cassino",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Università degli Studi di TORINO",
+          "program": "BUSINESS & MANAGEMENT",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Business (World Bachelor in Business)",
+          "city": "Milano",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Politecnico di TORINO",
+          "program": "Electronic and Communications Engineering",
+          "city": "Torino",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 81,
+          "university": "Università degli Studi di BRESCIA",
+          "program": "Business and Economics",
+          "city": "Brescia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Business Administration & Economics",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Business Administration and Management",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università Cattolica del Sacro Cuore",
+          "program": "Business and finance",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "LUM \"Giuseppe Degennaro\"",
+          "program": "Business Economics and Organization",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Digital Management",
+          "city": "Venezia",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "program": "Biomedical Engineering",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    }
+  ]
+}

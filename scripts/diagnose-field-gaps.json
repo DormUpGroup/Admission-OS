@@ -1,0 +1,569 @@
+{
+  "generatedAt": "2026-08-31T21:02:23.679Z",
+  "students": 32,
+  "emptyTotal": 1052,
+  "unexplainedTotal": 0,
+  "byCause": {
+    "field_absent_in_official_source": 299,
+    "previous_year_only": 409,
+    "target_year_not_published": 200,
+    "link_not_found": 32,
+    "fetch_failed": 101,
+    "pdf_needs_ocr": 11
+  },
+  "byReason": {
+    "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD": 299,
+    "ONLY_PREVIOUS_YEAR_AVAILABLE": 409,
+    "NOT_PUBLISHED_FOR_TARGET_YEAR": 200,
+    "OFFICIAL_SOURCE_NOT_FOUND": 32,
+    "SOURCE_FETCH_FAILED": 101,
+    "SCANNED_PDF_NEEDS_OCR": 11
+  },
+  "topFieldReasons": [
+    {
+      "key": "tuition:ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "count": 241
+    },
+    {
+      "key": "languageRequirement:OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "count": 186
+    },
+    {
+      "key": "seats:ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "count": 168
+    },
+    {
+      "key": "deadline:NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "count": 140
+    },
+    {
+      "key": "admissionCall:NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "count": 60
+    },
+    {
+      "key": "selection:OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "count": 46
+    },
+    {
+      "key": "exams:OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "count": 46
+    },
+    {
+      "key": "languageRequirement:SOURCE_FETCH_FAILED",
+      "count": 23
+    },
+    {
+      "key": "tuition:SOURCE_FETCH_FAILED",
+      "count": 23
+    },
+    {
+      "key": "deadline:SOURCE_FETCH_FAILED",
+      "count": 23
+    },
+    {
+      "key": "access:OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "count": 21
+    },
+    {
+      "key": "admissionCall:SOURCE_FETCH_FAILED",
+      "count": 21
+    },
+    {
+      "key": "languageRequirement:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 6
+    },
+    {
+      "key": "tuition:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 6
+    },
+    {
+      "key": "deadline:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 6
+    },
+    {
+      "key": "admissionCall:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 6
+    },
+    {
+      "key": "selection:SOURCE_FETCH_FAILED",
+      "count": 3
+    },
+    {
+      "key": "exams:SOURCE_FETCH_FAILED",
+      "count": 3
+    },
+    {
+      "key": "seats:SOURCE_FETCH_FAILED",
+      "count": 3
+    },
+    {
+      "key": "languageRequirement:SCANNED_PDF_NEEDS_OCR",
+      "count": 2
+    },
+    {
+      "key": "tuition:SCANNED_PDF_NEEDS_OCR",
+      "count": 2
+    },
+    {
+      "key": "deadline:SCANNED_PDF_NEEDS_OCR",
+      "count": 2
+    },
+    {
+      "key": "admissionCall:SCANNED_PDF_NEEDS_OCR",
+      "count": 2
+    },
+    {
+      "key": "access:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 2
+    },
+    {
+      "key": "selection:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 2
+    },
+    {
+      "key": "exams:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 2
+    },
+    {
+      "key": "seats:OFFICIAL_SOURCE_NOT_FOUND",
+      "count": 2
+    },
+    {
+      "key": "access:SOURCE_FETCH_FAILED",
+      "count": 2
+    },
+    {
+      "key": "selection:SCANNED_PDF_NEEDS_OCR",
+      "count": 1
+    },
+    {
+      "key": "exams:SCANNED_PDF_NEEDS_OCR",
+      "count": 1
+    }
+  ],
+  "unexplainedByField": {},
+  "topUniversities": [
+    {
+      "name": "Università degli Studi di ROMA \"La Sapienza\"",
+      "count": 123
+    },
+    {
+      "name": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+      "count": 56
+    },
+    {
+      "name": "Università degli Studi di PADOVA",
+      "count": 50
+    },
+    {
+      "name": "Università degli Studi di PARMA",
+      "count": 47
+    },
+    {
+      "name": "Università degli Studi di PAVIA",
+      "count": 43
+    },
+    {
+      "name": "Università degli Studi di Napoli Federico II",
+      "count": 43
+    },
+    {
+      "name": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "count": 42
+    },
+    {
+      "name": "Politecnico di MILANO",
+      "count": 39
+    },
+    {
+      "name": "Università degli Studi di PALERMO",
+      "count": 35
+    },
+    {
+      "name": "Università degli Studi di FIRENZE",
+      "count": 31
+    },
+    {
+      "name": "Università degli Studi di SALERNO",
+      "count": 30
+    },
+    {
+      "name": "Università degli Studi di BRESCIA",
+      "count": 29
+    },
+    {
+      "name": "Università degli Studi di MILANO-BICOCCA",
+      "count": 29
+    },
+    {
+      "name": "Università degli Studi di TORINO",
+      "count": 27
+    },
+    {
+      "name": "Università degli Studi di ROMA \"Tor Vergata\"",
+      "count": 26
+    }
+  ],
+  "sampleSnippets": [
+    {
+      "university": "Università degli Studi di TORINO",
+      "program": "BUSINESS & MANAGEMENT",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "http://www.business-management.unito.it/do/home.pl/View?doc=tuition_fees_and_financial_aid.html",
+      "textPreview": "Admission requirements - Bachelor Program in Business and Management - Università degli Studi di Torino --> --> --> var Language=\"en\"; var $j = jQuery.noConflict(); --> var HelpBaseURL=\"/do/aiuto.pl\"; //window.addEventListener('load', function() {FastClick.attach(document.body)},"
+    },
+    {
+      "university": "Università degli Studi di TORINO",
+      "program": "BUSINESS & MANAGEMENT",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "http://www.business-management.unito.it/do/home.pl/View?doc=tuition_fees_and_financial_aid.html",
+      "textPreview": "Admission requirements - Bachelor Program in Business and Management - Università degli Studi di Torino --> --> --> var Language=\"en\"; var $j = jQuery.noConflict(); --> var HelpBaseURL=\"/do/aiuto.pl\"; //window.addEventListener('load', function() {FastClick.attach(document.body)},"
+    },
+    {
+      "university": "Università Ca' Foscari VENEZIA",
+      "program": "Business Administration and Management",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://unive.it/cdl/ETR8/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 31, \"codeUn\": \"36\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Business Administration and Management\", \"nomeCorsoEn\": \"Business Administration and Management\", \"url\": \"https://unive.it/cdl/ETR8\", \"modalitaDidattica\": { \"id\":"
+    },
+    {
+      "university": "Università degli Studi di BRESCIA",
+      "program": "Business and Economics",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://permalink.unibs.it/suacds/2026/54456R/infogen",
+      "textPreview": "MRX8I5W1_xwmS2rSBOATqsl9ftd21oz7sC4Fzk9wM4Bh-qnUkLdzg2ziRrDnB2DlIicReiPFIBxYH3GiuTHE46gxZTijFux5xQFUYULvpSvnELIpH04vcCdW-403TCWqXgVB_lS7MYwSxEIFrpn4REs75YZSIMWu792qagLH8M63rhUuIahiqlNx50l4emKqdy2bNvO1fwYyQYJh7XNX6VEbgdiNtiWNxTHpFb7RqxmAdKJoSyemys38zfLDdM2zCev_rsfdsLxIzTKgS8Guju-IH4aR2XV9f4RME8YXxCbNN24I\",\"theme\":\"unibscdl\",\"theme_token\":n"
+    },
+    {
+      "university": "Università degli Studi di BRESCIA",
+      "program": "Business and Economics",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://permalink.unibs.it/suacds/2026/54456R/infogen",
+      "textPreview": "MRX8I5W1_xwmS2rSBOATqsl9ftd21oz7sC4Fzk9wM4Bh-qnUkLdzg2ziRrDnB2DlIicReiPFIBxYH3GiuTHE46gxZTijFux5xQFUYULvpSvnELIpH04vcCdW-403TCWqXgVB_lS7MYwSxEIFrpn4REs75YZSIMWu792qagLH8M63rhUuIahiqlNx50l4emKqdy2bNvO1fwYyQYJh7XNX6VEbgdiNtiWNxTHpFb7RqxmAdKJoSyemys38zfLDdM2zCev_rsfdsLxIzTKgS8Guju-IH4aR2XV9f4RME8YXxCbNN24I\",\"theme\":\"unibscdl\",\"theme_token\":n"
+    },
+    {
+      "university": "Università degli Studi di BRESCIA",
+      "program": "Business and Economics",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://permalink.unibs.it/suacds/2026/54456R/infogen",
+      "textPreview": "MRX8I5W1_xwmS2rSBOATqsl9ftd21oz7sC4Fzk9wM4Bh-qnUkLdzg2ziRrDnB2DlIicReiPFIBxYH3GiuTHE46gxZTijFux5xQFUYULvpSvnELIpH04vcCdW-403TCWqXgVB_lS7MYwSxEIFrpn4REs75YZSIMWu792qagLH8M63rhUuIahiqlNx50l4emKqdy2bNvO1fwYyQYJh7XNX6VEbgdiNtiWNxTHpFb7RqxmAdKJoSyemys38zfLDdM2zCev_rsfdsLxIzTKgS8Guju-IH4aR2XV9f4RME8YXxCbNN24I\",\"theme\":\"unibscdl\",\"theme_token\":n"
+    },
+    {
+      "university": "Università degli Studi di BRESCIA",
+      "program": "Business and Economics",
+      "field": "admissionCall",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://permalink.unibs.it/suacds/2026/54456R/infogen",
+      "textPreview": "MRX8I5W1_xwmS2rSBOATqsl9ftd21oz7sC4Fzk9wM4Bh-qnUkLdzg2ziRrDnB2DlIicReiPFIBxYH3GiuTHE46gxZTijFux5xQFUYULvpSvnELIpH04vcCdW-403TCWqXgVB_lS7MYwSxEIFrpn4REs75YZSIMWu792qagLH8M63rhUuIahiqlNx50l4emKqdy2bNvO1fwYyQYJh7XNX6VEbgdiNtiWNxTHpFb7RqxmAdKJoSyemys38zfLDdM2zCev_rsfdsLxIzTKgS8Guju-IH4aR2XV9f4RME8YXxCbNN24I\",\"theme\":\"unibscdl\",\"theme_token\":n"
+    },
+    {
+      "university": "Università Ca' Foscari VENEZIA",
+      "program": "Digital Management",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "http://www.unive.it/cdl/etr7/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 31, \"codeUn\": \"36\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Digital Management\", \"nomeCorsoEn\": \"Digital Management\", \"url\": \"http://www.unive.it/cdl/etr7\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In presenza\", \"de"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "admissionCall",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di PAVIA",
+      "program": "Artificial intelligence",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://matematica.unipv.it/laurea-triennale-ia/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 39, \"codeUn\": \"22\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Artificial intelligence\", \"nomeCorsoEn\": \"Artificial intelligence\", \"url\": \"https://matematica.unipv.it/laurea-triennale-ia/\", \"modalitaDidattica\": { \"id\": 1, \"de"
+    },
+    {
+      "university": "Università degli Studi di PAVIA",
+      "program": "Artificial intelligence",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://matematica.unipv.it/laurea-triennale-ia/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 39, \"codeUn\": \"22\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Artificial intelligence\", \"nomeCorsoEn\": \"Artificial intelligence\", \"url\": \"https://matematica.unipv.it/laurea-triennale-ia/\", \"modalitaDidattica\": { \"id\": 1, \"de"
+    },
+    {
+      "university": "Università degli Studi di PAVIA",
+      "program": "Artificial intelligence",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://matematica.unipv.it/laurea-triennale-ia/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 39, \"codeUn\": \"22\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Artificial intelligence\", \"nomeCorsoEn\": \"Artificial intelligence\", \"url\": \"https://matematica.unipv.it/laurea-triennale-ia/\", \"modalitaDidattica\": { \"id\": 1, \"de"
+    },
+    {
+      "university": "Università degli Studi di PAVIA",
+      "program": "Artificial intelligence",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://matematica.unipv.it/laurea-triennale-ia/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 39, \"codeUn\": \"22\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Artificial intelligence\", \"nomeCorsoEn\": \"Artificial intelligence\", \"url\": \"https://matematica.unipv.it/laurea-triennale-ia/\", \"modalitaDidattica\": { \"id\": 1, \"de"
+    },
+    {
+      "university": "Università Politecnica delle MARCHE",
+      "program": "Digital Economics and Business",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://www.econ.univpm.it/ET07",
+      "textPreview": "Digital Economics and Business - Bachelor&#039;s Degree | Facoltà di Economia &quot;Giorgio Fuà&quot; @import url(\"https://www.econ.univpm.it/modules/system/system.base.css?sp1u4w\"); @import url(\"https://www.econ.univpm.it/modules/system/system.menus.css?sp1u4w\"); @import url(\"ht"
+    },
+    {
+      "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+      "program": "Economic and Social Sciences",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://www.unibocconi.it/en/programs/bachelor-science/economic-and-social-sciences",
+      "textPreview": "Mgg4J4od4czpLbHh_CuDiKlDgXquasZx1jOqXpd6U0JaWIXoIy9mioFl55Inb20aB4uq-EdGokvaeNa_VR4XZrkxCyGuu3Y_natsGkaTFzapd960nDJHbPF_WDVXBJA6otga9pPQQZKtanY3kUbIjWYINtyNXXlBtlyypzQODb3vC3k94r6V9heXROtoXDOTrjd3ZUDqkv1DsUy0-rqTYbWp2UsPAssizZVYk453gTSkHT5v7_CF7z-Hs6X-lO1FIOHGn8BSi7wTA\",\"theme\":\"bocconi_ds_corporate\",\"theme_token\":null},\"ajaxTrustedUrl\":{"
+    },
+    {
+      "university": "Università Ca' Foscari VENEZIA",
+      "program": "Economics and Business",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://unive.it/cdl/ETR9/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 31, \"codeUn\": \"36\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Economics and Business\", \"nomeCorsoEn\": \"Economics and Business\", \"url\": \"https://unive.it/cdl/ETR9\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In presenza\""
+    },
+    {
+      "university": "Università Ca' Foscari VENEZIA",
+      "program": "Economics and Business",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://unive.it/cdl/ETR9/iscriversi",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 31, \"codeUn\": \"36\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"Economics and Business\", \"nomeCorsoEn\": \"Economics and Business\", \"url\": \"https://unive.it/cdl/ETR9\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In presenza\""
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "access",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "selection",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "exams",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+      "program": "ECONOMICS AND BUSINESS",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://undergraduate.luiss.it/it/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 88, \"codeUn\": \"61\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND BUSINESS\", \"nomeCorsoEn\": \"ECONOMICS AND BUSINESS\", \"url\": \"https://undergraduate.luiss.it/it\", \"modalitaDidattica\": { \"id\": 1, \"descrizione\": \"In p"
+    },
+    {
+      "university": "Università degli Studi di TORINO",
+      "program": "ECONOMICS AND FINANCE WITH DATA SCIENCE",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://www.efds.unito.it/do/home.pl/how-to-enrol",
+      "textPreview": "ersitaly\": 1 }, \"idStrutture\": 71, \"codeUn\": \"31\", \"modalitaAccesso\": { \"id\": 1, \"descrizione\": \"Accesso con diploma\", \"descrizioneEn\": \"EN accesso con diploma\" }, \"nomeCorso\": \"ECONOMICS AND FINANCE WITH DATA SCIENCE\", \"nomeCorsoEn\": \"ECONOMICS AND FINANCE WITH DATA SCIENCE\", \"url\": \"https://www.efds.unito.it/do/home.pl\", \"modalitaDidatt"
+    },
+    {
+      "university": "Università degli Studi di MILANO-BICOCCA",
+      "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://www.unimib.it/didattica/offerta-formativa/corsi-laurea-iscrizioni/area-economico-statistica-laurea-triennale",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"YjpNlBY0G6\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Università degli Studi di MILANO-BICOCCA",
+      "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://www.unimib.it/didattica/offerta-formativa/corsi-laurea-iscrizioni/area-economico-statistica-laurea-triennale",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"YjpNlBY0G6\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Università degli Studi di MILANO-BICOCCA",
+      "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://www.unimib.it/didattica/offerta-formativa/corsi-laurea-iscrizioni/area-economico-statistica-laurea-triennale",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"YjpNlBY0G6\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Università degli Studi di MILANO-BICOCCA",
+      "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+      "field": "admissionCall",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://www.unimib.it/didattica/offerta-formativa/corsi-laurea-iscrizioni/area-economico-statistica-laurea-triennale",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"YjpNlBY0G6\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+      "program": "Economics with data science",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://unicas-public.gomp.it/PublicData/how-to-enrol",
+      "textPreview": "Università degli studi di Cassino e del Lazio Meridionale $(function () { $(\"#pluginContents\").coursesPlugin({ url: \"/CourseAPI\", academicYear: 2026, // \"2021\", cuin: \"\", uid: null, code: \"\", // \"198289\", mode: \"classRoomList\", curriculaMode: \"dropdown\", courseTypes:[\"CorsoDiStud"
+    },
+    {
+      "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+      "program": "Economics with data science",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://unicas-public.gomp.it/PublicData/how-to-enrol",
+      "textPreview": "Università degli studi di Cassino e del Lazio Meridionale $(function () { $(\"#pluginContents\").coursesPlugin({ url: \"/CourseAPI\", academicYear: 2026, // \"2021\", cuin: \"\", uid: null, code: \"\", // \"198289\", mode: \"classRoomList\", curriculaMode: \"dropdown\", courseTypes:[\"CorsoDiStud"
+    },
+    {
+      "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+      "program": "Economics with data science",
+      "field": "deadline",
+      "reason": "NOT_PUBLISHED_FOR_TARGET_YEAR",
+      "cause": "target_year_not_published",
+      "sourceUrl": "https://unicas-public.gomp.it/PublicData/how-to-enrol",
+      "textPreview": "Università degli studi di Cassino e del Lazio Meridionale $(function () { $(\"#pluginContents\").coursesPlugin({ url: \"/CourseAPI\", academicYear: 2026, // \"2021\", cuin: \"\", uid: null, code: \"\", // \"198289\", mode: \"classRoomList\", curriculaMode: \"dropdown\", courseTypes:[\"CorsoDiStud"
+    },
+    {
+      "university": "Politecnico di TORINO",
+      "program": "Electronic and Communications Engineering",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://www.polito.it/corsi/37-474",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"wR0mVV93xE\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Politecnico di TORINO",
+      "program": "Electronic and Communications Engineering",
+      "field": "seats",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://www.polito.it/corsi/37-474",
+      "textPreview": "var _paq = _paq || [];(function(){var u=((\"https:\" == document.location.protocol) ? \"https://ingestion.webanalytics.italia.it/\" : \"http://ingestion.webanalytics.italia.it/\");_paq.push([\"setSiteId\", \"wR0mVV93xE\"]);_paq.push([\"setTrackerUrl\", u+\"matomo.php\"]);_paq.push([\"setDoNotTr"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "languageRequirement",
+      "reason": "OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD",
+      "cause": "field_absent_in_official_source",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    },
+    {
+      "university": "Università degli Studi di ROMA \"La Sapienza\"",
+      "program": "Applied Computer Science and Artificial Intelligence",
+      "field": "tuition",
+      "reason": "ONLY_PREVIOUS_YEAR_AVAILABLE",
+      "cause": "previous_year_only",
+      "sourceUrl": "https://corsidilaurea.uniroma1.it/it/timeview/2026/33502",
+      "textPreview": "orso Laurea Classe di laurea L-31 Durata 3 anni Modalità di accesso Prova di ammissione Facoltà Ingegneria dell'informazione, informatica e statistica Dipartimento INFORMATICA Sede Roma Lingua Inglese Modalità di erogazione Convenzionale - In presenza © Sapienza Università di Roma - Piazzale Aldo Moro 5, 00185 Roma - (+39) 06 49911 - CF 8"
+    }
+  ]
+}

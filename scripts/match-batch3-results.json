@@ -1,0 +1,1420 @@
+{
+  "at": "2026-08-28T11:33:58.372Z",
+  "engine": "v1.7",
+  "overallPrecisionTop5": 80,
+  "precisionSummary": [
+    {
+      "email": "match-test-k@student.local",
+      "sphere": "Psychology only",
+      "avgTop5": 100,
+      "exactInTop5": 2,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Psychological Science",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "exact_classe",
+          "degreeClass": "L-24",
+          "score": 100
+        },
+        {
+          "program": "Techniques and methods in psychological science",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "exact_classe",
+          "degreeClass": "L-24",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "email": "match-test-l@student.local",
+      "sphere": "Computer science only",
+      "avgTop5": 55,
+      "exactInTop5": 2,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Artificial intelligence",
+          "university": "Università degli Studi di PAVIA",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-31",
+          "score": 100
+        },
+        {
+          "program": "Electronic and Communications Engineering",
+          "university": "Politecnico di TORINO",
+          "kind": "secondary_classe",
+          "degreeClass": "L-8",
+          "score": 25
+        },
+        {
+          "program": "Information Engineering",
+          "university": "Università degli Studi di PADOVA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-8",
+          "score": 25
+        },
+        {
+          "program": "Biomedical Engineering",
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "kind": "secondary_classe",
+          "degreeClass": "L-8",
+          "score": 25
+        }
+      ]
+    },
+    {
+      "email": "match-test-m@student.local",
+      "sphere": "Economics only",
+      "avgTop5": 80,
+      "exactInTop5": 5,
+      "noiseInTop5": 1,
+      "top5Detail": [
+        {
+          "program": "Economic and Social Sciences",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "Economics and Finance",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "Economics of Tourism and Cities",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        },
+        {
+          "program": "Economics, Management and Computer Science",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 0
+        },
+        {
+          "program": "Economics, Politics and Social Sciences",
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "kind": "exact_classe",
+          "degreeClass": "L-33",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "email": "match-test-n@student.local",
+      "sphere": "Physics",
+      "avgTop5": 63,
+      "exactInTop5": 1,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "kind": "exact_classe",
+          "degreeClass": "L-30",
+          "score": 100
+        },
+        {
+          "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "kind": "secondary_classe",
+          "degreeClass": "L-35",
+          "score": 25
+        }
+      ]
+    },
+    {
+      "email": "match-test-o@student.local",
+      "sphere": "Design (IT)",
+      "avgTop5": 100,
+      "exactInTop5": 5,
+      "noiseInTop5": 0,
+      "top5Detail": [
+        {
+          "program": "Fashion and Industrial Design",
+          "university": "Università Telematica San Raffaele Roma",
+          "kind": "exact_classe",
+          "degreeClass": "L-4",
+          "score": 100
+        },
+        {
+          "program": "Design",
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "kind": "exact_classe",
+          "degreeClass": "L-4",
+          "score": 100
+        },
+        {
+          "program": "Interior Design",
+          "university": "Politecnico di MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-4",
+          "score": 100
+        },
+        {
+          "program": "Communication Design",
+          "university": "Politecnico di MILANO",
+          "kind": "exact_classe",
+          "degreeClass": "L-4",
+          "score": 100
+        },
+        {
+          "program": "Product, Interior, Communication and Eco-social Design",
+          "university": "Università degli Studi di FIRENZE",
+          "kind": "exact_classe",
+          "degreeClass": "L-4",
+          "score": 100
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "email": "match-test-k@student.local",
+      "name": "Karina PsychOnly",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Психология"
+        ],
+        "cities": [
+          "Padova",
+          "Milano",
+          "Bologna"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Психология",
+            "bachelor": [
+              "L-24"
+            ],
+            "master": [
+              "LM-51",
+              "LM-55"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Психология",
+          "Psychology"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 5,
+        "rawCount": 5,
+        "afterCityFilter": 5,
+        "afterSoftGate": 5,
+        "afterSynonym": 5,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Психология"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-24",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Психология"
+            ],
+            "pagesAllocated": 10
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 2,
+      "eligibility": {
+        "NEEDS_REVIEW": 2
+      },
+      "needsReviewCount": 2,
+      "preferredCityShareTop20": 100,
+      "preferredCityHitsTop20": 2,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 2,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Psychological Science",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "exact_classe",
+            "degreeClass": "L-24",
+            "score": 100
+          },
+          {
+            "program": "Techniques and methods in psychological science",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "exact_classe",
+            "degreeClass": "L-24",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 2,
+        "call": 2,
+        "access": 0,
+        "tuition": 2,
+        "seats": 0,
+        "exams": 0
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Psychological Science",
+          "city": "PADOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Techniques and methods in psychological science",
+          "city": "PADOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-24",
+          "whyIncluded": "Точный класс MIUR L-24",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-l@student.local",
+      "name": "Leon CSOnly",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Компьютерные технологии"
+        ],
+        "cities": [
+          "Bologna",
+          "Milano",
+          "Torino"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Компьютерные технологии",
+            "bachelor": [
+              "L-31",
+              "L-8"
+            ],
+            "master": [
+              "LM-18",
+              "LM-32"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Компьютерные технологии",
+          "Computer Science"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 25,
+        "rawCount": 25,
+        "afterCityFilter": 25,
+        "afterSoftGate": 25,
+        "afterSynonym": 25,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Компьютерные технологии"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-31",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Компьютерные технологии"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-8",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Компьютерные технологии"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 10,
+      "eligibility": {
+        "NEEDS_REVIEW": 10
+      },
+      "needsReviewCount": 10,
+      "preferredCityShareTop20": 10,
+      "preferredCityHitsTop20": 1,
+      "precision": {
+        "avgTop5": 55,
+        "exactInTop5": 2,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Artificial intelligence",
+            "university": "Università degli Studi di PAVIA",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Applied Computer Science and Artificial Intelligence",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-31",
+            "score": 100
+          },
+          {
+            "program": "Electronic and Communications Engineering",
+            "university": "Politecnico di TORINO",
+            "kind": "secondary_classe",
+            "degreeClass": "L-8",
+            "score": 25
+          },
+          {
+            "program": "Information Engineering",
+            "university": "Università degli Studi di PADOVA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-8",
+            "score": 25
+          },
+          {
+            "program": "Biomedical Engineering",
+            "university": "Università \"Campus Bio-Medico\" di ROMA",
+            "kind": "secondary_classe",
+            "degreeClass": "L-8",
+            "score": 25
+          }
+        ]
+      },
+      "fill": {
+        "n": 10,
+        "call": 5,
+        "access": 7,
+        "tuition": 1,
+        "seats": 0,
+        "exams": 4
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 93,
+          "university": "Università degli Studi di PAVIA",
+          "program": "Artificial intelligence",
+          "city": "PAVIA",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Applied Computer Science and Artificial Intelligence",
+          "city": "ROMA",
+          "year": "2026/2027",
+          "degreeClass": "L-31",
+          "whyIncluded": "Точный класс MIUR L-31",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 84,
+          "university": "Politecnico di TORINO",
+          "program": "Electronic and Communications Engineering",
+          "city": "TORINO",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Information Engineering",
+          "city": "PADOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università \"Campus Bio-Medico\" di ROMA",
+          "program": "Biomedical Engineering",
+          "city": "ROMA",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PERUGIA",
+          "program": "Engineering management",
+          "city": "PERUGIA",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di GENOVA",
+          "program": "Computer Engineering",
+          "city": "GENOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di PALERMO",
+          "program": "Industrial and Information Engineering",
+          "city": "PALERMO",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Computer Engineering",
+          "city": "CASSINO e del LAZIO MERIDIONALE",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università degli Studi di Napoli Federico II",
+          "program": "Electrical Engineering and Information Technology",
+          "city": "Napoli Federico II",
+          "year": "2026/2027",
+          "degreeClass": "L-8",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-8",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-m@student.local",
+      "name": "Marco EconOnly",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Экономические науки"
+        ],
+        "cities": [
+          "Bologna",
+          "Roma",
+          "Milano"
+        ],
+        "english": "B2",
+        "miur": [
+          {
+            "direction": "Экономические науки",
+            "bachelor": [
+              "L-33",
+              "L-18"
+            ],
+            "master": [
+              "LM-56",
+              "LM-77"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Экономические науки",
+          "Economics"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 73,
+        "rawCount": 73,
+        "afterCityFilter": 73,
+        "afterSoftGate": 73,
+        "afterSynonym": 73,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Экономические науки"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-18",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Экономические науки"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-33",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Экономические науки"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 65,
+      "preferredCityHitsTop20": 13,
+      "precision": {
+        "avgTop5": 80,
+        "exactInTop5": 5,
+        "noiseInTop5": 1,
+        "scores": [
+          {
+            "program": "Economic and Social Sciences",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "Economics and Finance",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "Economics of Tourism and Cities",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          },
+          {
+            "program": "Economics, Management and Computer Science",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 0
+          },
+          {
+            "program": "Economics, Politics and Social Sciences",
+            "university": "Alma Mater Studiorum - Università di BOLOGNA",
+            "kind": "exact_classe",
+            "degreeClass": "L-33",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 20,
+        "call": 17,
+        "access": 9,
+        "tuition": 2,
+        "seats": 1,
+        "exams": 5
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Economic and Social Sciences",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics and Finance",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics of Tourism and Cities",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Economics, Management and Computer Science",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Economics, Politics and Social Sciences",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di MILANO",
+          "program": "Economics: Behavior, Data and Policy",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "International Economics and Finance",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "program": "ECONOMICS AND SCIENCE FOR ENVIRONMENTAL SUSTAINABILITY",
+          "city": "MILANO-BICOCCA",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Politecnica delle MARCHE",
+          "program": "Digital Economics and Business",
+          "city": "MARCHE",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università Ca' Foscari VENEZIA",
+          "program": "Economics and Business",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di TORINO",
+          "program": "ECONOMICS AND FINANCE WITH DATA SCIENCE",
+          "city": "TORINO",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di PADOVA",
+          "program": "Economics, governance and decision-making",
+          "city": "PADOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Luiss Libera Università Internazionale degli Studi Sociali Guido Carli",
+          "program": "ECONOMICS AND BUSINESS",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di CASSINO e del LAZIO MERIDIONALE",
+          "program": "Economics with data science",
+          "city": "CASSINO e del LAZIO MERIDIONALE",
+          "year": "2026/2027",
+          "degreeClass": "L-33",
+          "whyIncluded": "Точный класс MIUR L-33",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Business (World Bachelor in Business)",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università degli Studi di ROMA \"Tor Vergata\"",
+          "program": "Business Administration & Economics",
+          "city": "ROMA",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Business and Economics",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "International Economics and Management",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 82,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "Management and Economics",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 79,
+          "university": "Università degli Studi di BRESCIA",
+          "program": "Business and Economics",
+          "city": "BRESCIA",
+          "year": "2026/2027",
+          "degreeClass": "L-18",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-18",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-n@student.local",
+      "name": "Nina Physics",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Английский",
+        "directions": [
+          "Физика"
+        ],
+        "cities": [
+          "Pisa",
+          "Roma",
+          "Torino"
+        ],
+        "english": "C1",
+        "miur": [
+          {
+            "direction": "Физика",
+            "bachelor": [
+              "L-30",
+              "L-35"
+            ],
+            "master": [
+              "LM-17",
+              "LM-79"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Физика",
+          "Physics"
+        ],
+        "langs": [
+          "English"
+        ],
+        "missing": [
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 5,
+        "rawCount": 5,
+        "afterCityFilter": 5,
+        "afterSoftGate": 5,
+        "afterSynonym": 5,
+        "warning": "Thin pool retry: fetched extra pages on primary classe queries (target 15).",
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Физика"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-30",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Физика"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-35",
+            "lingua": "EN",
+            "durata": "3",
+            "sourceDirections": [
+              "Физика"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 2,
+      "eligibility": {
+        "NEEDS_REVIEW": 2
+      },
+      "needsReviewCount": 2,
+      "preferredCityShareTop20": 0,
+      "preferredCityHitsTop20": 0,
+      "precision": {
+        "avgTop5": 63,
+        "exactInTop5": 1,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+            "university": "Università degli Studi di MILANO-BICOCCA",
+            "kind": "exact_classe",
+            "degreeClass": "L-30",
+            "score": 100
+          },
+          {
+            "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+            "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+            "kind": "secondary_classe",
+            "degreeClass": "L-35",
+            "score": 25
+          }
+        ]
+      },
+      "fill": {
+        "n": 2,
+        "call": 2,
+        "access": 1,
+        "tuition": 1,
+        "seats": 0,
+        "exams": 0
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 80,
+          "university": "Università degli Studi di MILANO-BICOCCA",
+          "program": "PHYSICAL SCIENCES FOR INNOVATIVE TECHNOLOGIES",
+          "city": "MILANO-BICOCCA",
+          "year": "2026/2027",
+          "degreeClass": "L-30",
+          "whyIncluded": "Точный класс MIUR L-30",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 68,
+          "university": "Università Commerciale \"Luigi Bocconi\" MILANO",
+          "program": "Mathematical and Computing Sciences for Artificial Intelligence",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-35",
+          "whyIncluded": "Соседний / вторичный класс MIUR L-35",
+          "inclusionKind": "secondary_classe"
+        }
+      ]
+    },
+    {
+      "email": "match-test-o@student.local",
+      "name": "Olga Design",
+      "questionnaire": {
+        "level": "Бакалавриат",
+        "language": "Итальянский",
+        "directions": [
+          "Дизайн"
+        ],
+        "cities": [
+          "Milano",
+          "Firenze",
+          "Roma"
+        ],
+        "english": "B1",
+        "miur": [
+          {
+            "direction": "Дизайн",
+            "bachelor": [
+              "L-4",
+              "L-3"
+            ],
+            "master": [
+              "LM-12",
+              "LM-65"
+            ],
+            "singleCycle": []
+          }
+        ]
+      },
+      "profile": {
+        "degree": "BACHELOR",
+        "fields": [
+          "Дизайн",
+          "Design"
+        ],
+        "langs": [
+          "Italian"
+        ],
+        "missing": [
+          "English certificate / IELTS score",
+          "SAT score",
+          "Budget / max tuition"
+        ]
+      },
+      "live": {
+        "source": "universitaly-live",
+        "candidates": 57,
+        "rawCount": 57,
+        "afterCityFilter": 57,
+        "afterSoftGate": 57,
+        "afterSynonym": 57,
+        "warning": null,
+        "usedSynonymFallback": false,
+        "directionsSearched": [
+          "Дизайн"
+        ],
+        "coverageQueried": [
+          {
+            "classeCode": "L-3",
+            "lingua": "IT",
+            "durata": "3",
+            "sourceDirections": [
+              "Дизайн"
+            ],
+            "pagesAllocated": 5
+          },
+          {
+            "classeCode": "L-4",
+            "lingua": "IT",
+            "durata": "3",
+            "sourceDirections": [
+              "Дизайн"
+            ],
+            "pagesAllocated": 5
+          }
+        ],
+        "coverageDeferred": []
+      },
+      "matchCount": 20,
+      "eligibility": {
+        "NEEDS_REVIEW": 20
+      },
+      "needsReviewCount": 20,
+      "preferredCityShareTop20": 40,
+      "preferredCityHitsTop20": 8,
+      "precision": {
+        "avgTop5": 100,
+        "exactInTop5": 5,
+        "noiseInTop5": 0,
+        "scores": [
+          {
+            "program": "Fashion and Industrial Design",
+            "university": "Università Telematica San Raffaele Roma",
+            "kind": "exact_classe",
+            "degreeClass": "L-4",
+            "score": 100
+          },
+          {
+            "program": "Design",
+            "university": "Università degli Studi di ROMA \"La Sapienza\"",
+            "kind": "exact_classe",
+            "degreeClass": "L-4",
+            "score": 100
+          },
+          {
+            "program": "Interior Design",
+            "university": "Politecnico di MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-4",
+            "score": 100
+          },
+          {
+            "program": "Communication Design",
+            "university": "Politecnico di MILANO",
+            "kind": "exact_classe",
+            "degreeClass": "L-4",
+            "score": 100
+          },
+          {
+            "program": "Product, Interior, Communication and Eco-social Design",
+            "university": "Università degli Studi di FIRENZE",
+            "kind": "exact_classe",
+            "degreeClass": "L-4",
+            "score": 100
+          }
+        ]
+      },
+      "fill": {
+        "n": 20,
+        "call": 13,
+        "access": 8,
+        "tuition": 3,
+        "seats": 0,
+        "exams": 2
+      },
+      "top": [
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università Telematica San Raffaele Roma",
+          "program": "Fashion and Industrial Design",
+          "city": "Roma",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di ROMA \"La Sapienza\"",
+          "program": "Design",
+          "city": "ROMA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Interior Design",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Communication Design",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di FIRENZE",
+          "program": "Product, Interior, Communication and Eco-social Design",
+          "city": "FIRENZE",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Product Design",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Politecnico di MILANO",
+          "program": "Fashion design",
+          "city": "MILANO",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 94,
+          "university": "Università degli Studi di FIRENZE",
+          "program": "Textile and Fashion Design",
+          "city": "FIRENZE",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 91,
+          "university": "Università di PISA",
+          "program": "Engineering for the Industrial Design",
+          "city": "PISA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi \"Mediterranea\" di REGGIO CALABRIA",
+          "program": "Design",
+          "city": "REGGIO CALABRIA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di PERUGIA",
+          "program": "Design",
+          "city": "PERUGIA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di SASSARI",
+          "program": "Design",
+          "city": "SASSARI",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università IUAV di VENEZIA",
+          "program": "Design",
+          "city": "VENEZIA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di CAMERINO",
+          "program": "Design",
+          "city": "CAMERINO",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi \"G. d'Annunzio\" CHIETI-PESCARA",
+          "program": "Design",
+          "city": null,
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di GENOVA",
+          "program": "Product and Communication Design",
+          "city": "GENOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di FERRARA",
+          "program": "Industrial design",
+          "city": "FERRARA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Alma Mater Studiorum - Università di BOLOGNA",
+          "program": "INDUSTRIAL DESIGN",
+          "city": "BOLOGNA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università degli Studi di GENOVA",
+          "program": "Nautical Product Design",
+          "city": "GENOVA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        },
+        {
+          "status": "NEEDS_REVIEW",
+          "fit": 78,
+          "university": "Università IUAV di VENEZIA",
+          "program": "Product, Visual and Interior Design",
+          "city": "VENEZIA",
+          "year": "2026/2027",
+          "degreeClass": "L-4",
+          "whyIncluded": "Точный класс MIUR L-4",
+          "inclusionKind": "exact_classe"
+        }
+      ]
+    }
+  ]
+}

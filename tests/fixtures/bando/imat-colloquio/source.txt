@@ -1,0 +1,4 @@
+Admission requirements.
+Candidates must sit the IMAT admission test.
+A colloquio / interview may also be required.
+Portfolio is required for design tracks.

@@ -1,0 +1,1 @@
+{"sessionId":"817131","location":"src/instrumentation.ts:register","message":"prisma client filesystem probe","data":{"nextRuntime":"nodejs","clientDirExists":true,"runtimeDirExists":false,"libraryJsExists":false,"sourceLibraryJsExists":true,"indexJsExists":true,"tmpEngineCount":12},"timestamp":1788179431620,"hypothesisId":"A"}
