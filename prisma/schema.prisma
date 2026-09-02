@@ -299,6 +299,8 @@ model ProgramAcademicYear {
   accessMode        String   @default("UNKNOWN")
   // Last successful deep HTML dossier enrich (shared across students)
   dossierEnrichedAt DateTime?
+  // Last monitoring poll (even when page unchanged) — cadence 7/14 days
+  lastMonitoringCheckedAt DateTime?
   verifiedAt        DateTime?
   lastUpdatedAt     DateTime @default(now())
   createdAt         DateTime @default(now())

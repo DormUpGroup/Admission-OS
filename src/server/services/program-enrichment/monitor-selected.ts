@@ -22,6 +22,7 @@ const CRITICAL_MONITOR_FIELDS = [
 
 export async function setMonitoringSelected(input: {
   matchId: string;
+  studentId: string;
   selected: boolean;
   actorUserId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -29,6 +30,9 @@ export async function setMonitoringSelected(input: {
     where: { id: input.matchId },
   });
   if (!match) return { ok: false, error: "match_not_found" };
+  if (match.studentId !== input.studentId) {
+    return { ok: false, error: "match_student_mismatch" };
+  }
 
   if (input.selected) {
     const count = await prisma.programMatch.count({
@@ -56,7 +60,7 @@ export async function setMonitoringSelected(input: {
   return { ok: true };
 }
 
-function shouldRunNow(input: {
+export function shouldRunMonitoringNow(input: {
   lastCheckedAt: Date | null;
   hasCurrentBando: boolean;
   nearestDeadline: Date | null;
@@ -73,6 +77,16 @@ function shouldRunNow(input: {
   const weekly = input.hasCurrentBando || deadlineSoon;
   const intervalDays = weekly ? 7 : 14;
   return daysSince >= intervalDays || last === 0;
+}
+
+async function markMonitoringChecked(
+  programAcademicYearId: string,
+  at: Date
+) {
+  await prisma.programAcademicYear.update({
+    where: { id: programAcademicYearId },
+    data: { lastMonitoringCheckedAt: at },
+  });
 }
 
 function isNoiseOnlyChange(oldText: string, newText: string): boolean {
@@ -162,8 +176,8 @@ export async function monitorSelectedPrograms(options?: {
 
     if (
       !options?.force &&
-      !shouldRunNow({
-        lastCheckedAt: pay.dossierEnrichedAt,
+      !shouldRunMonitoringNow({
+        lastCheckedAt: pay.lastMonitoringCheckedAt,
         hasCurrentBando,
         nearestDeadline,
         now: options?.now,
@@ -174,8 +188,12 @@ export async function monitorSelectedPrograms(options?: {
     }
 
     result.checked += 1;
+    const checkedAt = options?.now ?? new Date();
     const officialUrl = pay.program.officialUrl;
-    if (!officialUrl) continue;
+    if (!officialUrl) {
+      await markMonitoringChecked(pay.id, checkedAt);
+      continue;
+    }
 
     try {
       const res = await fetch(officialUrl, {
@@ -184,6 +202,7 @@ export async function monitorSelectedPrograms(options?: {
       });
       if (!res.ok) {
         result.errors.push(`${pay.id}: http_${res.status}`);
+        await markMonitoringChecked(pay.id, checkedAt);
         continue;
       }
       const html = await res.text();
@@ -192,7 +211,8 @@ export async function monitorSelectedPrograms(options?: {
       const newHash = contentHash(text);
 
       if (prev && prev.contentHash === newHash) {
-        // unchanged — no OpenAI
+        // unchanged — no OpenAI, but advance cadence clock
+        await markMonitoringChecked(pay.id, checkedAt);
         continue;
       }
 
@@ -208,6 +228,7 @@ export async function monitorSelectedPrograms(options?: {
           body: text.slice(0, 100_000),
           contentType: "html",
         });
+        await markMonitoringChecked(pay.id, checkedAt);
         continue;
       }
 
@@ -232,6 +253,7 @@ export async function monitorSelectedPrograms(options?: {
 
       if (!materialSourceChange) {
         result.noiseOnly += 1;
+        await markMonitoringChecked(pay.id, checkedAt);
         continue;
       }
 
@@ -361,10 +383,12 @@ export async function monitorSelectedPrograms(options?: {
           });
         }
       }
+      await markMonitoringChecked(pay.id, checkedAt);
     } catch (e) {
       result.errors.push(
         `${pay.id}: ${e instanceof Error ? e.message : "monitor_failed"}`
       );
+      await markMonitoringChecked(pay.id, checkedAt);
     }
   }
 

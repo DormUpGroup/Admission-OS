@@ -707,6 +707,7 @@ export async function setMonitoringSelectedAction(formData: FormData) {
   );
   const result = await setMonitoringSelected({
     matchId,
+    studentId,
     selected,
     actorUserId: session.user.id,
   });
