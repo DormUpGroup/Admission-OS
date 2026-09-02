@@ -8,6 +8,8 @@ export type FactCandidate = {
   verificationStatus?: string | null;
   confidence?: string | null;
   superseded?: boolean;
+  freshness?: string | null;
+  applicantCategoryScope?: string | null;
 };
 
 const CONFIDENCE_RANK: Record<string, number> = {
@@ -24,7 +26,10 @@ function ts(value: Date | string | null | undefined): number {
 
 export function factScore(
   fact: FactCandidate,
-  targetAcademicYear?: string | null
+  targetAcademicYear?: string | null,
+  options?: {
+    applicantCategory?: string | null;
+  }
 ): number {
   if (fact.superseded) return -1;
   let score = SOURCE_PRIORITY[fact.sourceType] ?? SOURCE_PRIORITY.OTHER;
@@ -33,6 +38,21 @@ export function factScore(
   else if (targetAcademicYear && fact.academicYear && fact.academicYear !== targetAcademicYear)
     score -= 20;
   score += (CONFIDENCE_RANK[fact.confidence ?? "MEDIUM"] ?? 2) * 2;
+
+  const freshness = fact.freshness ?? "UNKNOWN";
+  if (freshness === "CURRENT") score += 15;
+  else if (freshness === "INDICATIVE") score += 5;
+  else if (freshness === "CONFLICT") score -= 30;
+
+  const scope = fact.applicantCategoryScope;
+  const cat = options?.applicantCategory;
+  if (cat && cat !== "UNKNOWN" && scope) {
+    if (scope === "ALL") score += 5;
+    else if (scope === cat || (cat === "EU_EQUIVALENT" && scope === "EU_CITIZEN"))
+      score += 20;
+    else score -= 40;
+  }
+
   score += Math.min(10, Math.floor(ts(fact.publishedAt) / 1e12));
   score += Math.min(5, Math.floor(ts(fact.retrievedAt) / 1e13));
   return score;
@@ -40,11 +60,12 @@ export function factScore(
 
 export function resolveProgramFact<T extends FactCandidate>(
   facts: T[],
-  targetAcademicYear?: string | null
+  targetAcademicYear?: string | null,
+  options?: { applicantCategory?: string | null }
 ): T | null {
   const ranked = facts
     .filter((f) => !f.superseded)
-    .map((f) => ({ f, score: factScore(f, targetAcademicYear) }))
+    .map((f) => ({ f, score: factScore(f, targetAcademicYear, options) }))
     .sort((a, b) => b.score - a.score);
   return ranked[0]?.f ?? null;
 }

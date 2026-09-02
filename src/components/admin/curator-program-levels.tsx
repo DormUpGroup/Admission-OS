@@ -16,6 +16,7 @@ import {
   reviewProgramMatchAction,
   createApplicationAction,
   verifyProgramDossierFactsAction,
+  setMonitoringSelectedAction,
 } from "@/server/actions";
 
 const SHORTLIST_LABELS: Record<string, string> = {
@@ -369,11 +370,87 @@ export function CuratorProgramLevelsCard({
                 {match.changeEvents.slice(0, 8).map((event) => (
                   <li key={event.id}>
                     {event.field}
+                    {event.oldValue && event.newValue
+                      ? `: ${event.oldValue.slice(0, 40)} → ${event.newValue.slice(0, 40)}`
+                      : ""}
                     {event.createdAt ? ` · ${formatDate(event.createdAt)}` : ""}
                   </li>
                 ))}
               </ul>
             </div>
+          ) : null}
+          {match.criticalFacts && match.criticalFacts.length > 0 ? (
+            <div>
+              <p className="text-muted-foreground">Доказанные поля</p>
+              <ul className="mt-1 space-y-1">
+                {match.criticalFacts.slice(0, 8).map((f) => (
+                  <li key={`${f.field}-${f.quote}`}>
+                    <span className="font-medium">{f.field}</span>
+                    {f.freshness ? ` · ${f.freshness}` : ""}
+                    {f.scope ? ` · scope ${f.scope}` : ""}
+                    {f.quote ? (
+                      <span className="block text-muted-foreground italic">
+                        «{f.quote.slice(0, 120)}»
+                      </span>
+                    ) : null}
+                    {f.sourceUrl ? (
+                      <a
+                        href={f.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--brand)] hover:underline"
+                      >
+                        источник
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {match.aiEnrichment ? (
+            <div className="rounded-md bg-muted/40 px-2 py-1.5 text-muted-foreground">
+              AI:{" "}
+              {match.aiEnrichment.disabled
+                ? "выключен (regex/PDF fallback)"
+                : match.aiEnrichment.reused
+                  ? "reused"
+                  : "new"}
+              {match.aiEnrichment.model
+                ? ` · ${match.aiEnrichment.model}`
+                : ""}
+              {match.aiEnrichment.date
+                ? ` · ${match.aiEnrichment.date}`
+                : ""}
+              {` · docs ${match.aiEnrichment.documentCount}`}
+            </div>
+          ) : null}
+          {match.campuses && match.campuses.length > 0 ? (
+            <div>
+              <p className="text-muted-foreground">Кампусы (доказано)</p>
+              <ul className="mt-1 space-y-0.5">
+                {match.campuses.map((c) => (
+                  <li key={c.city}>
+                    {c.city}
+                    {c.quote ? ` — «${c.quote.slice(0, 80)}»` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : match.universityCity && !match.city ? (
+            <p className="text-muted-foreground">
+              Город кампуса неизвестен (HQ университета: {match.universityCity})
+            </p>
+          ) : null}
+          {match.deferredCoverage ? (
+            <p className="text-muted-foreground">
+              Deferred Universitaly: {match.deferredCoverage}
+            </p>
+          ) : null}
+          {match.whyIncluded ? (
+            <p className="text-muted-foreground">
+              Inclusion: {match.whyIncluded}
+            </p>
           ) : null}
           {catalog ? null : (
             <div className="flex flex-wrap gap-2 pt-1">
@@ -383,6 +460,20 @@ export function CuratorProgramLevelsCard({
               <input type="hidden" name="status" value="SHORTLISTED" />
               <Button type="submit" size="sm">
                 В shortlist
+              </Button>
+            </form>
+            <form action={setMonitoringSelectedAction}>
+              <input type="hidden" name="studentId" value={match.studentId} />
+              <input type="hidden" name="matchId" value={match.matchId} />
+              <input
+                type="hidden"
+                name="selected"
+                value={match.monitoringSelected ? "0" : "1"}
+              />
+              <Button type="submit" size="sm" variant="outline">
+                {match.monitoringSelected
+                  ? "Снять с мониторинга"
+                  : "Мониторинг (до 5)"}
               </Button>
             </form>
             {match.alreadyApplied && match.applicationId ? (

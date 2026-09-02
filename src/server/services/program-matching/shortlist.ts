@@ -85,6 +85,35 @@ export async function addToShortlist(input: {
   return item;
 }
 
+export async function resetStudentPrograms(input: {
+  studentId: string;
+  userId: string;
+}) {
+  const [matches, shortlist] = await prisma.$transaction([
+    prisma.programMatch.deleteMany({ where: { studentId: input.studentId } }),
+    prisma.studentShortlistItem.deleteMany({
+      where: { studentId: input.studentId },
+    }),
+  ]);
+
+  await prisma.activity.create({
+    data: {
+      type: "PROGRAM_MATCHES_RESET",
+      studentId: input.studentId,
+      userId: input.userId,
+      metadata: JSON.stringify({
+        matchesDeleted: matches.count,
+        shortlistDeleted: shortlist.count,
+      }),
+    },
+  });
+
+  return {
+    matchesDeleted: matches.count,
+    shortlistDeleted: shortlist.count,
+  };
+}
+
 export async function listStudentShortlist(studentId: string) {
   return prisma.studentShortlistItem.findMany({
     where: { studentId, visibleToStudent: true },

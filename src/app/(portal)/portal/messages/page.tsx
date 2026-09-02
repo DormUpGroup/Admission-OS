@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
+import { InAppNotificationsPanel } from "@/components/in-app-notifications";
 import {
   MAX_MESSAGE_FILES,
   parseMessageAttachments,
@@ -38,7 +39,7 @@ export default async function PortalMessagesPage() {
       })
     : null;
 
-  const [activities, uploadedDocuments] = await Promise.all([
+  const [activities, uploadedDocuments, notifications] = await Promise.all([
     prisma.activity.findMany({
       where: { studentId: student.id, type: "NOTE" },
       include: { user: { select: { name: true } } },
@@ -54,6 +55,11 @@ export default async function PortalMessagesPage() {
           select: { id: true, name: true },
         })
       : Promise.resolve([]),
+    prisma.inAppNotification.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
   ]);
 
   const messages = activities
@@ -88,6 +94,13 @@ export default async function PortalMessagesPage() {
             : "Мы назначим куратора после обработки анкеты"}
         </p>
       </div>
+
+      {notifications.length > 0 ? (
+        <div className="rounded-lg border border-border p-4">
+          <h2 className="mb-3 text-sm font-medium">Уведомления</h2>
+          <InAppNotificationsPanel items={notifications} />
+        </div>
+      ) : null}
 
       {messages.length === 0 ? (
         <EmptyState

@@ -628,6 +628,36 @@ export async function generateProgramMatchesAction(formData: FormData) {
   revalidatePath(`/admin/students/${studentId}`);
 }
 
+export async function resetProgramMatchesAction(formData: FormData) {
+  const session = await requireStaff();
+  const studentId = String(formData.get("studentId") || "");
+  await assertStudentAccess(studentId);
+  const { resetStudentPrograms } = await import(
+    "@/server/services/program-matching/shortlist"
+  );
+  await resetStudentPrograms({
+    studentId,
+    userId: session.user.id,
+  });
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath("/portal/programs");
+  revalidatePath("/portal");
+  revalidatePath("/admin");
+}
+
+export async function resetUniversitalyCacheAction() {
+  await requireStaff();
+  const { resetUniversitalyCache } = await import(
+    "@/server/services/program-ingestion/reset-universitaly-cache"
+  );
+  await resetUniversitalyCache();
+  revalidatePath("/admin");
+  revalidatePath("/admin/programs");
+  revalidatePath("/admin/students");
+  revalidatePath("/portal/programs");
+  revalidatePath("/portal");
+}
+
 export async function reviewProgramMatchAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
@@ -664,6 +694,37 @@ export async function reviewProgramMatchAction(formData: FormData) {
 
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/portal/programs");
+}
+
+export async function setMonitoringSelectedAction(formData: FormData) {
+  const session = await requireStaff();
+  const studentId = String(formData.get("studentId") || "");
+  await assertStudentAccess(studentId);
+  const matchId = String(formData.get("matchId") || "");
+  const selected = String(formData.get("selected") || "") === "1";
+  const { setMonitoringSelected } = await import(
+    "@/server/services/program-enrichment/monitor-selected"
+  );
+  const result = await setMonitoringSelected({
+    matchId,
+    selected,
+    actorUserId: session.user.id,
+  });
+  if (!result.ok) throw new Error(result.error);
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath("/portal/programs");
+}
+
+export async function markNotificationReadAction(formData: FormData) {
+  const { requireSession } = await import("@/server/auth/guards");
+  const session = await requireSession();
+  const id = String(formData.get("notificationId") || "");
+  const { markNotificationRead } = await import(
+    "@/server/services/notifications"
+  );
+  await markNotificationRead(id, session.user.id);
+  revalidatePath("/admin");
+  revalidatePath("/portal");
 }
 
 export async function addManualProgramMatchAction(formData: FormData) {

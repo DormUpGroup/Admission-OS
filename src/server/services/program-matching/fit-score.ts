@@ -254,21 +254,14 @@ export function calculateFitScore(
   }
 
   let geography = 0;
+  // Only confirmed programme campusCity counts — never University HQ as campus.
   const city = program.campusCity;
   const region = program.region;
-  const uniHay = `${program.universityName ?? ""}`.toLowerCase();
-  const cityInUniversity = (c: string) => {
-    const n = normalizeCityToken(c);
-    if (n.length < 3 || n === "вся италия") return false;
-    const uniNorm = normalizeCityToken(uniHay);
-    return uniNorm.includes(n) || n.includes(uniNorm);
-  };
   if (city && profile.excludedCities.some((c) => cityTokensMatch(c, city))) {
     geography = 0;
   } else if (
-    (city &&
-      profile.preferredCities.some((c) => cityTokensMatch(c, city))) ||
-    profile.preferredCities.some(cityInUniversity)
+    city &&
+    profile.preferredCities.some((c) => cityTokensMatch(c, city))
   ) {
     geography = FIT_SCORE_WEIGHTS.geography;
   } else if (
@@ -276,6 +269,9 @@ export function calculateFitScore(
     profile.preferredRegions.some((r) => r.toLowerCase() === region.toLowerCase())
   ) {
     geography = Math.round(FIT_SCORE_WEIGHTS.geography * 0.8);
+  } else if (!city && profile.preferredCities.length > 0) {
+    // Campus unknown: neutral geography (do not invent from university name/HQ).
+    geography = Math.round(FIT_SCORE_WEIGHTS.geography * 0.35);
   } else if (profile.preferredCities.length === 0) {
     geography = Math.round(FIT_SCORE_WEIGHTS.geography * 0.6);
   } else if (!profile.mustBeInPreferredLocation) {

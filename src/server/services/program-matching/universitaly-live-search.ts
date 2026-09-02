@@ -23,6 +23,7 @@ import {
   allocatePagesRoundRobin,
   corsoMatchesCities,
   mapProfileToUniversitalyQuery,
+  orderPrimaryQueriesForThinPoolRetry,
   shouldRetrySingleCycleDurata6,
   splitCoverageByAllocation,
   type PlannedUniversitalyQuery,
@@ -487,10 +488,12 @@ export async function searchUniversitalyForProfile(
     plan.queries.length,
     UNIVERSITALY_MAX_PAGES
   );
-  const { queried, deferred } = splitCoverageByAllocation(
+  const coverageSplit = splitCoverageByAllocation(
     plan.queries,
     pageAllocations
   );
+  const queried = coverageSplit.queried;
+  const deferred = coverageSplit.deferred;
   for (let i = 0; i < plan.queries.length; i++) {
     plan.queries[i].pagesAllocated = pageAllocations[i] ?? 0;
   }
@@ -562,23 +565,43 @@ export async function searchUniversitalyForProfile(
     relevant.length < MATCH_LIMIT_MIN &&
     primary.pagesFetched < UNIVERSITALY_MAX_PAGES_EXTENDED
   ) {
-    const primaryOnly = plan.queries.filter((q) =>
-      q.roles.includes("primary")
+    const orderedPrimary = orderPrimaryQueriesForThinPoolRetry(
+      plan.queries,
+      deferred
     );
     const extraBudget = UNIVERSITALY_MAX_PAGES_EXTENDED - primary.pagesFetched;
-    if (primaryOnly.length > 0 && extraBudget > 0) {
+    if (orderedPrimary.length > 0 && extraBudget > 0) {
       thinPoolRetry = true;
       const extraAlloc = allocatePagesRoundRobin(
-        primaryOnly.length,
+        orderedPrimary.length,
         extraBudget
       );
+      // Prefer giving first pages to deferred primaries (already ordered first).
       const retry = await runAllocatedQueries(
-        primaryOnly,
+        orderedPrimary,
         extraAlloc,
         plan.degreeLevel
       );
       for (const [id, corso] of retry.byId) {
         if (!primary.byId.has(id)) primary.byId.set(id, corso);
+      }
+      // Move previously deferred queries that received pages into queried metadata.
+      for (let i = 0; i < orderedPrimary.length; i++) {
+        if ((extraAlloc[i] ?? 0) <= 0) continue;
+        const q = orderedPrimary[i];
+        const key = `${q.classeCode ?? ""}|${q.lingua ?? ""}|${q.durata ?? ""}`;
+        const wasDeferred = deferred.findIndex(
+          (d) =>
+            `${d.classeCode ?? ""}|${d.lingua ?? ""}|${d.durata ?? ""}` === key
+        );
+        if (wasDeferred >= 0) {
+          const [item] = deferred.splice(wasDeferred, 1);
+          queried.push({
+            ...item,
+            pagesAllocated: (item.pagesAllocated ?? 0) + (extraAlloc[i] ?? 0),
+            reason: undefined,
+          });
+        }
       }
       primary = {
         ...primary,

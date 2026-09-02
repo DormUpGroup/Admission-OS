@@ -158,6 +158,39 @@ export function splitCoverageByAllocation<
   return { queried, deferred };
 }
 
+function queryKey(q: {
+  classeCode?: string;
+  lingua?: string;
+  durata?: string;
+}): string {
+  return `${q.classeCode ?? ""}|${q.lingua ?? ""}|${q.durata ?? ""}`;
+}
+
+/**
+ * Thin-pool retry order: deferred primary MIUR queries first, then other primaries.
+ * Does not change the overall page budget — only the allocation preference.
+ */
+export function orderPrimaryQueriesForThinPoolRetry<
+  T extends {
+    classeCode?: string;
+    lingua?: string;
+    durata?: string;
+    roles: string[];
+    sourceDirections: string[];
+  },
+>(
+  queries: T[],
+  deferred: CoverageSplitItem[]
+): T[] {
+  const deferredKeys = new Set(
+    deferred.map((d) => queryKey(d))
+  );
+  const primary = queries.filter((q) => q.roles.includes("primary"));
+  const deferredPrimary = primary.filter((q) => deferredKeys.has(queryKey(q)));
+  const otherPrimary = primary.filter((q) => !deferredKeys.has(queryKey(q)));
+  return [...deferredPrimary, ...otherPrimary];
+}
+
 /** Unknown SINGLE_CYCLE: empty durata=5 result may retry durata=6. */
 export function shouldRetrySingleCycleDurata6(input: {
   classeCode?: string | null;

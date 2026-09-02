@@ -70,6 +70,13 @@ async function main() {
     where: { email: { in: QA_SUITE_EMAILS } },
     select: { id: true, email: true },
   });
+  const [programCorpus, universityCount] = await Promise.all([
+    prisma.program.count(),
+    prisma.university.count(),
+  ]);
+  console.log(
+    `Diagnose scope: ${students.length}/${QA_SUITE_EMAILS.length} QA profiles · ${programCorpus} programmes · ${universityCount} universities`
+  );
 
   const byCause: Record<string, number> = {};
   const byReason: Record<string, number> = {};

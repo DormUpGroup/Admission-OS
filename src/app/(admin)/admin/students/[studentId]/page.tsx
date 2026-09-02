@@ -22,12 +22,15 @@ import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { ApplicationCard } from "@/components/application-card";
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { InAppNotificationsPanel } from "@/components/in-app-notifications";
 import { TaskList } from "@/components/task-list";
 import { DeadlineList } from "@/components/deadline-list";
 import { StudentAvatar } from "@/components/student-avatar";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { GenerateProgramMatchesButton } from "@/components/generate-program-matches-button";
+import { ResetProgramMatchesButton } from "@/components/reset-program-matches-button";
+import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
 import type { CuratorMatchView } from "@/components/curator-program-match-card";
 import { CuratorProgramLevelsCard } from "@/components/admin/curator-program-levels";
 import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
@@ -144,7 +147,7 @@ export default async function StudentProfilePage({
 
   if (!student) notFound();
 
-  const [programs, templates, persistedMatches, shortlist, matchingProfile] =
+  const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications] =
     await Promise.all([
       prisma.program.findMany({
         include: { university: true },
@@ -154,6 +157,13 @@ export default async function StudentProfilePage({
       listPersistedMatches(studentId),
       listStudentShortlist(studentId),
       buildMatchingProfile(studentId),
+      student.curatorId
+        ? prisma.inAppNotification.findMany({
+            where: { userId: student.curatorId, studentId },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+          })
+        : Promise.resolve([]),
     ]);
 
   const preferredCities = parsePreferredCities(student.preferredCities);
@@ -246,8 +256,9 @@ export default async function StudentProfilePage({
       programAcademicYearId: pay.id,
       programName: program.name,
       universityName: program.university.name,
-      city: program.campusCity || program.university.city,
-      region: program.region || program.university.region,
+      city: program.campusCity,
+      universityCity: program.university.city,
+      region: program.region,
       degreeLevel: program.degreeLevel,
       language: program.language,
       teachingLanguages,
@@ -296,6 +307,79 @@ export default async function StudentProfilePage({
       scoreBreakdown,
       whyIncluded,
       inclusionKind,
+      monitoringSelected: m.monitoringSelected ?? false,
+      campuses: (() => {
+        try {
+          const raw = program.campusesJson
+            ? (JSON.parse(program.campusesJson) as Array<{
+                city: string;
+                quote?: string;
+                sourceUrl?: string;
+              }>)
+            : [];
+          return Array.isArray(raw) ? raw : [];
+        } catch {
+          return [];
+        }
+      })(),
+      criticalFacts: pay.facts
+        .filter((f) =>
+          [
+            "ACCESS_TYPE",
+            "APPLICATION_DEADLINE",
+            "TUITION",
+            "SEATS",
+            "ADMISSION_EXAMS",
+            "LANGUAGE_REQUIREMENT",
+            "CAMPUS",
+          ].includes(f.field)
+        )
+        .map((f) => ({
+          field: f.field,
+          value: f.rawValue || f.normalizedValueJson,
+          freshness: f.freshness,
+          scope: f.applicantCategoryScope,
+          quote: f.evidenceQuote,
+          sourceUrl: f.sourceUrl,
+        })),
+      aiEnrichment: (() => {
+        const run = (
+          pay as typeof pay & {
+            enrichmentRuns?: Array<{
+              finishedAt: Date | null;
+              model: string | null;
+              status: string;
+              sourceDocumentIdsJson: string | null;
+              promptVersion: string;
+            }>;
+          }
+        ).enrichmentRuns?.[0];
+        if (!run) {
+          return {
+            date: null,
+            model: null,
+            reused: false,
+            documentCount: 0,
+            disabled: true,
+          };
+        }
+        let docCount = 0;
+        try {
+          docCount = run.sourceDocumentIdsJson
+            ? (JSON.parse(run.sourceDocumentIdsJson) as unknown[]).length
+            : 0;
+        } catch {
+          docCount = 0;
+        }
+        return {
+          date: run.finishedAt?.toISOString() ?? null,
+          model: run.model,
+          reused: run.status === "REUSED",
+          documentCount: docCount,
+          promptVersion: run.promptVersion,
+          disabled: false,
+        };
+      })(),
     };
 
     return mergeDossierIntoCuratorView(
@@ -543,6 +627,16 @@ export default async function StudentProfilePage({
 
       {tab === "overview" ? (
         <div className="space-y-4">
+          {curatorNotifications.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Уведомления по программам</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <InAppNotificationsPanel items={curatorNotifications} />
+              </CardContent>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle>Путь</CardTitle>
@@ -659,6 +753,21 @@ export default async function StudentProfilePage({
 
       {tab === "programs" ? (
         <div className="space-y-4">
+          <div className="flex flex-wrap items-start gap-2">
+            <GenerateProgramMatchesButton
+              studentId={studentId}
+              disabled={!matchingReady}
+            />
+            {persistedMatches.length > 0 || shortlist.length > 0 ? (
+              <ResetProgramMatchesButton studentId={studentId} />
+            ) : null}
+            <ResetUniversitalyCacheButton />
+          </div>
+          {!matchingReady ? (
+            <p className="text-xs text-muted-foreground">
+              Заполните анкету №2, чтобы запускать подбор.
+            </p>
+          ) : null}
           <div className="space-y-6">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Shortlist студента</h3>

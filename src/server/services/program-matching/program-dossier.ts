@@ -12,7 +12,6 @@ import {
   formatExamAlternatives,
 } from "@/lib/program-matching/examiner-links";
 import {
-  cityFromUniversityName,
   regionForCity,
 } from "@/lib/program-matching/taxonomy";
 import { prisma } from "@/lib/db";
@@ -451,14 +450,10 @@ export async function getProgramDossier(
         ).trim() || null
       : null;
 
-  const city =
-    pay.program.campusCity ||
-    pay.program.university.city ||
-    cityFromUniversityName(pay.program.university.name);
+  // Confirmed programme campus only — never invent from university HQ/name.
+  const city = pay.program.campusCity;
   const region =
-    pay.program.region ||
-    pay.program.university.region ||
-    regionForCity(city);
+    pay.program.region || (city ? regionForCity(city) : null);
   const tuition = sanitizeTuitionPair(
     pay.tuition?.minTuition ?? null,
     pay.tuition?.maxTuition ?? null
@@ -605,21 +600,38 @@ export type EnsureDossierResult = {
   programAcademicYearId: string;
   reused: boolean;
   enriched: boolean;
+  aiStatus?: string;
   reason?: string;
 };
 
+export type EnsureDossiersOptions = {
+  applicantCategory?: import("@/lib/program-matching/types").ApplicantCategory;
+  matchingContexts?: Map<
+    string,
+    import("@/server/services/program-enrichment/matching-context").MinimalMatchingContext
+  >;
+  onProgress?: (done: number, total: number, label: string) => void;
+};
+
 /**
- * For each PAY: reuse shared dossier if fresh, otherwise deep-enrich from official URL.
- * Cross-student: enrichment is stored on ProgramAcademicYear, not ProgramMatch.
+ * For each PAY: reuse shared dossier if fresh, otherwise AI-enrich (when enabled)
+ * or deep-enrich from official URL (regex/PDF fallback).
  */
 export async function ensureProgramDossiers(
-  programAcademicYearIds: string[]
+  programAcademicYearIds: string[],
+  options?: EnsureDossiersOptions
 ): Promise<EnsureDossierResult[]> {
   const { deepEnrichProgram } = await import(
     "@/server/services/program-ingestion/program-deep-enrich"
   );
+  const {
+    isProgramEnrichmentEnabled,
+    enrichProgramWithAi,
+  } = await import("@/server/services/program-enrichment");
   const results: EnsureDossierResult[] = [];
   const unique = [...new Set(programAcademicYearIds)];
+  const aiOn = isProgramEnrichmentEnabled();
+  let done = 0;
 
   for (const id of unique) {
     if (await isProgramDossierFresh(id)) {
@@ -628,16 +640,57 @@ export async function ensureProgramDossiers(
         reused: true,
         enriched: false,
         reason: "fresh_cache",
+        aiStatus: aiOn ? "dossier_fresh" : "disabled_or_fresh",
       });
+      done += 1;
+      options?.onProgress?.(done, unique.length, `Досье ${done}/${unique.length}`);
       continue;
     }
+
+    if (aiOn && options?.applicantCategory && options.matchingContexts?.has(id)) {
+      const ctx = options.matchingContexts.get(id)!;
+      const ai = await enrichProgramWithAi({
+        programAcademicYearId: id,
+        applicantCategory: options.applicantCategory,
+        matchingContext: ctx,
+        forShortlist: true,
+      });
+      if (ai.status === "SUCCEEDED" || ai.status === "REUSED") {
+        results.push({
+          programAcademicYearId: id,
+          reused: ai.status === "REUSED",
+          enriched: ai.status === "SUCCEEDED",
+          aiStatus: ai.status,
+          reason: ai.status,
+        });
+        done += 1;
+        options?.onProgress?.(done, unique.length, `AI ${done}/${unique.length}`);
+        continue;
+      }
+      // Fall through to regex/PDF parser
+      const enriched = await deepEnrichProgram(id);
+      results.push({
+        programAcademicYearId: id,
+        reused: false,
+        enriched: enriched.ok,
+        aiStatus: `${ai.status}+FALLBACK_REGEX`,
+        reason: enriched.reason ?? ai.error,
+      });
+      done += 1;
+      options?.onProgress?.(done, unique.length, `Fallback ${done}/${unique.length}`);
+      continue;
+    }
+
     const enriched = await deepEnrichProgram(id);
     results.push({
       programAcademicYearId: id,
       reused: false,
       enriched: enriched.ok,
       reason: enriched.reason,
+      aiStatus: aiOn ? "NO_CONTEXT" : "DISABLED",
     });
+    done += 1;
+    options?.onProgress?.(done, unique.length, `Обогащение ${done}/${unique.length}`);
   }
 
   return results;

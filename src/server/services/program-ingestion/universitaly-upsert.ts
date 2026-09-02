@@ -48,26 +48,19 @@ function academicYearFromCorso(corso: UniversitalyCorso, fallback: string): stri
   return fallback;
 }
 
-/** Resolve campus city: sede → nomeStruttura parse → null. */
-export function resolveCampusCity(
-  corso: UniversitalyCorso,
-  universityCity?: string | null
-): string | null {
+/**
+ * Resolve programme campus city from Universitaly corso only.
+ * Never falls back to University.city (HQ ≠ campus).
+ */
+export function resolveCampusCity(corso: UniversitalyCorso): string | null {
   const sede = corso.sede?.comuneDescrizione?.trim();
   if (sede) return sede;
-
-  const fromName = cityFromUniversityName(corso.nomeStruttura);
-  if (fromName) return fromName;
-
-  if (universityCity?.trim()) return universityCity.trim();
-  return null;
+  // Only parse city from nomeStruttura when it clearly encodes a sede/location.
+  return cityFromUniversityName(corso.nomeStruttura);
 }
 
-function cityHint(
-  corso: UniversitalyCorso,
-  universityCity?: string | null
-): string | null {
-  return resolveCampusCity(corso, universityCity);
+function cityHint(corso: UniversitalyCorso): string | null {
+  return resolveCampusCity(corso);
 }
 
 async function upsertFact(input: {
@@ -147,8 +140,13 @@ export async function upsertUniversitalyCandidates(
     const degreeLevel = degreeLevelFromCorso(corso);
     const language = languageFromCorso(corso);
     const academicYear = academicYearFromCorso(corso, fallbackYear);
-    const city = cityHint(corso, null);
+    const city = cityHint(corso);
     const region = city ? regionForCity(city) : null;
+    // University HQ city may come from sede or name parse; never written to Program.campusCity.
+    const universityHqCity = city ?? cityFromUniversityName(uniName);
+    const universityHqRegion = universityHqCity
+      ? regionForCity(universityHqCity)
+      : null;
     const fieldTags = tagsFromText(`${titleEn} ${titleIt} ${corso.classe?.descrizione ?? ""}`);
     const field = fieldTags[0] || corso.area || corso.classe?.descrizione || null;
     const officialUrl = corso.url?.trim() || null;
@@ -162,8 +160,8 @@ export async function upsertUniversitalyCandidates(
       create: {
         name: uniName,
         slug: uniSlug,
-        city: city,
-        region: region,
+        city: universityHqCity,
+        region: universityHqRegion,
         country: "IT",
         publicPrivate,
         universitalyExternalId: corso.idStrutture
@@ -172,8 +170,8 @@ export async function upsertUniversitalyCandidates(
       },
       update: {
         name: uniName,
-        city: city ?? undefined,
-        region: region ?? undefined,
+        city: universityHqCity ?? undefined,
+        region: universityHqRegion ?? undefined,
         universitalyExternalId: corso.idStrutture
           ? String(corso.idStrutture)
           : undefined,
@@ -181,11 +179,10 @@ export async function upsertUniversitalyCandidates(
       },
     });
 
-    const resolvedCity =
-      city ?? resolveCampusCity(corso, university.city) ?? university.city;
-    const resolvedRegion = resolvedCity
-      ? regionForCity(resolvedCity)
-      : region ?? university.region;
+    // Programme campus stays null when Universitaly did not state a sede.
+    // University.city may still hold HQ city separately — never copy it here.
+    const resolvedCity = city;
+    const resolvedRegion = resolvedCity ? regionForCity(resolvedCity) : region;
 
     let program = await prisma.program.findFirst({
       where: { universitalyExternalId: externalId },

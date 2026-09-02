@@ -133,6 +133,32 @@ export default async function ProgramDataPage() {
     }),
   ]);
 
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [
+    aiSucceeded,
+    aiReused,
+    quoteRejectsAgg,
+    sourceConflicts,
+    selectedMonitoring,
+    changesWeek,
+  ] = await Promise.all([
+    prisma.programEnrichmentRun.count({ where: { status: "SUCCEEDED" } }),
+    prisma.programEnrichmentRun.count({ where: { status: "REUSED" } }),
+    prisma.programEnrichmentRun.aggregate({
+      _sum: { quoteRejectCount: true, inputTokens: true, outputTokens: true },
+    }),
+    prisma.programFact.count({
+      where: { field: "SOURCE_CONFLICT", superseded: false },
+    }),
+    prisma.programMatch.count({ where: { monitoringSelected: true } }),
+    prisma.programChangeEvent.count({
+      where: { createdAt: { gte: weekAgo } },
+    }),
+  ]);
+  const tokenUsage =
+    (quoteRejectsAgg._sum.inputTokens ?? 0) +
+    (quoteRejectsAgg._sum.outputTokens ?? 0);
+
   const fill = (n: number) =>
     years > 0 ? `${n} (${Math.round((n / years) * 100)}%)` : String(n);
 
@@ -177,6 +203,20 @@ export default async function ProgramDataPage() {
         <MetricCard label="Stale sources" value={String(stale)} />
         <MetricCard label="Parser issues" value={String(parserIssues)} />
         <MetricCard label="Needs verification" value={String(needsVerification)} />
+        <MetricCard label="AI succeeded" value={String(aiSucceeded)} />
+        <MetricCard label="AI reused" value={String(aiReused)} />
+        <MetricCard
+          label="Quote rejects"
+          value={String(quoteRejectsAgg._sum.quoteRejectCount ?? 0)}
+        />
+        <MetricCard label="Source conflicts" value={String(sourceConflicts)} />
+        <MetricCard label="Token usage (approx)" value={String(tokenUsage)} />
+        <MetricCard
+          label="Selected under monitoring"
+          value={String(selectedMonitoring)}
+        />
+        <MetricCard label="Changes this week" value={String(changesWeek)} />
+        <MetricCard label="Change events" value={String(changes)} />
       </div>
 
       <Card>

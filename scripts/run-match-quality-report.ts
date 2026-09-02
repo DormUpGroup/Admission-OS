@@ -50,6 +50,14 @@ async function main() {
     select: { id: true, email: true, intake: true },
   });
 
+  const [programCorpus, universityCount] = await Promise.all([
+    prisma.program.count(),
+    prisma.university.count(),
+  ]);
+  console.log(
+    `Report scope: ${students.length}/${QA_SUITE_EMAILS.length} QA profiles · ${programCorpus} programmes · ${universityCount} universities (full base)`
+  );
+
   const byField: Record<
     CriticalProgramField,
     { total: number; rawUnknown: number; unexplainedUnknown: number }
@@ -214,6 +222,13 @@ async function main() {
     engine: MATCHING_ENGINE_VERSION,
     parser: PARSER_VERSION,
     targetIntake: DEFAULT_TARGET_ACADEMIC_YEAR,
+    scope: {
+      qaProfiles: QA_SUITE_EMAILS.length,
+      qaProfilesFound: students.length,
+      programCorpus,
+      universities: universityCount,
+      universityFilter: null,
+    },
     aggregate,
     students: studentSummaries,
     cards,
@@ -239,6 +254,7 @@ async function main() {
     `|--------|-------|`,
     `| QA students | ${students.length} |`,
     `| Programme cards | ${cards.length} |`,
+    `| Program corpus (DB) | ${programCorpus} programmes / ${universityCount} universities |`,
     `| Critical field observations | ${totalCriticalFields} |`,
     `| Raw unknown rate | ${(aggregate.rawUnknownRate * 100).toFixed(1)}% |`,
     `| Unexplained unknown rate | ${(aggregate.unexplainedUnknownRate * 100).toFixed(1)}% |`,

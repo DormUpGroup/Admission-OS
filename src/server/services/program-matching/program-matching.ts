@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   LIGHT_ENRICH_CANDIDATE_CAP,
   MATCH_LIMIT_DEFAULT,
+  MATCH_LIMIT_MAX,
   MATCHING_ENGINE_VERSION,
 } from "@/lib/program-matching/config";
 import { buildMiurProvenance } from "@/lib/program-matching/miur-provenance";
@@ -19,6 +20,11 @@ import {
   applyShortlistComposition,
   shareByInclusionKind,
 } from "./match-compose";
+import {
+  getEnrichmentConfig,
+  isProgramEnrichmentEnabled,
+  toMinimalMatchingContext,
+} from "@/server/services/program-enrichment";
 
 export async function buildMatchingProfile(studentId: string): Promise<MatchingProfile | null> {
   const student = await prisma.student.findUnique({ where: { id: studentId } });
@@ -169,8 +175,8 @@ export async function generateProgramMatches(
       profile,
       programDegreeLevel: program.degreeLevel,
       teachingLanguages,
-      campusCity: program.campusCity || program.university.city,
-      region: program.region || program.university.region,
+      campusCity: program.campusCity,
+      region: program.region,
       requirements: pay.requirements.map((r) => ({
         type: r.type,
         required: r.required,
@@ -207,8 +213,8 @@ export async function generateProgramMatches(
         name: program.name,
         field: program.field,
         fieldTags,
-        campusCity: program.campusCity || program.university.city,
-        region: program.region || program.university.region,
+        campusCity: program.campusCity,
+        region: program.region,
         universityName: program.university.name,
         teachingLanguages,
         deliveryMode: program.deliveryMode,
@@ -229,8 +235,8 @@ export async function generateProgramMatches(
       evaluations: eligibility.evaluations,
       risks: eligibility.risks,
       teachingLanguages,
-      city: program.campusCity || program.university.city,
-      region: program.region || program.university.region,
+      city: program.campusCity,
+      region: program.region,
       tuitionKnown: !!(pay.tuition?.minTuition || pay.tuition?.maxTuition || pay.tuition?.fixedTuition),
       usingPreviousYear,
       callMissing,
@@ -255,8 +261,8 @@ export async function generateProgramMatches(
       field: program.field,
       universityId: program.universityId,
       universityName: program.university.name,
-      city: program.campusCity || program.university.city,
-      region: program.region || program.university.region,
+      city: program.campusCity,
+      region: program.region,
       academicYear: pay.academicYear,
       eligibilityStatus: eligibility.status,
       fitScore: breakdown.total,
@@ -311,6 +317,8 @@ export type MatchProgressStage =
   | "profile"
   | "universitaly"
   | "score"
+  | "documents"
+  | "ai_extract"
   | "enrich"
   | "rank"
   | "save"
@@ -368,38 +376,140 @@ export async function persistProgramMatches(
 
   report("score", "Оценка fit и eligibility", 55);
   // Pass 1: hard eligibility + fit on discovery pool (no enrich yet).
+  const aiCap = isProgramEnrichmentEnabled()
+    ? getEnrichmentConfig().maxCandidates
+    : LIGHT_ENRICH_CANDIDATE_CAP;
   const ranked = await generateProgramMatches(studentId, {
     includeNotEligible: false,
-    limit: Math.max(MATCH_LIMIT_DEFAULT, LIGHT_ENRICH_CANDIDATE_CAP),
+    limit: Math.max(MATCH_LIMIT_DEFAULT, aiCap),
     programAcademicYearIds: liveMeta?.programAcademicYearIds,
     includeShortlisted: true,
     skipComposition: true,
   });
 
-  report("enrich", "Обогащение досье программ", 70);
+  report("documents", "Официальные документы программ", 62);
   let enrichedCount = 0;
   let reusedCount = 0;
-  if (ranked.length > 0) {
-    const toEnrich = ranked.slice(0, LIGHT_ENRICH_CANDIDATE_CAP);
+  let aiProcessed = 0;
+  let enrichedPayIds: string[] = [];
+
+  if (ranked.length > 0 && profile) {
+    const queueSize = Math.min(ranked.length, aiCap);
+    const queue = ranked.slice(0, queueSize);
+    const remaining = ranked.slice(queueSize);
+    const matchingContexts = new Map(
+      queue.map((m) => [
+        m.programAcademicYearId,
+        toMinimalMatchingContext({
+          profile,
+          miurCodes: (liveMeta?.miurCodes ?? []).map((c) => ({
+            code: c.code,
+            role: c.role,
+            sourceDirections: c.directions ?? [],
+          })),
+          program: {
+            name: m.programName,
+            universityName: m.universityName,
+            degreeClass: m.degreeClass,
+            language: m.language,
+            durationYears: null,
+            campusCity: m.city,
+            officialUrl: m.sourceUrls?.[0] ?? null,
+          },
+        }),
+      ])
+    );
+
     const { ensureProgramDossiers } = await import("./program-dossier");
-    const dossierResults = await ensureProgramDossiers(
-      toEnrich.map((m) => m.programAcademicYearId)
+
+    const runBatch = async (ids: string[], labelPrefix: string) => {
+      report(
+        "ai_extract",
+        isProgramEnrichmentEnabled()
+          ? `AI extraction: 0 / ${ids.length}`
+          : `${labelPrefix}: regex/PDF fallback`,
+        70,
+        isProgramEnrichmentEnabled() ? undefined : "AI enrichment выключен"
+      );
+      return ensureProgramDossiers(ids, {
+        applicantCategory: profile.applicantCategory,
+        matchingContexts,
+        onProgress: (done, total) => {
+          report(
+            "ai_extract",
+            isProgramEnrichmentEnabled()
+              ? `AI extraction: ${done} / ${total}`
+              : `Обогащение: ${done} / ${total}`,
+            70 + Math.round((done / Math.max(total, 1)) * 10)
+          );
+        },
+      });
+    };
+
+    let dossierResults = await runBatch(
+      queue.map((m) => m.programAcademicYearId),
+      "Обогащение досье"
     );
     enrichedCount = dossierResults.filter((r) => r.enriched).length;
     reusedCount = dossierResults.filter((r) => r.reused).length;
+    aiProcessed = dossierResults.length;
+    enrichedPayIds = queue.map((m) => m.programAcademicYearId);
+
+    // If quality cards are thin, pull next batch from remaining discovery pool
+    const qualityAfter = dossierResults.filter(
+      (r) => r.enriched || r.reused
+    ).length;
+    if (
+      qualityAfter < MATCH_LIMIT_DEFAULT &&
+      remaining.length > 0 &&
+      isProgramEnrichmentEnabled()
+    ) {
+      const next = remaining.slice(0, Math.min(remaining.length, aiCap));
+      for (const m of next) {
+        matchingContexts.set(
+          m.programAcademicYearId,
+          toMinimalMatchingContext({
+            profile,
+            program: {
+              name: m.programName,
+              universityName: m.universityName,
+              degreeClass: m.degreeClass,
+              language: m.language,
+              durationYears: null,
+              campusCity: m.city,
+              officialUrl: m.sourceUrls?.[0] ?? null,
+            },
+          })
+        );
+      }
+      const extra = await runBatch(
+        next.map((m) => m.programAcademicYearId),
+        "Доп. порция"
+      );
+      dossierResults = [...dossierResults, ...extra];
+      enrichedCount += extra.filter((r) => r.enriched).length;
+      reusedCount += extra.filter((r) => r.reused).length;
+      aiProcessed += extra.length;
+      enrichedPayIds = [
+        ...enrichedPayIds,
+        ...next.map((m) => m.programAcademicYearId),
+      ];
+    }
+
     if (liveMeta) {
       liveMeta = { ...liveMeta, enrichedCount };
     }
   }
 
-  report("rank", "Ранжирование и shortlist", 85);
+  report("rank", "Финальное ранжирование", 85);
   // Pass 2: re-score after dossier ensure (language / tuition / facts may have updated).
-  const enrichScopeIds = ranked
-    .slice(0, LIGHT_ENRICH_CANDIDATE_CAP)
-    .map((m) => m.programAcademicYearId);
+  const enrichScopeIds =
+    enrichedPayIds.length > 0
+      ? enrichedPayIds
+      : ranked.slice(0, LIGHT_ENRICH_CANDIDATE_CAP).map((m) => m.programAcademicYearId);
   const generated = await generateProgramMatches(studentId, {
     includeNotEligible: false,
-    limit: MATCH_LIMIT_DEFAULT,
+    limit: MATCH_LIMIT_MAX,
     programAcademicYearIds:
       enrichScopeIds.length > 0
         ? enrichScopeIds
@@ -421,7 +531,7 @@ export async function persistProgramMatches(
   const compositionMeta = compositionPreview.meta;
   const underfillWarning =
     compositionMeta.underfill
-      ? `Only ${generated.length} programmes matched on Universitaly (target ${MATCH_LIMIT_DEFAULT}). Consider broadening directions or language.`
+      ? `Only ${generated.length} programmes matched (target up to ${MATCH_LIMIT_DEFAULT}; no artificial padding).`
       : null;
 
   report("save", "Сохранение результатов", 95);
@@ -495,6 +605,8 @@ export async function persistProgramMatches(
         candidateCount: liveMeta?.candidateCount ?? generated.length,
         enrichedCount: liveMeta?.enrichedCount ?? enrichedCount,
         reusedDossierCount: reusedCount,
+        aiEnrichmentEnabled: isProgramEnrichmentEnabled(),
+        aiProcessedCount: aiProcessed,
         truncated: liveMeta?.truncated ?? false,
         errors: liveMeta?.errors ?? [],
         warning: [liveMeta?.warning, underfillWarning].filter(Boolean).join(" ") || null,
@@ -551,7 +663,10 @@ export async function listPersistedMatches(studentId: string) {
           cycles: true,
           tuition: true,
           requirements: true,
-          facts: { where: { superseded: false }, take: 10 },
+          facts: { where: { superseded: false }, take: 40 },
+          enrichmentRuns: { orderBy: { startedAt: "desc" }, take: 1 },
+          sourceDocuments: { orderBy: { retrievedAt: "desc" }, take: 8 },
+          // change events via separate query if needed
         },
       },
     },

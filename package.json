@@ -25,6 +25,7 @@
     "programs:qa-match": "tsx scripts/run-match-qa-suite.ts",
     "programs:qa-report": "tsx scripts/run-match-quality-report.ts",
     "programs:diagnose-gaps": "tsx scripts/diagnose-field-gaps.ts",
+    "programs:monitor-selected": "tsx scripts/monitor-selected-programs.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -52,6 +53,7 @@
     "lucide-react": "^1.33.0",
     "next": "15.5.23",
     "next-auth": "^5.0.0-beta.32",
+    "openai": "^7.9.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.10.38",
     "react": "19.1.0",

@@ -71,6 +71,24 @@ describe("discover tasse/requisiti", () => {
     );
   });
 
+  it("synthesizes Unive /iscriversi siblings from programme root", () => {
+    const siblings = admissionSiblingUrls(
+      "https://www.unive.it/cdl/ftta2"
+    );
+    expect(siblings.some((c) => c.url.endsWith("/iscriversi"))).toBe(true);
+    expect(siblings.some((c) => c.url.endsWith("/ammissione-e-immatricolazione"))).toBe(
+      true
+    );
+  });
+
+  it("synthesizes Unito CMS doc siblings from tuition page", () => {
+    const siblings = admissionSiblingUrls(
+      "https://www.unito.it/do/home.pl/View?doc=tuition_fees_and_financial_aid.html"
+    );
+    expect(siblings.some((c) => /admission_requirements/i.test(c.url))).toBe(true);
+    expect(siblings.some((c) => /how_to_apply/i.test(c.url))).toBe(true);
+  });
+
   it("rejects quality-policy PDFs as admission sources", () => {
     const html = `
       <a href="/uploads/Visione-della-qualita-e-politiche-per-la-qualita-2025.pdf">Qualità</a>

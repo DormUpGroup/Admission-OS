@@ -1,4 +1,4 @@
-export const MATCHING_ENGINE_VERSION = "v1.8";
+export const MATCHING_ENGINE_VERSION = "v1.9";
 
 /** Min programmes per questionnaire direction in top-N when 2+ directions selected. */
 export const MULTI_DIRECTION_MIN_SLOTS = 2;
@@ -53,12 +53,20 @@ export const UNIVERSITALY_MAX_DIRECTION_QUERIES = 3;
  */
 export const UNIVERSITALY_MAX_QUERY_SLICES = 8;
 
-/** Curator match funnel: target ~15–20 programmes. */
-export const MATCH_LIMIT_DEFAULT = 20;
+/** Curator match funnel: target ~20–25 programmes; no artificial padding. */
+export const MATCH_LIMIT_DEFAULT = 25;
 export const MATCH_LIMIT_MIN = 15;
+/** Absolute curator shortlist ceiling (honest underfill below this). */
+export const MATCH_LIMIT_MAX = 25;
 
-/** Light/deep enrich only top survivors after hard filter (before final top-20 slice). */
+/** Light/deep enrich only top survivors after hard filter (before final top-N slice). */
 export const LIGHT_ENRICH_CANDIDATE_CAP = 28;
+
+/** Default AI enrichment queue size (overridable via env). */
+export const AI_ENRICH_CANDIDATE_CAP_DEFAULT = 35;
+
+/** Max programmes a student may select for monitoring. */
+export const MONITORING_SELECTED_MAX = 5;
 
 /** Shared program dossier reuse across students (days). */
 export const PROGRAM_DOSSIER_TTL_DAYS = 30;

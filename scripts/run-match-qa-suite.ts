@@ -12,6 +12,14 @@ import { QA_SUITE_EMAILS } from "./qa-suite-emails";
 const prisma = new PrismaClient();
 
 async function main() {
+  const [programCount, universityCount] = await Promise.all([
+    prisma.program.count(),
+    prisma.university.count(),
+  ]);
+  console.log(
+    `QA scope: ${QA_SUITE_EMAILS.length} profiles · ${programCount} programmes · ${universityCount} universities (full base, no university filter)`
+  );
+
   const results: Array<Record<string, unknown>> = [];
   for (const email of QA_SUITE_EMAILS) {
     const student = await prisma.student.findUnique({ where: { email } });
@@ -32,6 +40,12 @@ async function main() {
     generatedAt: new Date().toISOString(),
     engine: MATCHING_ENGINE_VERSION,
     parser: PARSER_VERSION,
+    scope: {
+      qaProfiles: QA_SUITE_EMAILS.length,
+      programCorpus: programCount,
+      universities: universityCount,
+      universityFilter: null,
+    },
     profiles: QA_SUITE_EMAILS.length,
     results,
   };

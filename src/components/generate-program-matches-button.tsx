@@ -13,7 +13,8 @@ const STEPS: { id: MatchProgressStage; label: string }[] = [
   { id: "profile", label: "Профиль анкеты" },
   { id: "universitaly", label: "Поиск на Universitaly" },
   { id: "score", label: "Оценка программ" },
-  { id: "enrich", label: "Досье программ" },
+  { id: "documents", label: "Официальные документы" },
+  { id: "ai_extract", label: "AI extraction" },
   { id: "rank", label: "Ранжирование" },
   { id: "save", label: "Сохранение" },
 ];
@@ -119,7 +120,7 @@ export function GenerateProgramMatchesButton({
   const showProgress = loading || completeCount != null;
 
   return (
-    <div className="w-full max-w-lg space-y-3">
+    <div className="max-w-lg space-y-3">
       <Button
         type="button"
         onClick={handleGenerate}

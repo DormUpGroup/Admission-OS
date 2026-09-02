@@ -20,6 +20,7 @@ import { applyShortlistComposition } from "@/server/services/program-matching/ma
 import { resolveCampusCity } from "@/server/services/program-ingestion/universitaly-upsert";
 import {
   allocatePagesRoundRobin,
+  orderPrimaryQueriesForThinPoolRetry,
   shouldRetrySingleCycleDurata6,
   splitCoverageByAllocation,
 } from "@/server/services/program-matching/universitaly-query";
@@ -771,6 +772,65 @@ describe("v1.7 city resolution", () => {
       sede: null,
     } as import("@/server/services/program-ingestion/universitaly-client").UniversitalyCorso);
     expect(city?.toLowerCase()).toMatch(/venezia|venice/);
+  });
+
+  it("does not invent campus city when sede and name have no city", () => {
+    const city = resolveCampusCity({
+      id: 3,
+      nomeStruttura: "Politecnico di Something",
+      sede: null,
+    } as import("@/server/services/program-ingestion/universitaly-client").UniversitalyCorso);
+    // No university.city fallback parameter exists anymore.
+    expect(city).toBeNull();
+  });
+
+  it("uses sede.comuneDescrizione when present", () => {
+    const city = resolveCampusCity({
+      id: 4,
+      nomeStruttura: "Università di Bologna",
+      sede: { comuneDescrizione: "Cesena" },
+    } as import("@/server/services/program-ingestion/universitaly-client").UniversitalyCorso);
+    expect(city).toBe("Cesena");
+  });
+});
+
+describe("orderPrimaryQueriesForThinPoolRetry", () => {
+  it("puts deferred primary queries before other primaries", () => {
+    const queries = [
+      {
+        classeCode: "L-31",
+        lingua: "2",
+        durata: "3",
+        roles: ["primary"],
+        sourceDirections: ["CS"],
+      },
+      {
+        classeCode: "L-18",
+        lingua: "2",
+        durata: "3",
+        roles: ["primary"],
+        sourceDirections: ["Econ"],
+      },
+      {
+        classeCode: "L-33",
+        lingua: "2",
+        durata: "3",
+        roles: ["secondary"],
+        sourceDirections: ["Econ"],
+      },
+    ];
+    const deferred = [
+      {
+        classeCode: "L-18",
+        lingua: "2",
+        durata: "3",
+        sourceDirections: ["Econ"],
+        pagesAllocated: 0,
+        reason: "page_budget_exhausted",
+      },
+    ];
+    const ordered = orderPrimaryQueriesForThinPoolRetry(queries, deferred);
+    expect(ordered.map((q) => q.classeCode)).toEqual(["L-18", "L-31"]);
   });
 });
 

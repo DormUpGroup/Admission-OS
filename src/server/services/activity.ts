@@ -69,6 +69,8 @@ export function activityLabel(type: ActivityType, metadata?: string | null) {
       return "Не принят на сопровождение";
     case "ACCOMPANIMENT_CLARIFICATION_REQUESTED":
       return "Запрошено уточнение по анкете";
+    case "PROGRAM_MATCHES_RESET":
+      return "Подбор программ сброшен";
     case "INTAKE_LIMIT_CHANGED":
       return "Изменён лимит набора";
     default:

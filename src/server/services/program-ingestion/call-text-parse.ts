@@ -53,7 +53,7 @@ const SECTION_CUE =
 
 /** Prefer main/article content; always strip scripts/styles (Unito-like CMS shells). */
 export function extractHtmlMainText(body: string): string {
-  let html = body
+  const html = body
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");

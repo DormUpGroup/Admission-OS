@@ -1,6 +1,6 @@
 # Program Matching Engine
 
-> **Current state:** [Program Matching — Current Report](./program-matching-current.md) (28 August 2026, matching v1.8, parser call-v1.2). This document remains the implementation reference; the linked report is the latest operational summary.
+> **Current state:** matching **v1.9** adds an optional OpenAI second filter (official-site navigator + Luna/Terra) after Universitaly discovery. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false** (regex/PDF dossier remains fallback).
 
 Italy-specific program matching for IMMIGROME OS. Matches use the **existing questionnaires** as source of truth, a local **Program Database** with fact-level provenance, deterministic **eligibility**, configurable **fit score**, and **curator verification** before student shortlist.
 
@@ -8,14 +8,26 @@ Italy-specific program matching for IMMIGROME OS. Matches use the **existing que
 
 ```text
 Questionnaire → MatchingProfile → Universitaly (lingua × MIUR classe)
-  → Upsert candidates → Hard filter (degree + teaching language + avoid cities)
-    → Fit rank (language first, then field) → Ensure program dossier
-  → Persist top 15–20 → Curator review → Shortlist
+  → Soft-gate + upsert → Deterministic fit (Pass 1)
+  → AI enrichment queue (≤35) OR regex/PDF dossier fallback
+  → Re-score + compose (≤25, no padding) → Curator review
+  → Select ≤5 for monitoring → programs:monitor-selected
 ```
 
 **Hybrid rule:** no full Universitaly catalog mirror. Generate searches online with questionnaire filters, caches candidates locally for 24h (same fingerprint), then runs eligibility/fit only on those programmes (+ shortlisted).
 
-Matching does **not** scrape the whole of Italy on each click. Caps: max **10 pages** total budget shared across classe×lingua queries. Curator receives **15–20** matches. Program dossier HTML enrich is reused across students for **30 days** (`PROGRAM_DOSSIER_TTL_DAYS`).
+Matching does **not** scrape the whole of Italy on each click. Caps: max **10 pages** total budget shared across classe×lingua queries (extended thin-pool retry prefers deferred primary MIUR classes). Curator receives **up to 25** matches without artificial padding. Program dossier enrich is reused across students for **30 days** (`PROGRAM_DOSSIER_TTL_DAYS`). AI facts are keyed by program + academic year + applicant category + source hashes + prompt version (not by student PII).
+
+### OpenAI second filter (optional)
+
+| Env | Default |
+|---|---|
+| `OPENAI_PROGRAM_ENRICHMENT_ENABLED` | `false` |
+| `OPENAI_PROGRAM_ENRICHMENT_MODEL` | `gpt-5.6-luna` |
+| `OPENAI_PROGRAM_ENRICHMENT_ESCALATION_MODEL` | `gpt-5.6-terra` |
+| `OPENAI_PROGRAM_ENRICHMENT_MAX_CANDIDATES` | `35` |
+
+Tools are limited to `inspect_programme_site` / `follow_official_link` / `read_official_section` / `read_official_pdf` (no free web search). Every saved fact requires a quote present in its `SourceDocument`. Monitor only selected programmes: `npm run programs:monitor-selected`.
 
 ## Universitaly / Cineca API
 

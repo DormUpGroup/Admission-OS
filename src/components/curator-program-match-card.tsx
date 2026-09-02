@@ -78,6 +78,26 @@ export type CuratorMatchView = {
     field: string;
     verifiedAt: Date | null;
   }>;
+  monitoringSelected?: boolean;
+  universityCity?: string | null;
+  campuses?: Array<{ city: string; quote?: string; sourceUrl?: string }>;
+  criticalFacts?: Array<{
+    field: string;
+    value: string;
+    freshness?: string | null;
+    scope?: string | null;
+    quote?: string | null;
+    sourceUrl?: string | null;
+  }>;
+  aiEnrichment?: {
+    date: string | null;
+    model: string | null;
+    reused: boolean;
+    documentCount: number;
+    promptVersion?: string | null;
+    disabled?: boolean;
+  } | null;
+  deferredCoverage?: string | null;
 };
 
 function statusColor(status: string) {

@@ -23,6 +23,7 @@ model User {
   assignedTasks    Task[]     @relation("TaskAssignee")
   reviewedDocs     Document[]  @relation("DocumentReviewer")
   activities       Activity[]
+  notifications    InAppNotification[]
 }
 
 model Student {
@@ -64,6 +65,7 @@ model Student {
   activities   Activity[]
   programMatches ProgramMatch[]
   shortlistItems StudentShortlistItem[]
+  notifications InAppNotification[]
 }
 
 model IntakeCohort {
@@ -109,6 +111,8 @@ model Program {
   durationYears          Int?
   ects                   Int?
   campusCity             String?
+  // Proven campuses JSON: [{name?, city, sourceDocumentId, sourceUrl, quote}]
+  campusesJson           String?
   region                 String?
   officialUrl            String?
   universitalyUrl        String?
@@ -308,6 +312,7 @@ model ProgramAcademicYear {
   shortlistItems StudentShortlistItem[]
   facts        ProgramFact[]
   sourceDocuments SourceDocument[]
+  enrichmentRuns ProgramEnrichmentRun[]
 
   @@unique([programId, academicYear])
 }
@@ -400,6 +405,10 @@ model ProgramFact {
   field              String
   normalizedValueJson String
   rawValue           String?
+  evidenceQuote      String?
+  applicantCategoryScope String?
+  freshness          String?
+  extractionMetadataJson String?
   sourceDocumentId   String?
   sourceUrl          String?
   sourceType         String
@@ -417,6 +426,30 @@ model ProgramFact {
   programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
   sourceDocument      SourceDocument?      @relation(fields: [sourceDocumentId], references: [id])
   requirements        AdmissionRequirement[]
+}
+
+model ProgramEnrichmentRun {
+  id                    String    @id @default(cuid())
+  programAcademicYearId String
+  applicantCategory     String
+  status                String
+  model                 String?
+  promptVersion         String
+  sourceFingerprint     String
+  sourceDocumentIdsJson String?
+  toolCallCount         Int       @default(0)
+  inputTokens           Int?
+  outputTokens          Int?
+  quoteRejectCount      Int       @default(0)
+  reusedFromRunId       String?
+  startedAt             DateTime  @default(now())
+  finishedAt            DateTime?
+  error                 String?
+
+  programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+
+  @@index([programAcademicYearId, applicantCategory, sourceFingerprint, promptVersion])
+  @@index([status])
 }
 
 model ProgramMatch {
@@ -438,6 +471,8 @@ model ProgramMatch {
   curatorNotes          String?
   reviewedById          String?
   reviewedAt            DateTime?
+  monitoringSelected    Boolean   @default(false)
+  monitoringSelectedAt  DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -445,6 +480,7 @@ model ProgramMatch {
   programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, programAcademicYearId])
+  @@index([monitoringSelected])
 }
 
 model StudentShortlistItem {
@@ -508,4 +544,22 @@ model ProgramChangeEvent {
   createdAt        DateTime @default(now())
 
   sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+}
+
+model InAppNotification {
+  id           String    @id @default(cuid())
+  userId       String
+  studentId    String?
+  type         String
+  title        String
+  body         String
+  metadataJson String?
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([studentId])
 }
