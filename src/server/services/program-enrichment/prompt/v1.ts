@@ -17,7 +17,17 @@ export const ENRICHMENT_SYSTEM_PROMPT_V2 = `${ENRICHMENT_SYSTEM_PROMPT_V1}
 - Keep EU_CITIZEN, EU_EQUIVALENT, NON_EU_RESIDENT_ITALY, and NON_EU_RESIDENT_ABROAD distinct. For quota tables, emit one seats fact per safely mapped applicant group and preserve the original group text and category code in the value.
 - Never map a mixed, unknown, Marco Polo, or other special group to the applicant unless the official text explicitly names that applicant category.`;
 
+export const ENRICHMENT_SYSTEM_PROMPT_V3 = `${ENRICHMENT_SYSTEM_PROMPT_V2}
+
+Admission-exam investigation is a mandatory, AI-led step for every programme card:
+- First inspect the programme page. Then decide yourself, from the returned official links and sections, whether an admissions/exam page is available. Prioritise labels and URLs about prove, test, selezione, concorso, admission, entrance, TOLC, SAT, IMAT, interview, colloquio, portfolio, enrolment, or requirements.
+- When a relevant official link or section exists, inspect at least one before finalising the card. Do not treat the absence of an exam on the programme overview as evidence that no exam is required.
+- Resolve the outcome from evidence: ENTRANCE_EXAM when the test/selection gates enrolment; EVALUATION for a non-selective knowledge assessment/OFA; NONE only when the source explicitly says no admission test is required; otherwise UNKNOWN.
+- For UNKNOWN, include admissionExams in unresolvedFields and state no exam as a confirmed fact. Every non-UNKNOWN outcome still requires an exact quote and source URL.
+- Never use IELTS, TOEFL, CILS, or another language certificate as an admission exam.`;
+
 export function enrichmentSystemPrompt(version: string): string {
   if (version === "v1") return ENRICHMENT_SYSTEM_PROMPT_V1;
-  return ENRICHMENT_SYSTEM_PROMPT_V2;
+  if (version === "v2") return ENRICHMENT_SYSTEM_PROMPT_V2;
+  return ENRICHMENT_SYSTEM_PROMPT_V3;
 }

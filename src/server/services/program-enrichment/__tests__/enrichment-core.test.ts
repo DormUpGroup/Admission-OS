@@ -13,6 +13,15 @@ import { shouldEscalateToTerra, validateOutputQuotes } from "../luna-terra";
 import { createFakeOfficialSiteNavigator } from "../official-site-navigator";
 import { UNIBO_FIXTURE_PAGES } from "./fixtures/unibo";
 import type { EnrichmentOutput } from "../schema";
+import { enrichmentSystemPrompt } from "../prompt/v1";
+
+describe("exam-search prompt", () => {
+  it("makes admission-exam investigation an AI-led mandatory step", () => {
+    const prompt = enrichmentSystemPrompt("v3");
+    expect(prompt).toContain("mandatory, AI-led step");
+    expect(prompt).toContain("admissionExams in unresolvedFields");
+  });
+});
 
 describe("url-safety", () => {
   it("allows https university URLs", () => {

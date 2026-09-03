@@ -78,7 +78,7 @@ function userPrompt(ctx: MinimalMatchingContext, forShortlist: boolean): string 
   return JSON.stringify(
     {
       instruction: forShortlist
-        ? "Extract only the decision fields needed for an initial curator shortlist: campus, access, selection, admission exams, language requirements, seats, and required documents. Do not navigate to fee/tuition pages and do not look for application deadlines. Return empty arrays for deadlines and tuition."
+        ? "Extract only the decision fields needed for an initial curator shortlist: campus, access, selection, admission exams, language requirements, seats, and required documents. Admission-exam investigation is mandatory: inspect the programme page, then use the official links/sections yourself to check an exam/admission path when one is available. Do not return an empty admissionExams array as a conclusion: return documented evidence, documented selection NONE, or add admissionExams to unresolvedFields. Do not navigate to fee/tuition pages and do not look for application deadlines. Return empty arrays for deadlines and tuition."
         : "Extract proven programme card fields for this applicant category using tools only. Return final JSON when done.",
       matchingContext: ctx,
     },

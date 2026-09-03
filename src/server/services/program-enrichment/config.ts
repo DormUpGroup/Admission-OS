@@ -20,7 +20,7 @@ function envStr(name: string, fallback: string): string {
 
 export const ENRICHMENT_PROMPT_VERSION = envStr(
   "OPENAI_PROGRAM_ENRICHMENT_PROMPT_VERSION",
-  "v2"
+  "v3"
 );
 
 export function isProgramEnrichmentEnabled(): boolean {
