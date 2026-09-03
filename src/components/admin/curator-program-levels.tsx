@@ -3,7 +3,14 @@ import { ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { labelOf } from "@/lib/labels";
+import {
+  labelApplicantCategory,
+  labelFactConfidence,
+  labelFactField,
+  labelFactFreshness,
+  labelFactOrigin,
+  labelOf,
+} from "@/lib/labels";
 import {
   humanizeLanguage,
   humanizeWhyFits,
@@ -21,7 +28,7 @@ import {
 } from "@/server/actions";
 
 const SHORTLIST_LABELS: Record<string, string> = {
-  SHORTLISTED: "В shortlist",
+  SHORTLISTED: "В коротком списке",
   APPROVED: "Одобрена",
   NEEDS_REVIEW: "На проверке",
   AUTO_MATCHED: "Автоподбор",
@@ -56,7 +63,12 @@ function examsText(match: CuratorMatchView): string | null {
 function seatsText(match: CuratorMatchView): string | null {
   if (match.seatsUnlimited) return "Без лимита мест";
   if (match.quotaSeats == null) return null;
-  return `${match.quotaSeats} мест · ${match.quotaScope || "scope unknown"}`;
+  const scopeLabel = match.quotaScope
+    ? labelApplicantCategory(match.quotaScope)
+    : null;
+  return scopeLabel && scopeLabel !== "Не указано"
+    ? `${match.quotaSeats} мест · ${scopeLabel}`
+    : `${match.quotaSeats} мест`;
 }
 
 function fieldReason(
@@ -136,11 +148,17 @@ function DecisionRow({
               required
               className="h-7 rounded-md border border-input bg-card px-2 text-xs"
             >
-              <option value="UNKNOWN" disabled>Applicant category</option>
-              <option value="EU_CITIZEN">EU citizen</option>
-              <option value="EU_EQUIVALENT">EU equivalent</option>
-              <option value="NON_EU_RESIDENT_ITALY">Non-EU resident Italy</option>
-              <option value="NON_EU_RESIDENT_ABROAD">Non-EU resident abroad</option>
+              <option value="UNKNOWN" disabled>
+                Категория абитуриента
+              </option>
+              <option value="EU_CITIZEN">Гражданин ЕС</option>
+              <option value="EU_EQUIVALENT">Приравнен к ЕС</option>
+              <option value="NON_EU_RESIDENT_ITALY">
+                Non-EU, резидент Италии
+              </option>
+              <option value="NON_EU_RESIDENT_ABROAD">
+                Non-EU из-за рубежа
+              </option>
             </select>
             {confirmField === "accessMode" ? (
               <select
@@ -173,14 +191,14 @@ function DecisionRow({
             <input
               name="manualSourceUrl"
               type="url"
-              placeholder="Official source URL"
+              placeholder="Ссылка на официальный источник"
               required
               className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
             />
             <input
               name="evidenceQuote"
               type="text"
-              placeholder="Exact evidence quote"
+              placeholder="Точная цитата"
               required
               className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
             />
@@ -208,14 +226,14 @@ export function CuratorProgramLevelsCard({
     humanizeLanguage(match.teachingLanguages[0] ?? match.language);
   const whyFits = humanizeWhyFits(match.reasons);
   const shortlistLabel = match.onShortlist
-    ? "В shortlist"
+    ? "В коротком списке"
     : SHORTLIST_LABELS[match.curatorStatus] ?? "Автоподбор";
   const access = accessText(match);
   const exams = examsText(match);
   const seats = seatsText(match);
   const callFreshness =
     match.callFreshness === "current"
-      ? `Опубликован call ${match.academicYear}`
+      ? `Опубликован набор ${match.academicYear}`
       : match.callFreshness === "indicative" || match.indicativeFromYear
         ? previousYearCallNote(
             match.academicYear,
@@ -253,7 +271,7 @@ export function CuratorProgramLevelsCard({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="rounded-md bg-[var(--brand-soft)] px-2 py-1 text-xs font-semibold tabular-nums text-[var(--brand)]">
-              Fit {match.fitScore}/100
+              Совпадение {match.fitScore}/100
             </span>
             <Badge variant={match.onShortlist ? "success" : "muted"}>
               {shortlistLabel}
@@ -269,7 +287,7 @@ export function CuratorProgramLevelsCard({
 
       <div className="px-4 py-3">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Проверить перед shortlist
+          Проверить перед коротким списком
         </p>
         <div className="grid gap-x-5 sm:grid-cols-2">
           <DecisionRow
@@ -356,7 +374,7 @@ export function CuratorProgramLevelsCard({
                   .filter((fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field))
                   .map((fact) => (
                   <li key={fact.field}>
-                    {fact.field}
+                    {labelFactField(fact.field)}
                     {fact.verifiedAt ? ` · ${formatDate(fact.verifiedAt)}` : ""}
                   </li>
                 ))}
@@ -376,7 +394,7 @@ export function CuratorProgramLevelsCard({
                   .slice(0, 8)
                   .map((event) => (
                   <li key={event.id}>
-                    {event.field}
+                    {labelFactField(event.field)}
                     {event.oldValue && event.newValue
                       ? `: ${event.oldValue.slice(0, 40)} → ${event.newValue.slice(0, 40)}`
                       : ""}
@@ -395,13 +413,26 @@ export function CuratorProgramLevelsCard({
                 {match.criticalFacts
                   .filter((fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field))
                   .slice(0, 8)
-                  .map((f, index) => (
+                  .map((f, index) => {
+                    const freshness = labelFactFreshness(f.freshness);
+                    const scope =
+                      f.scope && f.scope !== "ALL"
+                        ? labelApplicantCategory(f.scope)
+                        : f.scope === "ALL"
+                          ? labelApplicantCategory("ALL")
+                          : null;
+                    const confidence = labelFactConfidence(f.confidence);
+                    const origin = labelFactOrigin(f.origin);
+                    const meta = [
+                      freshness,
+                      scope,
+                      confidence ? `уверенность ${confidence}` : null,
+                      origin,
+                    ].filter(Boolean);
+                    return (
                   <li key={`${f.field}-${index}-${f.sourceUrl ?? ""}`}>
-                    <span className="font-medium">{f.field}</span>
-                    {f.freshness ? ` · ${f.freshness}` : ""}
-                    {f.scope ? ` · scope ${f.scope}` : ""}
-                    {f.confidence ? ` · confidence ${f.confidence}` : ""}
-                    {f.origin ? ` · ${f.origin}` : ""}
+                    <span className="font-medium">{labelFactField(f.field)}</span>
+                    {meta.length > 0 ? ` · ${meta.join(" · ")}` : ""}
                     {f.quote ? (
                       <span className="block text-muted-foreground italic">
                         «{f.quote.slice(0, 120)}»
@@ -418,25 +449,26 @@ export function CuratorProgramLevelsCard({
                       </a>
                     ) : null}
                   </li>
-                ))}
+                    );
+                  })}
               </ul>
             </div>
           ) : null}
           {match.aiEnrichment ? (
             <div className="rounded-md bg-muted/40 px-2 py-1.5 text-muted-foreground">
-              AI:{" "}
+              Обогащение:{" "}
               {match.aiEnrichment.disabled
-                ? "выключен (regex/PDF fallback)"
+                ? "выключено (fallback regex/PDF)"
                 : match.aiEnrichment.reused
-                  ? "reused"
-                  : "new"}
+                  ? "повторно использовано"
+                  : "новое"}
               {match.aiEnrichment.model
                 ? ` · ${match.aiEnrichment.model}`
                 : ""}
               {match.aiEnrichment.date
                 ? ` · ${match.aiEnrichment.date}`
                 : ""}
-              {` · docs ${match.aiEnrichment.documentCount}`}
+              {` · документов: ${match.aiEnrichment.documentCount}`}
             </div>
           ) : null}
           {match.campuses && match.campuses.length > 0 ? (
@@ -453,17 +485,17 @@ export function CuratorProgramLevelsCard({
             </div>
           ) : match.universityCity && !match.city ? (
             <p className="text-muted-foreground">
-              Город кампуса неизвестен (HQ университета: {match.universityCity})
+              Город кампуса неизвестен (штаб-квартира вуза: {match.universityCity})
             </p>
           ) : null}
           {match.deferredCoverage ? (
             <p className="text-muted-foreground">
-              Deferred Universitaly: {match.deferredCoverage}
+              Отложенный охват Universitaly: {match.deferredCoverage}
             </p>
           ) : null}
           {match.whyIncluded ? (
             <p className="text-muted-foreground">
-              Inclusion: {match.whyIncluded}
+              Почему в подборе: {match.whyIncluded}
             </p>
           ) : null}
           {catalog ? null : (
@@ -473,7 +505,7 @@ export function CuratorProgramLevelsCard({
               <input type="hidden" name="matchId" value={match.matchId} />
               <input type="hidden" name="status" value="SHORTLISTED" />
               <Button type="submit" size="sm">
-                В shortlist
+                В короткий список
               </Button>
             </form>
             <form action={setMonitoringSelectedAction}>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { labelOf } from "@/lib/labels";
+import { labelApplicantCategory, labelOf } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,15 +134,15 @@ function callLabel(match: CuratorMatchView) {
     return `Ориентир по ${match.academicYear}; условия ${match.intake} ещё не опубликованы`;
   }
   if (match.callFreshness === "current") {
-    return `${match.academicYear} call published`;
+    return `Опубликован набор ${match.academicYear}`;
   }
   if (match.callFreshness === "indicative" && match.indicativeFromYear) {
-    return `Indicative from ${match.indicativeFromYear}`;
+    return `Ориентир за ${match.indicativeFromYear}`;
   }
   if (match.callFreshness === "indicative") {
-    return "Indicative (previous year)";
+    return "Ориентир за прошлый год";
   }
-  return "Call status unknown";
+  return "Статус набора неизвестен";
 }
 
 function indicativeSuffix(match: CuratorMatchView): string | null {
@@ -162,7 +162,7 @@ function indicativeSuffix(match: CuratorMatchView): string | null {
 }
 
 function withIndicative(label: string, match: CuratorMatchView): string {
-  if (label === "UNKNOWN") return label;
+  if (label === "UNKNOWN" || label === "Не указано") return "Не указано";
   const suffix = indicativeSuffix(match);
   return suffix ? `${label} · ${suffix}` : label;
 }
@@ -183,12 +183,14 @@ function tuitionLabel(match: CuratorMatchView) {
 
 function accessLabel(match: CuratorMatchView) {
   if (match.accessMode === "OPEN") {
-    return match.seatsUnlimited ? "Open access · без лимита мест" : "Open access";
+    return match.seatsUnlimited
+      ? "Свободный доступ · без лимита мест"
+      : "Свободный доступ";
   }
   if (match.accessMode === "CLOSED") {
-    return "Closed access";
+    return "Конкурсный набор";
   }
-  return "UNKNOWN";
+  return "Не указано";
 }
 
 function selectionLabel(match: CuratorMatchView) {
@@ -202,7 +204,13 @@ function seatsLabel(match: CuratorMatchView) {
   let label = "Квота уточняется";
   if (match.seatsUnlimited) label = "без лимита мест";
   else if (match.quotaSeats != null) {
-    label = `${match.quotaSeats} · ${match.quotaScope || "scope unknown"}`;
+    const scopeLabel = match.quotaScope
+      ? labelApplicantCategory(match.quotaScope)
+      : null;
+    label =
+      scopeLabel && scopeLabel !== "Не указано"
+        ? `${match.quotaSeats} мест · ${scopeLabel}`
+        : `${match.quotaSeats} мест`;
   }
   return withIndicative(label, match);
 }
@@ -219,7 +227,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
     (match.teachingLanguages.length
       ? match.teachingLanguages.join(", ")
       : match.language) ||
-    "UNKNOWN";
+    "Не указано";
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
@@ -237,7 +245,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 {match.region ? ` · ${match.region}` : ""}
               </span>
             ) : (
-              <span>Город: UNKNOWN</span>
+              <span>Город не указан</span>
             )}
             <span>{labelOf(match.degreeLevel)}</span>
             <span>· {match.academicYear}</span>
@@ -248,14 +256,14 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 ? "Частный"
                 : match.publicPrivate === "PUBLIC"
                   ? "Государственный"
-                  : "Public/Private UNKNOWN"}
+                  : "Тип вуза не указан"}
             </Badge>
             <Badge variant="muted">{accessLabel(match)}</Badge>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold tabular-nums text-[var(--brand)]">
-            Fit {match.fitScore}/100
+            Совпадение {match.fitScore}/100
           </span>
           <span
             className={cn(
@@ -265,7 +273,14 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           >
             {labelOf(match.eligibilityStatus)}
           </span>
-          <Badge variant="muted">Data {match.dataConfidence}</Badge>
+          <Badge variant="muted">
+            Данные: {labelOf(match.dataConfidence, {
+              HIGH: "высокая уверенность",
+              MEDIUM: "средняя уверенность",
+              LOW: "низкая уверенность",
+              UNKNOWN: "неизвестно",
+            })}
+          </Badge>
         </div>
       </div>
 
@@ -286,7 +301,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <dd className="font-medium">{langLine}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Tuition</dt>
+            <dt className="text-muted-foreground">Стоимость</dt>
             <dd className="font-medium">{tuitionLabel(match)}</dd>
           </div>
           <div>
@@ -305,7 +320,8 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           <div className="sm:col-span-2">
             <dt className="text-muted-foreground">Экзамены</dt>
             <dd className="font-medium">
-              {match.examsDisplay || (match.selection === "NONE" ? "не требуются" : "UNKNOWN")}
+              {match.examsDisplay ||
+                (match.selection === "NONE" ? "не требуются" : "Не указано")}
             </dd>
             {match.exams.some((e) => e.examinerUrl) ? (
               <ul className="mt-1 space-y-0.5">
@@ -334,7 +350,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             </div>
           ) : null}
           <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Актуальность call</dt>
+            <dt className="text-muted-foreground">Актуальность набора</dt>
             <dd className="font-medium">{callLabel(match)}</dd>
             {match.admissionCallUrl ? (
               <a
@@ -344,7 +360,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 className="mt-0.5 inline-flex items-center gap-1 text-[var(--brand)] hover:underline"
               >
                 <ExternalLink className="h-3 w-3" />
-                Admission call
+                Официальный набор
               </a>
             ) : null}
             {match.extractQuality &&
@@ -352,7 +368,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               match.extractQuality === "NEEDS_REVIEW" ||
               match.extractQuality === "MANUAL_REVIEW_REQUIRED") ? (
               <Badge variant="muted" className="mt-1">
-                Extract {match.extractQuality.replace(/_/g, " ").toLowerCase()}
+                Качество извлечения: нужна проверка куратора
               </Badge>
             ) : null}
           </div>
@@ -360,7 +376,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
 
         <details className="rounded-lg border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
           <summary className="cursor-pointer font-medium text-muted-foreground">
-            Confirm dossier (curator)
+            Подтвердить досье (куратор)
           </summary>
           <form action={verifyProgramDossierFactsAction} className="mt-2 grid gap-2 sm:grid-cols-2">
             <input type="hidden" name="studentId" value={match.studentId} />
@@ -370,22 +386,28 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               value={match.programAcademicYearId}
             />
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Applicant category</span>
+              <span className="text-muted-foreground">Категория абитуриента</span>
               <select
                 name="applicantCategory"
                 defaultValue={match.applicantCategory || "UNKNOWN"}
                 required
                 className="rounded border border-[var(--border)] bg-white px-2 py-1"
               >
-                <option value="UNKNOWN" disabled>Select category</option>
-                <option value="EU_CITIZEN">EU citizen</option>
-                <option value="EU_EQUIVALENT">EU equivalent</option>
-                <option value="NON_EU_RESIDENT_ITALY">Non-EU resident Italy</option>
-                <option value="NON_EU_RESIDENT_ABROAD">Non-EU resident abroad</option>
+                <option value="UNKNOWN" disabled>
+                  Выберите категорию
+                </option>
+                <option value="EU_CITIZEN">Гражданин ЕС</option>
+                <option value="EU_EQUIVALENT">Приравнен к ЕС</option>
+                <option value="NON_EU_RESIDENT_ITALY">
+                  Non-EU, резидент Италии
+                </option>
+                <option value="NON_EU_RESIDENT_ABROAD">
+                  Non-EU из-за рубежа
+                </option>
               </select>
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Deadline (YYYY-MM-DD)</span>
+              <span className="text-muted-foreground">Дедлайн</span>
               <input
                 name="deadline"
                 type="date"
@@ -398,7 +420,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Tuition min (€, optional)</span>
+              <span className="text-muted-foreground">Стоимость мин (€, необяз.)</span>
               <input
                 name="tuitionMin"
                 type="number"
@@ -407,7 +429,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Tuition max (€, optional)</span>
+              <span className="text-muted-foreground">Стоимость макс (€, необяз.)</span>
               <input
                 name="tuitionMax"
                 type="number"
@@ -416,19 +438,21 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Access</span>
+              <span className="text-muted-foreground">Доступ</span>
               <select
                 name="accessMode"
                 defaultValue={match.accessMode || "UNKNOWN"}
                 className="rounded border border-[var(--border)] bg-white px-2 py-1"
               >
-                <option value="UNKNOWN">UNKNOWN</option>
-                <option value="OPEN">OPEN</option>
-                <option value="CLOSED">CLOSED</option>
+                <option value="UNKNOWN">Не указано</option>
+                <option value="OPEN">Свободный доступ</option>
+                <option value="CLOSED">Конкурс</option>
               </select>
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Quota seats for selected category</span>
+              <span className="text-muted-foreground">
+                Места для выбранной категории
+              </span>
               <input
                 name="nonEuSeats"
                 type="number"
@@ -437,7 +461,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Exams display</span>
+              <span className="text-muted-foreground">Экзамены</span>
               <input
                 name="examsDisplay"
                 type="text"
@@ -447,7 +471,9 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Official source URL</span>
+              <span className="text-muted-foreground">
+                Ссылка на официальный источник
+              </span>
               <input
                 name="manualSourceUrl"
                 type="url"
@@ -456,7 +482,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Exact evidence quote</span>
+              <span className="text-muted-foreground">Точная цитата</span>
               <textarea
                 name="evidenceQuote"
                 required
@@ -464,7 +490,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               />
             </label>
             <Button type="submit" size="sm" className="sm:col-span-2">
-              Confirm dossier
+              Сохранить подтверждение
             </Button>
           </form>
         </details>
@@ -472,7 +498,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         {match.reasons.length > 0 ? (
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Why it matches
+              Почему подходит
             </p>
             <ul className="mt-1 space-y-1 text-xs">
               {match.reasons.map((r) => (
@@ -485,7 +511,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         {(match.risks.length > 0 || match.riskNotes.length > 0) && (
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">
-              Risks
+              Риски
             </p>
             <ul className="mt-1 space-y-1 text-xs text-amber-900">
               {match.riskNotes.map((n) => (
@@ -509,7 +535,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 className="inline-flex items-center gap-1 text-xs text-[var(--brand)] hover:underline"
               >
                 <ExternalLink className="h-3 w-3" />
-                Source
+                Источник
               </a>
             ))}
           </div>
@@ -521,7 +547,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="APPROVED" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
-              Approve
+              Одобрить
             </Button>
           </form>
           <form action={reviewProgramMatchAction}>
@@ -529,7 +555,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="REJECTED" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
-              Reject
+              Отклонить
             </Button>
           </form>
           <form action={reviewProgramMatchAction}>
@@ -537,7 +563,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="NEEDS_REVIEW" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
-              Needs review
+              На проверку
             </Button>
           </form>
           <form action={reviewProgramMatchAction}>
@@ -545,7 +571,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="SHORTLISTED" />
             <Button type="submit" size="sm" className="w-full">
-              Shortlist
+              В короткий список
             </Button>
           </form>
         </div>
@@ -555,7 +581,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <Link
               href={`/admin/students/${match.studentId}/applications/${match.applicationId}`}
             >
-              Open application
+              Открыть заявку
             </Link>
           </Button>
         ) : (
@@ -569,7 +595,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             />
             <input type="hidden" name="intake" value={match.intake} />
             <Button type="submit" size="sm" variant="secondary" className="w-full">
-              Create application
+              Создать заявку
             </Button>
           </form>
         )}

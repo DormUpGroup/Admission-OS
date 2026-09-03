@@ -51,7 +51,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JourneyStage } from "@/lib/enums";
 import type { ActivityType } from "@/lib/enums";
-import { JOURNEY_LABELS, labelOf } from "@/lib/labels";
+import { JOURNEY_LABELS, labelApplicantCategory, labelOf } from "@/lib/labels";
 import {
   hasQuestionnaire,
   hasMatchingProfile,
@@ -743,11 +743,11 @@ export default async function StudentProfilePage({
           ) : null}
           <div className="space-y-6">
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold">Shortlist студента</h3>
+              <h3 className="text-sm font-semibold">Короткий список студента</h3>
               {shortlistViews.length === 0 ? (
                 <EmptyState
-                  title="Shortlist пуст"
-                  description="Программы появятся здесь, когда студент или куратор добавят их в shortlist."
+                  title="Короткий список пуст"
+                  description="Программы появятся здесь, когда студент или куратор добавят их в короткий список."
                   className="py-6"
                 />
               ) : (
@@ -805,18 +805,18 @@ export default async function StudentProfilePage({
             <div className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Matching Profile</CardTitle>
+              <CardTitle>Профиль подбора</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Target intake</dt>
+                  <dt className="text-xs text-muted-foreground">Целевой набор</dt>
                   <dd className="font-medium">
                     {matchingProfile?.targetAcademicYear ?? student.intake}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Degree</dt>
+                  <dt className="text-xs text-muted-foreground">Степень</dt>
                   <dd className="font-medium">
                     {labelOf(
                       String(matchingProfile?.desiredDegreeLevel ?? student.studyLevel)
@@ -824,13 +824,13 @@ export default async function StudentProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Applicant category</dt>
+                  <dt className="text-xs text-muted-foreground">Категория абитуриента</dt>
                   <dd className="font-medium">
-                    {matchingProfile?.applicantCategory ?? "UNKNOWN"}
+                    {labelApplicantCategory(matchingProfile?.applicantCategory)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Last matching run</dt>
+                  <dt className="text-xs text-muted-foreground">Последний подбор</dt>
                   <dd className="font-medium">
                     {persistedMatches[0]?.generatedAt
                       ? formatDate(persistedMatches[0].generatedAt)
@@ -838,11 +838,11 @@ export default async function StudentProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Matches found</dt>
+                  <dt className="text-xs text-muted-foreground">Найдено программ</dt>
                   <dd className="font-medium">{persistedMatches.length}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Needs review</dt>
+                  <dt className="text-xs text-muted-foreground">На проверке</dt>
                   <dd className="font-medium">
                     {
                       persistedMatches.filter(
@@ -854,11 +854,11 @@ export default async function StudentProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Shortlist</dt>
+                  <dt className="text-xs text-muted-foreground">Короткий список</dt>
                   <dd className="font-medium">{shortlist.length}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Languages</dt>
+                  <dt className="text-xs text-muted-foreground">Языки</dt>
                   <dd className="font-medium">
                     {(matchingProfile?.preferredTeachingLanguages || []).join(", ") ||
                       student.preferredLanguage ||
@@ -866,7 +866,7 @@ export default async function StudentProfilePage({
                   </dd>
                 </div>
                 <div className="sm:col-span-2 lg:col-span-4">
-                  <dt className="text-xs text-muted-foreground">Preferred cities</dt>
+                  <dt className="text-xs text-muted-foreground">Предпочтительные города</dt>
                   <dd className="mt-1 flex flex-wrap gap-1.5">
                     {(matchingProfile?.preferredCities?.length
                       ? matchingProfile.preferredCities
@@ -889,7 +889,7 @@ export default async function StudentProfilePage({
               {matchingProfile?.missingFields?.length ? (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">
-                    Missing information
+                    Не хватает данных
                   </p>
                   <ul className="mt-1 flex flex-wrap gap-1.5">
                     {matchingProfile.missingFields.map((f) => (
