@@ -90,9 +90,9 @@ export default async function AdminDeadlinesPage({
             key={r.key}
             href={`/admin/deadlines?range=${r.key}`}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-xl px-2.5 py-1 text-xs font-medium transition-colors",
               range === r.key
-                ? "bg-[var(--brand)] text-white"
+                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
                 : "bg-muted text-muted-foreground hover:text-foreground"
             )}
           >

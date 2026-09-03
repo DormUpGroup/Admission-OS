@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { UniversityMonogram } from "@/components/university-monogram";
 import type { JourneyProgramsBlock } from "@/server/services/student-journey/types";
 
 const PREVIEW_STATUS_CLASS: Record<string, string> = {
@@ -13,15 +14,15 @@ export function JourneyPrograms({ programs }: { programs: JourneyProgramsBlock }
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
+        <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
           Программы
         </h2>
-        <Button asChild variant="ghost" size="sm" className="h-11 px-3 sm:h-8">
+        <Button asChild variant="ghost" size="sm">
           <Link href={programs.allHref}>Все программы</Link>
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+      <div className="surface-card px-5 py-4">
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <p>
             <span className="text-muted-foreground">На рассмотрении: </span>
@@ -44,41 +45,40 @@ export function JourneyPrograms({ programs }: { programs: JourneyProgramsBlock }
           {programs.previews.map((preview) => (
             <li
               key={preview.programId}
-              className="rounded-2xl border border-[var(--border)] bg-white px-4 py-4"
+              className="surface-card px-5 py-4"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-[var(--brand)]">
-                    {preview.universityName}
-                  </p>
-                  <p className="mt-0.5 text-sm text-[var(--foreground)]">
-                    {preview.programName}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-md px-2 py-1 text-[11px] font-medium",
-                    PREVIEW_STATUS_CLASS[preview.status] ??
-                      "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {preview.statusLabel}
-                </span>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <div className="flex items-start gap-3.5">
+                <UniversityMonogram name={preview.universityName} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[17px] font-semibold tracking-tight text-foreground">
+                        {preview.universityName}
+                      </p>
+                      <p className="mt-0.5 text-[13px] text-foreground">
+                        {preview.programName}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        PREVIEW_STATUS_CLASS[preview.status] ??
+                          "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {preview.statusLabel}
+                    </span>
+                  </div>
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 {[preview.city, preview.language].filter(Boolean).join(" · ")}
               </p>
-              {preview.whyFits ? (
-                <p className="mt-2 text-sm text-[var(--foreground)]">
-                  <span className="text-muted-foreground">Почему подходит: </span>
-                  {preview.whyFits}
-                </p>
-              ) : null}
               {preview.previousYearNote ? (
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                   {preview.previousYearNote}
                 </p>
               ) : null}
+                </div>
+              </div>
             </li>
           ))}
         </ul>

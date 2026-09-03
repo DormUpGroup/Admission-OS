@@ -9,7 +9,7 @@ export function DataTable({ className, children, ...props }: DataTableProps) {
   return (
     <div
       className={cn(
-        "w-full overflow-auto rounded-lg border border-border bg-card shadow-sm",
+        "w-full overflow-auto rounded-2xl surface-card",
         className
       )}
       {...props}

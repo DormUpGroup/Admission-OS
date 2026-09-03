@@ -227,4 +227,41 @@ describe("validateOutputQuotes / escalation", () => {
       })
     ).toBe(true);
   });
+
+  it("does not escalate shortlist for unresolved deadlines or tuition alone", () => {
+    expect(
+      shouldEscalateToTerra({
+        output: {
+          ...base,
+          unresolvedFields: ["deadlines", "tuition"],
+        },
+        quoteRejects: 0,
+        invalidCritical: [],
+        forShortlist: true,
+        categorySpecificRules: true,
+      })
+    ).toBe(false);
+  });
+
+  it("rejects fabricated quotes against full document text even when only a snippet was shown", () => {
+    const full =
+      "Call for applications. Admission test: IMAT. Application deadline for non-EU students: 15 May 2027. English C1 required.";
+    const snippet = "Admission test: IMAT. English C1 required.";
+    expect(snippet.length).toBeLessThan(full.length);
+    const poisoned: EnrichmentOutput = {
+      ...base,
+      admissionExams: [
+        {
+          ...base.admissionExams[0],
+          quote: "Applicants must sit an imaginary online entrance quiz tomorrow",
+        },
+      ],
+    };
+    const { valid, rejectCount } = validateOutputQuotes(
+      poisoned,
+      new Map([["doc-unibo-enrol", full]])
+    );
+    expect(rejectCount).toBe(1);
+    expect(valid.admissionExams).toHaveLength(0);
+  });
 });

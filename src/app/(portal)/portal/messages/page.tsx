@@ -87,8 +87,8 @@ export default async function PortalMessagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight">Сообщения</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-[28px] font-semibold tracking-tight">Сообщения</h1>
+        <p className="mt-1 text-[15px] text-muted-foreground">
           {curator
             ? `Переписка с куратором ${curator.name}`
             : "Мы назначим куратора после обработки анкеты"}
@@ -96,7 +96,7 @@ export default async function PortalMessagesPage() {
       </div>
 
       {notifications.length > 0 ? (
-        <div className="rounded-lg border border-border p-4">
+        <div className="surface-card p-5">
           <h2 className="mb-3 text-sm font-medium">Уведомления</h2>
           <InAppNotificationsPanel items={notifications} />
         </div>
@@ -112,7 +112,7 @@ export default async function PortalMessagesPage() {
           {messages.map((message) => (
             <li
               key={message.id}
-              className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3"
+              className="surface-card px-5 py-4"
             >
               <p className="text-xs text-muted-foreground">
                 {message.author} · {formatDate(message.createdAt)}
@@ -143,7 +143,7 @@ export default async function PortalMessagesPage() {
               rows={4}
               maxLength={2000}
               placeholder="Напишите куратору"
-              className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="min-h-28 w-full rounded-xl border border-input bg-card px-3 py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </label>
 
@@ -173,7 +173,7 @@ export default async function PortalMessagesPage() {
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {uploadedDocuments.map((doc) => (
                   <li key={doc.id}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm">
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
                       <input
                         type="checkbox"
                         name="documentId"
@@ -188,7 +188,7 @@ export default async function PortalMessagesPage() {
             </fieldset>
           ) : null}
 
-          <Button type="submit" size="lg" className="h-11 w-full sm:h-9 sm:w-auto">
+          <Button type="submit" size="lg" className="w-full sm:w-auto">
             Отправить
           </Button>
         </form>

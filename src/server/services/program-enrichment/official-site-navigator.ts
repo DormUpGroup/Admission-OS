@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { FETCH_RATE_LIMIT_MS } from "@/lib/program-matching/config";
 import { upsertSourceDocument } from "@/server/services/program-ingestion/snapshot";
 import { getEnrichmentConfig } from "./config";
+import { extractDocumentSections } from "./document-sections";
+import type { ExtractedSection } from "./document-sections";
 import {
   extractFromHtml,
   type ClassifiedLink,
@@ -29,6 +31,16 @@ export type NavigatorDeps = {
   now?: () => number;
 };
 
+export type NavigatorDocument = {
+  url: string;
+  text: string;
+  contentHash: string;
+  sections: ExtractedSection[];
+  sourceType?: string;
+  sourceAuthority?: string | null;
+  academicYear?: string | null;
+};
+
 export type OfficialSiteNavigator = {
   inspect_programme_site: (officialUrl: string) => Promise<NavigatorPage | { error: string; code?: string }>;
   follow_official_link: (linkId: string) => Promise<NavigatorPage | { error: string; code?: string }>;
@@ -50,7 +62,7 @@ export type OfficialSiteNavigator = {
   >;
   getAllowedLinks: () => Map<string, ClassifiedLink & { pageId: string }>;
   getPages: () => Map<string, NavigatorPage>;
-  getDocuments: () => Map<string, { url: string; text: string; contentHash: string }>;
+  getDocuments: () => Map<string, NavigatorDocument>;
   toolCallCount: () => number;
 };
 
@@ -112,10 +124,7 @@ export function createOfficialSiteNavigator(input: {
   let pageSeq = 0;
   const pages = new Map<string, NavigatorPage>();
   const links = new Map<string, ClassifiedLink & { pageId: string }>();
-  const documents = new Map<
-    string,
-    { url: string; text: string; contentHash: string }
-  >();
+  const documents = new Map<string, NavigatorDocument>();
 
   async function rateLimit(hostname: string) {
     const now = input.deps?.now?.() ?? Date.now();
@@ -143,6 +152,7 @@ export function createOfficialSiteNavigator(input: {
       programAcademicYearId: input.programAcademicYearId,
       contentType: "html",
       body: extracted.cleanText,
+      html,
       extractionQuality: "OK",
     });
     docCount += 1;
@@ -162,6 +172,16 @@ export function createOfficialSiteNavigator(input: {
       url,
       text: extracted.cleanText,
       contentHash: snap.document.contentHash,
+      sections: extractDocumentSections({
+        html,
+        text: extracted.cleanText,
+        contentType: "html",
+        sourceType: "PROGRAMME_PAGE",
+        academicYear: input.academicYear,
+        pageUrl: url,
+      }),
+      sourceType: "PROGRAMME_PAGE",
+      academicYear: input.academicYear,
     });
     for (const link of extracted.links) {
       // Only register same-domain candidates; safety checked on follow.
@@ -351,6 +371,15 @@ export function createOfficialSiteNavigator(input: {
           url: fetched.url,
           text,
           contentHash: snap.document.contentHash,
+          sections: extractDocumentSections({
+            text,
+            contentType: "pdf",
+            sourceType: "ADMISSION_CALL",
+            academicYear: input.academicYear,
+            pageUrl: fetched.url,
+          }),
+          sourceType: "ADMISSION_CALL",
+          academicYear: input.academicYear,
         });
         return {
           sourceDocumentId: snap.document.id,
@@ -384,10 +413,7 @@ export function createFakeOfficialSiteNavigator(fixture: {
   let pageSeq = 0;
   const pages = new Map<string, NavigatorPage>();
   const links = new Map<string, ClassifiedLink & { pageId: string }>();
-  const documents = new Map<
-    string,
-    { url: string; text: string; contentHash: string }
-  >();
+  const documents = new Map<string, NavigatorDocument>();
   const urlToKey = new Map<string, string>();
   for (const [key, p] of Object.entries(fixture.pages)) {
     urlToKey.set(p.url, key);
@@ -417,6 +443,14 @@ export function createFakeOfficialSiteNavigator(fixture: {
       url: p.url,
       text: extracted.cleanText,
       contentHash,
+      sections: extractDocumentSections({
+        html: p.html,
+        text: extracted.cleanText,
+        contentType: "html",
+        sourceType: "PROGRAMME_PAGE",
+        pageUrl: p.url,
+      }),
+      sourceType: "PROGRAMME_PAGE",
     });
     for (const link of extracted.links) {
       links.set(link.linkId, { ...link, pageId });
@@ -474,6 +508,13 @@ export function createFakeOfficialSiteNavigator(fixture: {
         url: pdf.url,
         text: pdf.text,
         contentHash,
+        sections: extractDocumentSections({
+          text: pdf.text,
+          contentType: "pdf",
+          sourceType: "ADMISSION_CALL",
+          pageUrl: pdf.url,
+        }),
+        sourceType: "ADMISSION_CALL",
       });
       return {
         sourceDocumentId,

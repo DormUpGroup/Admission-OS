@@ -798,7 +798,7 @@ export default async function StudentProfilePage({
             </section>
           </div>
 
-          <details className="rounded-lg border border-border bg-card px-4 py-3">
+          <details className="rounded-2xl border border-border bg-card px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium">
               Профиль подбора и генерация
             </summary>
@@ -967,7 +967,7 @@ export default async function StudentProfilePage({
                   return (
                     <div
                       className={cn(
-                        "space-y-2 rounded-md border px-3 py-2 text-sm",
+                        "space-y-2 rounded-xl border px-3 py-2 text-sm",
                         meta.warning
                           ? "border-amber-300 bg-amber-50 text-amber-950"
                           : "border-border bg-muted/40 text-muted-foreground"
@@ -1044,7 +1044,7 @@ export default async function StudentProfilePage({
             </div>
           </details>
 
-          <details className="rounded-lg border border-border bg-card px-4 py-3">
+          <details className="rounded-2xl border border-border bg-card px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium">
               Фильтры
             </summary>
@@ -1056,7 +1056,7 @@ export default async function StudentProfilePage({
                 <select
                   name="eligibility"
                   defaultValue={sp.eligibility || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Eligibility</option>
                   <option value="ELIGIBLE">ELIGIBLE</option>
@@ -1067,7 +1067,7 @@ export default async function StudentProfilePage({
                 <select
                   name="confidence"
                   defaultValue={sp.confidence || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Data confidence</option>
                   <option value="HIGH">HIGH</option>
@@ -1077,7 +1077,7 @@ export default async function StudentProfilePage({
                 <select
                   name="curator"
                   defaultValue={sp.curator || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Curator status</option>
                   <option value="AUTO_MATCHED">AUTO_MATCHED</option>
@@ -1095,7 +1095,7 @@ export default async function StudentProfilePage({
                 <select
                   name="language"
                   defaultValue={sp.language || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Language</option>
                   <option value="English">English</option>
@@ -1104,7 +1104,7 @@ export default async function StudentProfilePage({
                 <select
                   name="publicPrivate"
                   defaultValue={sp.publicPrivate || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Public / Private</option>
                   <option value="PUBLIC">Public</option>
@@ -1114,7 +1114,7 @@ export default async function StudentProfilePage({
                 <select
                   name="accessMode"
                   defaultValue={sp.accessMode || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Access</option>
                   <option value="OPEN">Open</option>
@@ -1124,7 +1124,7 @@ export default async function StudentProfilePage({
                 <select
                   name="hasExam"
                   defaultValue={sp.hasExam || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Exams</option>
                   <option value="ANY">Any exam</option>
@@ -1136,7 +1136,7 @@ export default async function StudentProfilePage({
                 <select
                   name="callFreshness"
                   defaultValue={sp.callFreshness || ""}
-                  className="h-8 rounded-md border border-input bg-card px-2 text-[13px]"
+                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
                 >
                   <option value="">Call freshness</option>
                   <option value="current">Current year</option>
@@ -1168,7 +1168,7 @@ export default async function StudentProfilePage({
                     id="manualProgramId"
                     name="programId"
                     required
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="">Search / select…</option>
                     {programs.map((p) => (
@@ -1185,7 +1185,7 @@ export default async function StudentProfilePage({
             </CardContent>
           </Card>
 
-          <details className="rounded-lg border border-border bg-card px-4 py-3">
+          <details className="rounded-2xl border border-border bg-card px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium">
               Фильтры и подбор
             </summary>
@@ -1206,7 +1206,7 @@ export default async function StudentProfilePage({
                 <div className="space-y-5">
                   {PERSONAL_QUESTIONNAIRE_SECTIONS.map((section) => (
                     <div key={section.id}>
-                      <h4 className="mb-2 rounded-md bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white">
+                      <h4 className="mb-2 rounded-xl bg-muted px-3 py-1.5 text-xs font-semibold text-foreground">
                         {section.title}
                       </h4>
                       <dl className="space-y-2 text-sm">
@@ -1257,7 +1257,7 @@ export default async function StudentProfilePage({
                 <div className="space-y-5">
                   {PROGRAMS_QUESTIONNAIRE_SECTIONS.map((section) => (
                     <div key={section.id}>
-                      <h4 className="mb-2 rounded-md bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white">
+                      <h4 className="mb-2 rounded-xl bg-muted px-3 py-1.5 text-xs font-semibold text-foreground">
                         {section.title}
                       </h4>
                       <dl className="space-y-2 text-sm">
@@ -1315,7 +1315,7 @@ export default async function StudentProfilePage({
                     id="programId"
                     name="programId"
                     required
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="">Выберите программу…</option>
                     {programs.map((p) => (
@@ -1350,7 +1350,7 @@ export default async function StudentProfilePage({
                   <select
                     id="templateId"
                     name="templateId"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="">Нет</option>
                     {templates.map((t) => (
@@ -1417,7 +1417,7 @@ export default async function StudentProfilePage({
                   <select
                     id="category"
                     name="category"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
                     defaultValue="OTHER"
                   >
                     <option value="PERSONAL">Личные</option>
@@ -1449,7 +1449,7 @@ export default async function StudentProfilePage({
                   {docs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="text-[13px] font-medium">{doc.name}</p>
@@ -1538,7 +1538,7 @@ export default async function StudentProfilePage({
                     id="priority"
                     name="priority"
                     defaultValue="MEDIUM"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="LOW">Низкий</option>
                     <option value="MEDIUM">Средний</option>
@@ -1551,7 +1551,7 @@ export default async function StudentProfilePage({
                   <select
                     id="applicationId"
                     name="applicationId"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="">Нет</option>
                     {student.applications.map((a) => (

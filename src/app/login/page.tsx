@@ -21,16 +21,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--brand-soft)] px-4">
-      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="surface-card w-full max-w-md rounded-[28px] p-8">
         <div className="mb-8">
-          <p className="text-xs font-semibold tracking-[0.16em] text-[var(--brand)] uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             IMMIGROME
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
             Система поступлений
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Войдите, чтобы продолжить</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">Войдите, чтобы продолжить</p>
         </div>
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -53,13 +53,13 @@ export default function LoginPage() {
               required
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? "Вход…" : "Войти"}
           </Button>
         </form>
-        <div className="mt-6 rounded-lg bg-neutral-50 p-3 text-xs text-neutral-600 space-y-1">
-          <p className="font-medium text-neutral-800">Демо-аккаунты</p>
+        <div className="mt-6 rounded-2xl bg-muted p-4 text-[13px] text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Демо-аккаунты</p>
           <p>anna@immigrome.local / password123 (куратор)</p>
           <p>admin@immigrome.local / password123</p>
           <p>alina.sokolova@student.local / password123 (портал)</p>

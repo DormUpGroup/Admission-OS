@@ -52,15 +52,15 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-screen sticky top-0 w-[220px] shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
+        "flex h-screen sticky top-0 w-[220px] shrink-0 flex-col overflow-hidden rounded-r-[28px] border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
         className
       )}
     >
-      <div className="px-4 py-4 border-b border-[var(--sidebar-border)]">
-        <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-[var(--brand)]">
+      <div className="px-4 py-5">
+        <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
           IMMIGROME
         </p>
-        <p className="text-sm font-semibold text-[var(--foreground)]">
+        <p className="mt-0.5 text-[15px] font-semibold tracking-tight text-foreground">
           Сопровождение
         </p>
         {userName && (
@@ -80,10 +80,10 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors",
+                    "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                     active
-                      ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)] shadow-sm"
-                      : "text-[var(--sidebar-foreground)]/80 hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-foreground)]"
+                      ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
+                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]"
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />

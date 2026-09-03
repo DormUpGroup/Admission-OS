@@ -11,21 +11,21 @@ export default async function PortalLayout({
   const { student } = await getCurrentStudent();
 
   return (
-    <div className="min-h-screen bg-[var(--brand-soft)] text-[var(--foreground)]">
-      <header className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="surface-glass sticky top-0 z-20 border-b border-black/5">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <p className="text-xs font-semibold tracking-[0.16em] text-[var(--brand)] uppercase">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               IMMIGROME
             </p>
-            <p className="text-sm text-[var(--foreground)]">
+            <p className="text-[17px] font-semibold tracking-tight text-foreground">
               Привет, {fullName(student.firstName, student.lastName)}
             </p>
           </div>
           <form action={logoutAction}>
             <button
               type="submit"
-              className="min-h-11 px-2 text-xs text-muted-foreground hover:text-[var(--brand)] sm:min-h-0"
+              className="min-h-11 px-2 text-[13px] text-muted-foreground hover:text-[var(--brand)] sm:min-h-0"
             >
               Выйти
             </button>
@@ -33,7 +33,7 @@ export default async function PortalLayout({
         </div>
         <PortalNav />
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 md:py-8">{children}</main>
+      <main className="mx-auto max-w-3xl px-4 py-8 md:py-10">{children}</main>
     </div>
   );
 }

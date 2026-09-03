@@ -39,7 +39,7 @@ export function SubmitApplicationForm({
 
   if (done) {
     return (
-      <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+      <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
         Подача отмечена как поданная.
       </p>
     );
@@ -48,14 +48,14 @@ export function SubmitApplicationForm({
   return (
     <form action={onSubmit} className="space-y-3">
       {hasBlockers && !force ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Критичные требования ещё не закрыты: {blockerNames.join(", ") || "см. список требований"}.
           Подача возможна, но риск высокий.
           Для подачи потребуется подтверждение.
         </div>
       ) : null}
       {warning ? (
-        <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
           Пока нельзя: не закрыты критичные требования — {warning.join(", ")}. Отметьте
           «Подать всё равно», чтобы продолжить.
         </div>
@@ -67,7 +67,7 @@ export function SubmitApplicationForm({
         </div>
         <div className="flex items-end gap-2 pb-1">
           <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" name="applicationFeePaid" className="rounded border" />
+            <input type="checkbox" name="applicationFeePaid" className="rounded-xl border" />
             Сбор за подачу оплачен
           </label>
         </div>
@@ -86,7 +86,7 @@ export function SubmitApplicationForm({
             type="checkbox"
             checked={force}
             onChange={(e) => setForce(e.target.checked)}
-            className="rounded border"
+            className="rounded-xl border"
           />
           Подать всё равно (критичные требования не закрыты)
         </label>

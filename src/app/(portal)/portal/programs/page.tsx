@@ -16,8 +16,8 @@ export default async function PortalProgramsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Программы</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-[28px] font-semibold tracking-tight">Программы</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">
             Рекомендации появятся после анкеты по подбору программ
           </p>
         </div>
@@ -25,7 +25,7 @@ export default async function PortalProgramsPage() {
           title="Сначала заполните анкету №2"
           description="Анкета по подбору программ нужна, чтобы мы могли подготовить список вузов."
         />
-        <Button asChild className="h-11 sm:h-9">
+        <Button asChild size="lg">
           <Link href="/portal/questionnaire-2">Открыть анкету №2</Link>
         </Button>
       </div>
@@ -47,16 +47,16 @@ export default async function PortalProgramsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
+          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
             Программы
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-[15px] text-muted-foreground">
             Выбранные и рекомендованные программы
             {student.targetField ? ` · ${student.targetField}` : ""}
             {student.preferredLanguage ? ` · ${student.preferredLanguage}` : ""}
           </p>
         </div>
-        <Button asChild variant="outline" size="sm" className="h-11 sm:h-8">
+        <Button asChild variant="outline" size="sm">
           <Link href="/portal/questionnaire-2">Изменить анкету №2</Link>
         </Button>
       </div>
@@ -70,7 +70,7 @@ export default async function PortalProgramsPage() {
 
       {applications.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
+          <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
             Выбрано
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -93,7 +93,7 @@ export default async function PortalProgramsPage() {
 
       {matches.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
+          <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
             Рекомендованные
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -116,7 +116,7 @@ export default async function PortalProgramsPage() {
                         name="programAcademicYearId"
                         value={m.programAcademicYearId || ""}
                       />
-                      <Button type="submit" size="sm" className="w-full h-11 sm:h-8">
+                      <Button type="submit" className="w-full">
                         Хочу подать
                       </Button>
                     </form>

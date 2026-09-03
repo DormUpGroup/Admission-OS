@@ -187,6 +187,39 @@ describe("bando-url-discover", () => {
     expect(parsed.nonEuSeats?.value).toBe(40);
   });
 
+  it("decodes quota-table entities, preserves applicant scopes, and ignores menu exam noise", () => {
+    const html = `<html><body>
+      <nav>TOLC preparation material</nav>
+      <main>
+        <p>The programme has a limited number of places, so all candidates must take the SAT Suite test.</p>
+        <p>University Portal: undergraduate degrees foreseeing SAT or TOLC.</p>
+        <table>
+          <tr><td>195 places &gt; Italians, EU and equivalents, non-EU legally residing in Italy (cat. 990)</td></tr>
+          <tr><td>50 places &gt; non-EU citizens residing abroad (cat. 989)</td></tr>
+          <tr><td>5 places &gt; Chinese students (Marco Polo Program)</td></tr>
+        </table>
+      </main>
+    </body></html>`;
+    const parsed = parseCallText(html, "https://uni.example.it/admission", {
+      academicYear: "2026/2027",
+    });
+
+    expect(parsed.exams.map((exam) => exam.name)).toEqual(["SAT"]);
+    expect(parsed.admissionRegime.admissionExams.snippet).toContain("SAT Suite");
+    expect(
+      parsed.quotaRows.find((row) => row.category === "NON_EU_RESIDENT_ABROAD")
+        ?.places
+    ).toBe(50);
+    expect(
+      parsed.quotaRows.find((row) => row.category === "NON_EU_RESIDENT_ITALY")
+        ?.places
+    ).toBe(195);
+    expect(
+      parsed.quotaRows.find((row) => row.category === "EU_CITIZEN")?.places
+    ).toBe(195);
+    expect(parsed.quotaRows.some((row) => row.category === "UNMAPPED")).toBe(true);
+  });
+
   it("extracts university-wide contributo onnicomprensivo range", () => {
     const html = `<html><body>
       <h2>Tasse</h2>

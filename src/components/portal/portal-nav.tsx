@@ -28,10 +28,10 @@ export function PortalNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "whitespace-nowrap rounded-full px-3 py-2 text-sm transition-colors",
+              "whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] transition-colors",
               active
-                ? "bg-[var(--brand-soft)] font-medium text-[var(--brand)]"
-                : "text-muted-foreground hover:text-[var(--brand)]"
+                ? "bg-white font-medium text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-white/70 hover:text-foreground"
             )}
           >
             {item.label}

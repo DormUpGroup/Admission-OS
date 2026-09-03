@@ -8,6 +8,7 @@ import {
   SOURCE_STORAGE_ROOT,
 } from "@/lib/program-matching/config";
 import { detectStaleness } from "@/server/services/program-matching/source-resolver";
+import { syncSourceDocumentSections } from "@/server/services/program-enrichment/document-sections";
 
 let lastFetchAt = 0;
 
@@ -50,6 +51,8 @@ export async function upsertSourceDocument(input: {
   programAcademicYearId?: string;
   contentType?: string;
   body: string;
+  /** Original HTML when `body` is already stripped. Used only for section extraction. */
+  html?: string;
   publishedAt?: Date | null;
   extractionQuality?: string | null;
   status?: string;
@@ -61,6 +64,17 @@ export async function upsertSourceDocument(input: {
   });
 
   if (existing && existing.contentHash === hash) {
+    await syncSourceDocumentSections({
+      sourceDocumentId: existing.id,
+      body: input.body,
+      html: input.html,
+      contentType: input.contentType ?? existing.contentType,
+      sourceType: existing.sourceType,
+      sourceAuthority: existing.sourceAuthority,
+      academicYear: existing.academicYear,
+      pageUrl: input.url,
+      onlyIfEmpty: true,
+    });
     return { document: existing, changed: false };
   }
 
@@ -100,6 +114,17 @@ export async function upsertSourceDocument(input: {
       extractionQuality: input.extractionQuality,
       publishedAt: input.publishedAt ?? null,
     },
+  });
+
+  await syncSourceDocumentSections({
+    sourceDocumentId: document.id,
+    body: input.body,
+    html: input.html,
+    contentType: input.contentType ?? "html",
+    sourceType: input.sourceType,
+    sourceAuthority: input.sourceAuthority,
+    academicYear: input.academicYear,
+    pageUrl: input.url,
   });
 
   return { document, changed: !!existing };

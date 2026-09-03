@@ -12,12 +12,12 @@ export function StudentJourneyPage({ view }: { view: StudentJourneyView }) {
     <div className="space-y-10 md:space-y-12">
       <section className="space-y-4">
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold tracking-tight">Мой путь</h1>
-          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+          <h1 className="text-[28px] font-semibold tracking-tight">Мой путь</h1>
+          <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             {view.headline}
           </p>
         </div>
-        <Button asChild size="lg" className="h-11 w-full sm:h-9 sm:w-auto">
+        <Button asChild size="lg" className="w-full sm:w-auto">
           <Link href={view.primaryCta.href}>{view.primaryCta.label}</Link>
         </Button>
       </section>

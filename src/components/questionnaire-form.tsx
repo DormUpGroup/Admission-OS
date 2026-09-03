@@ -33,7 +33,7 @@ function FieldCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white px-4 py-4 shadow-sm",
+        "surface-card rounded-[22px] border bg-card px-5 py-4",
         error ? "border-red-300" : "border-[var(--border)]"
       )}
     >
@@ -61,7 +61,7 @@ function FieldCard({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Ваш ответ"
           rows={3}
-          className="mt-3 w-full resize-y rounded-md border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
+          className="mt-3 w-full resize-y rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
         />
       ) : null}
 
@@ -72,7 +72,7 @@ function FieldCard({
             type="date"
             value={textValue}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full rounded-md border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
+            className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--brand)]"
           />
         </div>
       ) : null}
@@ -255,25 +255,25 @@ export function QuestionnaireForm({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white shadow-sm">
-        <div className="border-b border-[var(--border)] bg-[var(--brand-soft)] px-5 py-4">
-          <h1 className="text-xl font-semibold text-[var(--brand)]">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+      <div className="overflow-hidden surface-card">
+        <div className="px-5 py-5">
+          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">{title}</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">{subtitle}</p>
           {preview ? (
-            <p className="mt-2 text-xs font-medium text-[var(--brand)]">
+            <p className="mt-2 text-[13px] font-medium text-[var(--brand)]">
               Пустой стартовый вид · только просмотр
             </p>
           ) : null}
         </div>
-        <div className="h-1 bg-[var(--brand-muted)]">
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full bg-[var(--brand)] transition-all"
+            className="h-full rounded-full bg-[var(--brand)] transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
-      <div className="rounded-xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white">
+      <div className="rounded-full bg-muted px-4 py-2.5 text-[15px] font-semibold text-foreground">
         {section.title}
       </div>
 

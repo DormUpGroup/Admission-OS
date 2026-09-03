@@ -198,7 +198,7 @@ export function GenerateProgramMatchesButton({
 
       {showProgress ? (
         <div
-          className="rounded-lg border bg-muted/30 p-4 space-y-3"
+          className="rounded-2xl border bg-muted/30 p-4 space-y-3"
           aria-live="polite"
           aria-busy={loading}
         >

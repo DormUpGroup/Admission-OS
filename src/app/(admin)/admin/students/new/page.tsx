@@ -63,7 +63,7 @@ export default async function NewStudentPage() {
                 id="studyLevel"
                 name="studyLevel"
                 defaultValue="BACHELOR"
-                className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
               >
                 <option value="BACHELOR">Бакалавриат</option>
                 <option value="MASTER">Магистратура</option>
@@ -90,7 +90,7 @@ export default async function NewStudentPage() {
                   id="curatorId"
                   name="curatorId"
                   defaultValue={session.user.id}
-                  className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                  className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                 >
                   {curators.map((c) => (
                     <option key={c.id} value={c.id}>

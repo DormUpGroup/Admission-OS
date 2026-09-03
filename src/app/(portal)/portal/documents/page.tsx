@@ -20,8 +20,8 @@ export default async function PortalDocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight">Документы</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <h1 className="text-[28px] font-semibold tracking-tight">Документы</h1>
+        <p className="mt-1 text-[15px] text-muted-foreground">
           Загрузите файлы, которые запросил куратор
         </p>
       </div>
@@ -38,12 +38,12 @@ export default async function PortalDocumentsPage() {
             return (
               <li
                 key={doc.id}
-                className="rounded-xl border border-neutral-200 bg-white p-4"
+                className="surface-card p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-neutral-900">{doc.name}</p>
-                    <p className="mt-0.5 text-xs text-neutral-400 capitalize">
+                    <p className="font-medium text-foreground">{doc.name}</p>
+                    <p className="mt-0.5 text-[13px] text-muted-foreground capitalize">
                       {doc.category.toLowerCase()}
                       {doc.uploadedAt
                         ? ` · загружено ${formatDate(doc.uploadedAt)}`
@@ -54,7 +54,7 @@ export default async function PortalDocumentsPage() {
                 </div>
 
                 {doc.status === "NEEDS_CHANGES" && doc.studentFeedback ? (
-                  <div className="mt-3 rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-900">
+                  <div className="mt-3 rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-900">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-700">
                       Комментарий куратора
                     </p>
@@ -65,7 +65,7 @@ export default async function PortalDocumentsPage() {
                 {doc.fileUrl && !canUpload ? (
                   <a
                     href={doc.fileUrl}
-                    className="mt-2 inline-block text-xs text-sky-700 hover:underline"
+                    className="mt-2 inline-block text-[13px] text-[var(--brand)] hover:underline"
                     target="_blank"
                     rel="noreferrer"
                   >

@@ -40,7 +40,7 @@ export function TaskList({
   }
 
   return (
-    <ul className={cn("divide-y divide-border rounded-lg border border-border bg-card", className)}>
+    <ul className={cn("divide-y divide-border surface-card", className)}>
       {tasks.map((task) => {
         const row = (
           <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors">

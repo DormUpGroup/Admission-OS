@@ -12,13 +12,6 @@ export interface MetricCardProps {
   onClick?: () => void;
 }
 
-const toneStyles = {
-  neutral: "",
-  danger: "border-l-[3px] border-l-[var(--danger)]",
-  warning: "border-l-[3px] border-l-[var(--warning)]",
-  ok: "border-l-[3px] border-l-[var(--ok)]",
-};
-
 const valueTone = {
   neutral: "text-foreground",
   danger: "text-[var(--danger-fg)]",
@@ -38,7 +31,7 @@ export function MetricCard({
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
           {label}
         </p>
         {href ? (
@@ -47,7 +40,7 @@ export function MetricCard({
       </div>
       <p
         className={cn(
-          "mt-2 text-2xl font-semibold tracking-tight tabular-nums",
+          "mt-2 text-[28px] font-semibold tracking-tight tabular-nums",
           valueTone[tone]
         )}
       >
@@ -60,9 +53,8 @@ export function MetricCard({
   );
 
   const classes = cn(
-    "group block rounded-lg border border-border bg-card p-3.5 shadow-sm transition-colors",
-    toneStyles[tone],
-    (href || onClick) && "hover:border-neutral-300 hover:bg-neutral-50/80 cursor-pointer",
+    "group block surface-card p-4 transition-shadow",
+    (href || onClick) && "surface-card-hover cursor-pointer",
     className
   );
 

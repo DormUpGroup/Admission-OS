@@ -236,9 +236,9 @@ export default async function AdminApplicationsPage({
             key={v.id}
             href={hrefForView(v.id)}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium border transition-colors",
+              "rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors",
               view === v.id
-                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                ? "border-[var(--brand-muted)] bg-[var(--brand-soft)] text-[var(--brand)]"
                 : "border-border bg-card text-muted-foreground hover:bg-muted"
             )}
           >
@@ -247,7 +247,7 @@ export default async function AdminApplicationsPage({
         ))}
       </div>
 
-      <form className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-3">
+      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-3">
         <input type="hidden" name="view" value={view} />
         <div className="min-w-[180px] flex-[1.2] space-y-1">
           <label className="text-[11px] text-muted-foreground">Поиск</label>
@@ -262,7 +262,7 @@ export default async function AdminApplicationsPage({
           <select
             name="studentId"
             defaultValue={sp.studentId ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все студенты</option>
             {students.map((s) => (
@@ -277,7 +277,7 @@ export default async function AdminApplicationsPage({
           <select
             name="status"
             defaultValue={sp.status ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             {STATUS_OPTIONS.map((s) => (
@@ -292,7 +292,7 @@ export default async function AdminApplicationsPage({
           <select
             name="risk"
             defaultValue={sp.risk ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             <option value="CRITICAL">Критический</option>
@@ -307,7 +307,7 @@ export default async function AdminApplicationsPage({
           <select
             name="intake"
             defaultValue={sp.intake ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             {intakes.map((i) => (
@@ -322,7 +322,7 @@ export default async function AdminApplicationsPage({
           <select
             name="universityId"
             defaultValue={sp.universityId ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             {universities.map((u) => (
@@ -337,7 +337,7 @@ export default async function AdminApplicationsPage({
           <select
             name="sort"
             defaultValue={sort}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             {SORT_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>

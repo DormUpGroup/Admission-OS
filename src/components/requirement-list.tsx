@@ -43,7 +43,7 @@ export function RequirementList({
   return (
     <ul
       className={cn(
-        "divide-y divide-border rounded-lg border border-border bg-card",
+        "divide-y divide-border surface-card",
         className
       )}
     >

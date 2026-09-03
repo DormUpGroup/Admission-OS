@@ -22,6 +22,7 @@ async function main() {
   await prisma.tuitionInfo.deleteMany();
   await prisma.admissionCycle.deleteMany();
   await prisma.programFact.deleteMany();
+  await prisma.sourceDocumentSection.deleteMany();
   await prisma.sourceDocument.deleteMany();
   await prisma.scholarshipRule.deleteMany();
   await prisma.scholarshipProgram.deleteMany();

@@ -53,7 +53,7 @@ export default async function AdminSettingsPage({
       />
 
       {query.error ? (
-        <p className="rounded-lg border border-[var(--danger)] bg-[var(--danger-bg)]/40 px-4 py-2 text-sm text-[var(--danger-fg)]">
+        <p className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-bg)]/40 px-4 py-2 text-sm text-[var(--danger-fg)]">
           {query.error}
         </p>
       ) : null}

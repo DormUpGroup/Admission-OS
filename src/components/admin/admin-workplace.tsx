@@ -116,7 +116,7 @@ function NewAnketasBlock({
         </span>
       </div>
 
-      <details className="rounded-lg border border-border bg-card px-4 py-2">
+      <details className="rounded-2xl border border-border bg-card px-4 py-2">
         <summary className="cursor-pointer text-xs text-muted-foreground">
           Фильтры
         </summary>
@@ -126,7 +126,7 @@ function NewAnketasBlock({
             <select
               name="intake"
               defaultValue={query.intake ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+              className="h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
             >
               <option value="">Все наборы</option>
               {view.filters.intakes.map((item) => (
@@ -142,7 +142,7 @@ function NewAnketasBlock({
             <select
               name="status"
               defaultValue={query.status ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+              className="h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
             >
               <option value="">Все открытые</option>
               <option value="PENDING">Новая анкета</option>
@@ -155,7 +155,7 @@ function NewAnketasBlock({
             <select
               name="curatorId"
               defaultValue={query.curatorId ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+              className="h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
             >
               <option value="">Все</option>
               {view.filters.curators.map((curator) => (
@@ -170,7 +170,7 @@ function NewAnketasBlock({
             <select
               name="studyLevel"
               defaultValue={query.studyLevel ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+              className="h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
             >
               <option value="">Все уровни</option>
               {view.filters.studyLevels.map((level) => (

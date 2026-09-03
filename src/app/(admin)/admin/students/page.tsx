@@ -151,9 +151,9 @@ export default async function StudentsPage({
             key={v.id}
             href={hrefForView(v.id)}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium border transition-colors",
+              "rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors",
               view === v.id
-                ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                ? "border-[var(--brand-muted)] bg-[var(--brand-soft)] text-[var(--brand)]"
                 : "border-border bg-card text-muted-foreground hover:bg-muted"
             )}
           >
@@ -162,7 +162,7 @@ export default async function StudentsPage({
         ))}
       </div>
 
-      <form className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-3">
+      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-3">
         <input type="hidden" name="view" value={view} />
         <div className="min-w-[160px] flex-1 space-y-1">
           <label className="text-[11px] text-muted-foreground">Поиск</label>
@@ -173,7 +173,7 @@ export default async function StudentsPage({
           <select
             name="intake"
             defaultValue={sp.intake ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             {intakes.map((i) => (
@@ -188,7 +188,7 @@ export default async function StudentsPage({
           <select
             name="studyLevel"
             defaultValue={sp.studyLevel ?? ""}
-            className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
           >
             <option value="">Все</option>
             <option value="BACHELOR">Бакалавриат</option>
@@ -207,7 +207,7 @@ export default async function StudentsPage({
             <select
               name="curatorId"
               defaultValue={sp.curatorId ?? ""}
-              className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+              className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
             >
               <option value="">Все</option>
               {curators.map((c) => (

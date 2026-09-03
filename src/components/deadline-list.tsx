@@ -41,7 +41,7 @@ export function DeadlineList({
   }
 
   return (
-    <ul className={cn("divide-y divide-border rounded-lg border border-border bg-card", className)}>
+    <ul className={cn("divide-y divide-border surface-card", className)}>
       {deadlines.map((item) => {
         const due =
           typeof item.dueDate === "string"
@@ -50,7 +50,7 @@ export function DeadlineList({
         const days = daysUntil(due);
         const row = (
           <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[28%] bg-muted text-muted-foreground">
               <CalendarClock className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0 flex-1">

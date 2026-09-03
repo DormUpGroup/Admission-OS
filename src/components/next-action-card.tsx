@@ -23,11 +23,11 @@ export function NextActionCard({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-lg border border-border bg-card p-3.5 shadow-sm",
+        "flex items-start gap-3 surface-card p-4",
         className
       )}
     >
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--brand)] text-white">
+      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[28%] bg-[var(--brand-soft)] text-[var(--brand)]">
         <Zap className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0 flex-1">

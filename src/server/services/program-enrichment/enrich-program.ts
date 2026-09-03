@@ -7,6 +7,10 @@ import {
   findReusableEnrichmentRun,
   finishEnrichmentRun,
 } from "./enrichment-cache";
+import {
+  findEligibleFactsForCurrentSources,
+  enrichmentFieldsForMode,
+} from "./eligible-facts";
 import { runLunaTerraEnrichment } from "./luna-terra";
 import {
   toMinimalMatchingContext,
@@ -170,36 +174,75 @@ export async function enrichProgramWithAi(input: {
       },
     };
 
-    const result = await runLunaTerraEnrichment({
-      ctx,
-      navigator,
-      client,
-      forShortlist: input.forShortlist,
-    });
-
     const docs = navigator.getDocuments();
+    const currentDocIds = [...docs.keys()];
     const hashes = [...docs.values()].map((d) => d.contentHash);
     const fingerprint = buildSourceFingerprint(
       hashes.length ? hashes : preflightHashes
     );
 
+    const eligible = await findEligibleFactsForCurrentSources({
+      programAcademicYearId: pay.id,
+      applicantCategory: input.applicantCategory,
+      academicYear: pay.academicYear,
+      sourceDocumentIds: currentDocIds,
+      forShortlist: input.forShortlist,
+    });
+    const needed = enrichmentFieldsForMode(input.forShortlist ?? false);
+    const alreadyResolved = eligible.coveredFields;
+    if (
+      needed.length > 0 &&
+      needed.every((field) => alreadyResolved.includes(field)) &&
+      eligible.factIds.length > 0
+    ) {
+      await finishEnrichmentRun(run.id, {
+        status: "REUSED",
+        sourceDocumentIdsJson: JSON.stringify(currentDocIds),
+        resolvedFactIdsJson: JSON.stringify(eligible.factIds),
+        toolCallCount: navigator.toolCallCount(),
+        sourceFingerprint: fingerprint,
+        origin: "AI",
+      });
+      return {
+        status: "REUSED",
+        aiEnabled: true,
+        reused: true,
+        runId: run.id,
+        toolCallCount: navigator.toolCallCount(),
+      };
+    }
+
+    const result = await runLunaTerraEnrichment({
+      ctx,
+      navigator,
+      client,
+      forShortlist: input.forShortlist,
+      alreadyResolvedFields: alreadyResolved,
+    });
+
+    const docsAfter = navigator.getDocuments();
+    const hashesAfter = [...docsAfter.values()].map((d) => d.contentHash);
+    const fingerprintAfter = buildSourceFingerprint(
+      hashesAfter.length ? hashesAfter : preflightHashes
+    );
+
     // Cache hit after navigation (shared bando hash)
-    if (!input.force && hashes.length) {
+    if (!input.force && hashesAfter.length) {
       const reusable = await findReusableEnrichmentRun({
         programAcademicYearId: pay.id,
         applicantCategory: input.applicantCategory,
-        sourceFingerprint: fingerprint,
+        sourceFingerprint: fingerprintAfter,
         promptVersion: cfg.promptVersion,
       });
       if (reusable && reusable.id !== run.id) {
         await finishEnrichmentRun(run.id, {
           status: "REUSED",
           model: reusable.model,
-          sourceDocumentIdsJson: JSON.stringify([...docs.keys()]),
+          sourceDocumentIdsJson: JSON.stringify([...docsAfter.keys()]),
           resolvedFactIdsJson: reusable.resolvedFactIdsJson,
           toolCallCount: result.toolCallCount,
           reusedFromRunId: reusable.id,
-          sourceFingerprint: fingerprint,
+          sourceFingerprint: fingerprintAfter,
         });
         return {
           status: "REUSED",
@@ -213,33 +256,63 @@ export async function enrichProgramWithAi(input: {
     }
 
     if (!result.output) {
+      // A failed model response must not discard official documents it already
+      // inspected. Fall back to the deterministic, quote-validated pipeline;
+      // it writes the same individual ELIGIBLE facts read by the dossier.
+      const { deepEnrichProgram } = await import(
+        "@/server/services/program-ingestion/program-deep-enrich"
+      );
+      const fallback = await deepEnrichProgram(pay.id, {
+        deferAdministrativeFields: input.forShortlist,
+      });
+      const fallbackDocuments = await prisma.sourceDocument.findMany({
+        where: { programAcademicYearId: pay.id },
+        select: { id: true, contentHash: true },
+      });
+      const fallbackFacts = fallback.ok
+        ? await prisma.programFact.findMany({
+            where: {
+              programAcademicYearId: pay.id,
+              superseded: false,
+              decisionStatus: "ELIGIBLE",
+              origin: "OFFICIAL_FALLBACK",
+            },
+            select: { id: true },
+          })
+        : [];
+      const fallbackFingerprint = buildSourceFingerprint(
+        fallbackDocuments.map((document) => document.contentHash)
+      );
       await finishEnrichmentRun(run.id, {
-        status: "FAILED",
-        model: result.model,
+        status: fallback.ok ? "SUCCEEDED" : "FAILED",
+        model: fallback.ok ? "FALLBACK_REGEX" : result.model,
         toolCallCount: result.toolCallCount,
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
         quoteRejectCount: result.quoteRejectCount,
-        sourceDocumentIdsJson: JSON.stringify([...docs.keys()]),
-        error: "empty_or_invalid_model_output",
-      });
-      await prisma.programEnrichmentRun.update({
-        where: { id: run.id },
-        data: { sourceFingerprint: fingerprint },
+        sourceDocumentIdsJson: JSON.stringify(
+          fallbackDocuments.map((document) => document.id)
+        ),
+        resolvedFactIdsJson: JSON.stringify(
+          fallbackFacts.map((fact) => fact.id)
+        ),
+        sourceFingerprint: fallbackFingerprint,
+        origin: fallback.ok ? "OFFICIAL_FALLBACK" : "AI",
+        error: fallback.ok ? null : "empty_or_invalid_model_output",
       });
       return {
-        status: "FAILED",
+        status: fallback.ok ? "SUCCEEDED" : "FAILED",
         aiEnabled: true,
         runId: run.id,
-        model: result.model,
-        error: "empty_or_invalid_model_output",
+        model: fallback.ok ? "FALLBACK_REGEX" : result.model,
+        error: fallback.ok ? undefined : "empty_or_invalid_model_output",
         toolCallCount: result.toolCallCount,
         quoteRejectCount: result.quoteRejectCount,
       };
     }
 
     const docTexts = new Map(
-      [...docs.entries()].map(([id, d]) => [id, d.text])
+      [...docsAfter.entries()].map(([id, d]) => [id, d.text])
     );
     const persisted = await persistEnrichmentOutput({
       programId: pay.programId,
@@ -260,13 +333,13 @@ export async function enrichProgramWithAi(input: {
       outputTokens: result.outputTokens,
       quoteRejectCount:
         result.quoteRejectCount + persisted.quoteRejectCount,
-      sourceDocumentIdsJson: JSON.stringify([...docs.keys()]),
+      sourceDocumentIdsJson: JSON.stringify([...docsAfter.keys()]),
       resolvedFactIdsJson: JSON.stringify(persisted.savedFactIds),
       resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
     });
     await prisma.programEnrichmentRun.update({
       where: { id: run.id },
-      data: { sourceFingerprint: fingerprint },
+      data: { sourceFingerprint: fingerprintAfter },
     });
 
     await prisma.programAcademicYear.update({

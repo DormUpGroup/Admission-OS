@@ -416,6 +416,109 @@ async function persistScopedQuotaFacts(
 }
 
 /**
+ * Write decision facts from every inspected official document through the
+ * same evidence contract used by AI output.  The dossier resolver only reads
+ * these individual facts; a legacy composite ADMISSION_REGIME is deliberately
+ * not a decision source.
+ */
+async function persistVerifiedDecisionFacts(
+  pay: {
+    id: string;
+    programId: string;
+    academicYear: string;
+    program: { universityId: string; name: string };
+  },
+  documents: ParsedDocument[]
+) {
+  for (const document of documents) {
+    const plainText = /html/i.test(document.method)
+      ? extractHtmlMainText(document.body)
+      : document.body;
+    const snapshot = await upsertSourceDocument({
+      sourceType: document.sourceType,
+      sourceAuthority: pay.program.name,
+      url: document.url,
+      academicYear: pay.academicYear,
+      universityId: pay.program.universityId,
+      programId: pay.programId,
+      programAcademicYearId: pay.id,
+      contentType: /pdf/i.test(document.method) ? "pdf" : "html",
+      body: plainText.slice(0, 100_000),
+      status: "FETCHED",
+      extractionQuality: extractionQualityLabel(document.parsed.quality),
+    });
+    const regime = regimeFromDocument(document);
+    const validates = (quote: string | null) =>
+      !!quote && validateEvidenceQuote(quote, plainText).accepted;
+    const source = {
+      programId: pay.programId,
+      programAcademicYearId: pay.id,
+      sourceDocumentId: snapshot.document.id,
+      sourceUrl: document.url,
+      academicYear: pay.academicYear,
+      sourceType: document.sourceType,
+      extractionMethod: `FALLBACK_${document.method}`,
+      applicantCategoryScope: "ALL",
+    };
+
+    if (regime.access.value !== "UNKNOWN" && validates(regime.access.snippet)) {
+      await upsertFact({
+        ...source,
+        field: "ACCESS_TYPE",
+        value: { mode: regime.access.value },
+        rawValue: regime.access.snippet ?? undefined,
+        evidenceQuote: regime.access.snippet ?? undefined,
+        confidence: regime.access.confidence,
+        dimensionKey: factDimensionKey({
+          field: "ACCESS_TYPE",
+          scope: "ALL",
+          discriminator: "access",
+        }),
+        evidenceValidated: true,
+      });
+    }
+
+    if (regime.selection.value !== "UNKNOWN" && validates(regime.selection.snippet)) {
+      await upsertFact({
+        ...source,
+        field: "SELECTION",
+        value: { selection: regime.selection.value },
+        rawValue: regime.selection.snippet ?? undefined,
+        evidenceQuote: regime.selection.snippet ?? undefined,
+        confidence: regime.selection.confidence,
+        dimensionKey: factDimensionKey({
+          field: "SELECTION",
+          scope: "ALL",
+          discriminator: "selection",
+        }),
+        evidenceValidated: true,
+      });
+    }
+
+    if (
+      regime.admissionExams.value.length > 0 &&
+      validates(regime.admissionExams.snippet)
+    ) {
+      const description = formatExamAlternatives(regime.admissionExams.value);
+      await upsertFact({
+        ...source,
+        field: "ADMISSION_EXAMS",
+        value: { alternatives: regime.admissionExams.value, description },
+        rawValue: description,
+        evidenceQuote: regime.admissionExams.snippet ?? undefined,
+        confidence: regime.admissionExams.confidence,
+        dimensionKey: factDimensionKey({
+          field: "ADMISSION_EXAMS",
+          scope: "ALL",
+          discriminator: description,
+        }),
+        evidenceValidated: true,
+      });
+    }
+  }
+}
+
+/**
  * A call is usually authoritative for access, seats and deadlines; a linked
  * tasse/requisiti page can be the only source for fees or language. Merge
  * fields instead of treating one high-coverage document as the whole dossier.
@@ -524,14 +627,13 @@ async function applyParsedFacts(input: {
   parsed: CallTextParse;
   sourceDocumentId: string;
   sourceUrl: string;
-  sourceText: string;
   sourceType: "ADMISSION_CALL" | "PROGRAMME_PAGE";
   extractionMethod: string;
   regime?: AdmissionRegime;
   /** Fee and deadline work is deferred until a programme is shortlisted. */
   deferAdministrativeFields?: boolean;
 }): Promise<{ accessMode: string; hadSignal: boolean }> {
-  const { pay, parsed, sourceDocumentId, sourceUrl, sourceText, sourceType, extractionMethod } =
+  const { pay, parsed, sourceDocumentId, sourceUrl, sourceType, extractionMethod } =
     input;
   let hadSignal = false;
   const writeLegacyProjection = !isProgramEnrichmentEnabled();
@@ -833,27 +935,6 @@ async function applyParsedFacts(input: {
   if (regime.access.value !== "UNKNOWN") {
     hadSignal = true;
     accessMode = regime.access.value;
-    await upsertFact({
-      programId: pay.programId,
-      programAcademicYearId: pay.id,
-      field: "ACCESS_TYPE",
-      value: {
-        mode: regime.access.value,
-        selection: regime.selection.value,
-        unlimitedSeats: regime.seats.value.unlimited,
-        euSeats: regime.seats.value.eu,
-        nonEuSeats: regime.seats.value.nonEu,
-        totalSeats: regime.seats.value.total,
-        fromCall: sourceType === "ADMISSION_CALL",
-      },
-      sourceDocumentId,
-      sourceUrl,
-      academicYear: pay.academicYear,
-      sourceType,
-      extractionMethod,
-      confidence: regime.access.confidence,
-      rawValue: regime.access.snippet ?? undefined,
-    });
   }
 
   const examParts = regime.admissionExams.value;
@@ -889,25 +970,6 @@ async function applyParsedFacts(input: {
         },
       });
     }
-    await upsertFact({
-      programId: pay.programId,
-      programAcademicYearId: pay.id,
-      field: "ADMISSION_EXAMS",
-      value: { alternatives: examParts, description },
-      sourceDocumentId,
-      sourceUrl,
-      academicYear: pay.academicYear,
-      sourceType,
-      extractionMethod,
-      confidence: parsed.examsConfidence,
-      rawValue: description,
-      evidenceQuote: regime.admissionExams.snippet ?? description,
-      applicantCategoryScope: "ALL",
-      evidenceValidated: regime.admissionExams.snippet
-        ? validateEvidenceQuote(regime.admissionExams.snippet, sourceText)
-            .accepted || sourceText.trim().length > 0
-        : false,
-    });
   }
 
   if (parsed.careerOutcomes) {
@@ -1337,15 +1399,13 @@ export async function deepEnrichProgram(
   };
 
   await persistScopedQuotaFacts(pay, parsedDocuments);
+  await persistVerifiedDecisionFacts(pay, parsedDocuments);
 
   const { accessMode, hadSignal } = await applyParsedFacts({
     pay: payFresh,
     parsed: mergedParsed,
     sourceDocumentId: snap.document.id,
     sourceUrl: bestUrl,
-    sourceText: /html/i.test(bestMethod)
-      ? extractHtmlMainText(bestBody)
-      : bestBody,
     sourceType: bestSourceType,
     extractionMethod: bestMethod,
     regime: mergedRegime,

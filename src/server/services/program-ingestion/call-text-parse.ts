@@ -66,6 +66,57 @@ const MONTH_NAMES =
 const SECTION_CUE =
   /\b(tasse|contribuzione|tuition|fees|amounts|requisiti|requirements|ammissione|admission|posti|seats|scadenze|scadenza|deadlines?|sbocchi|career|lingua|language|cef|qcer)\b/gi;
 
+/**
+ * Normalise official HTML/PDF text before both parsing and quote validation.
+ * University CMSes frequently put real table delimiters into entities; keeping
+ * `&gt;` as literal text loses the group that follows a quota number.
+ */
+export function decodeHtmlEntities(value: string): string {
+  const named: Record<string, string> = {
+    nbsp: " ",
+    amp: "&",
+    apos: "'",
+    quot: '"',
+    lt: "<",
+    gt: ">",
+    ndash: "–",
+    mdash: "—",
+    rsquo: "’",
+    lsquo: "‘",
+    rdquo: "”",
+    ldquo: "“",
+    euro: "€",
+  };
+  return value.replace(
+    /&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,
+    (entity, raw: string) => {
+      const key = raw.toLowerCase();
+      if (named[key] != null) return named[key];
+      if (key.startsWith("#x")) {
+        const code = Number.parseInt(key.slice(2), 16);
+        return Number.isFinite(code) && code <= 0x10ffff
+          ? String.fromCodePoint(code)
+          : entity;
+      }
+      if (key.startsWith("#")) {
+        const code = Number.parseInt(key.slice(1), 10);
+        return Number.isFinite(code) && code <= 0x10ffff
+          ? String.fromCodePoint(code)
+          : entity;
+      }
+      return entity;
+    }
+  );
+}
+
+/** Text form used as the common evidence surface for deterministic extractors. */
+export function normalizeOfficialText(value: string): string {
+  return decodeHtmlEntities(value)
+    .replace(/[\u00a0\u200b]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Prefer main/article content; always strip scripts/styles (Unito-like CMS shells). */
 export function extractHtmlMainText(body: string): string {
   const html = body
@@ -82,13 +133,10 @@ export function extractHtmlMainText(body: string): string {
   ].filter((c): c is string => !!c);
 
   const toText = (chunk: string) =>
-    chunk
+    normalizeOfficialText(
+      chunk
       .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/&amp;/gi, "&")
-      .replace(/&euro;/gi, "€")
-      .replace(/\s+/g, " ")
-      .trim();
+    );
 
   let best = "";
   for (const c of candidates) {
@@ -340,22 +388,88 @@ function extractCareer(text: string, windows: Map<string, string>): CallField<st
   return null;
 }
 
+function sentenceAround(text: string, index: number): string | undefined {
+  if (index < 0) return undefined;
+  const start = Math.max(
+    text.lastIndexOf(".", index - 1),
+    text.lastIndexOf("!", index - 1),
+    text.lastIndexOf("?", index - 1),
+    text.lastIndexOf("\n", index - 1)
+  ) + 1;
+  const endings = [
+    text.indexOf(".", index),
+    text.indexOf("!", index),
+    text.indexOf("?", index),
+    text.indexOf("\n", index),
+  ].filter((end) => end >= 0);
+  const end = endings.length ? Math.min(...endings) + 1 : text.length;
+  const sentence = normalizeOfficialText(text.slice(start, end));
+  return sentence.length >= 8 ? sentence.slice(0, 500) : undefined;
+}
+
+function namedExamContextScore(text: string, name: "SAT" | "TOLC"): number {
+  const token = name === "SAT" ? "SAT" : "TOLC(?:-[A-Z]+)?";
+  const re = new RegExp(`\\b${token}\\b`, "gi");
+  let best = Number.NEGATIVE_INFINITY;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const sentence = sentenceAround(text, match.index)?.toLowerCase() ?? "";
+    let score = 0;
+    if (/admission|ammissione|entrance|selection|selezione|enrol|iscriz/.test(sentence)) score += 2;
+    if (/all candidates?|applicants?|must take|take the|required|accepted|ammess/.test(sentence)) score += 2;
+    if (/limited number|numero programmato|ranked|graduatoria|intake round/.test(sentence)) score += 2;
+    // Global navigation and portal cross-links often list several tests but
+    // do not state this programme's own rule.
+    if (/university portal|all further information|programs? that require|degrees? foreseeing|preparation material/.test(sentence)) score -= 8;
+    best = Math.max(best, score);
+  }
+  return best;
+}
+
+function isNamedExamInAdmissionContext(text: string, name: "SAT" | "TOLC"): boolean {
+  return namedExamContextScore(text, name) > 0;
+}
+
+function hasExplicitSatTolcAlternative(text: string): boolean {
+  const match = text.match(
+    /\bSAT\b[^.!?\n]{0,45}\b(?:or|oppure|o)\b[^.!?\n]{0,45}\bTOLC(?:-[A-Z]+)?\b|\bTOLC(?:-[A-Z]+)?\b[^.!?\n]{0,45}\b(?:or|oppure|o)\b[^.!?\n]{0,45}\bSAT\b/i
+  );
+  if (!match) return false;
+  // A university-wide portal index can name both tests without saying that
+  // either applies to the current programme.
+  if (/university portal|all further information|programs? that require|degrees? foreseeing/i.test(match[0])) {
+    return false;
+  }
+  return /admission|ammissione|entrance|selection|selezione|numero\s+programmato|posti|seats|deadline|scadenza/i.test(text);
+}
+
 function extractExams(text: string): {
   exams: CallExam[];
   alternatives: CallExam[];
   confidence: FieldConfidence;
   admissionGate: boolean;
   evaluationOnly: boolean;
+  snippet?: string;
 } {
   const exams: CallExam[] = [];
   const alternatives: CallExam[] = [];
 
-  if (/\b(?:CISIA\s+)?TOLC(?:-[A-Z]+)?\b/i.test(text)) {
+  if (
+    /\b(?:CISIA\s+)?TOLC(?:-[A-Z]+)?\b/i.test(text) &&
+    (isNamedExamInAdmissionContext(text, "TOLC") ||
+      hasExplicitSatTolcAlternative(text))
+  ) {
     const tolc = text.match(/\bTOLC-[A-Z]+\b/i)?.[0] || "TOLC";
     exams.push({ name: tolc.toUpperCase() });
   }
-  if (/\bSAT\b/i.test(text)) {
-    const satScore = text.match(/\bSAT[^.\n]{0,30}?(\d{3,4})\b/i);
+  if (
+    /\bSAT\b/i.test(text) &&
+    (isNamedExamInAdmissionContext(text, "SAT") ||
+      hasExplicitSatTolcAlternative(text))
+  ) {
+    const satScore = text.match(
+      /\bSAT(?:\s+(?:score|test))?[^.!?\n]{0,80}?\b(?:score\s*(?:of)?|minimum|at\s+least|>=|≥)\s*(\d{3,4})\b/i
+    );
     exams.push({
       name: "SAT",
       detail: satScore ? `≥ ${satScore[1]}` : undefined,
@@ -424,7 +538,24 @@ function extractExams(text: string): {
   const confidence: FieldConfidence =
     alternatives.length >= 2 ? "HIGH" : exams.length > 0 ? "MEDIUM" : "LOW";
 
-  return { exams, alternatives, confidence, admissionGate, evaluationOnly };
+  const firstName = exams[0]?.name;
+  const examIndex = firstName
+    ? text.search(
+        new RegExp(
+          `\\b${firstName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace("-", "(?:-)?")}\\b`,
+          "i"
+        )
+      )
+    : -1;
+
+  return {
+    exams,
+    alternatives,
+    confidence,
+    admissionGate,
+    evaluationOnly,
+    snippet: sentenceAround(text, examIndex),
+  };
 }
 
 function quotaCategories(group: string): ScopedQuotaRow["category"][] {
@@ -471,16 +602,17 @@ function quotaRowsFromChunks(chunks: string[]): ScopedQuotaRow[] {
       raw: match[1],
     }));
     if (numbers.length === 0) continue;
-    const code = chunk.match(/\b(?:category|categoria)\s*(\d{3,4})\b/i)?.[1];
+    const code = chunk.match(/\b(?:category|categoria|cat\.?)\s*(\d{3,4})\b/i)?.[1];
     const placeMentions = chunk.match(/\b(?:places|posti|seats)\b/gi) || [];
     if (!code && placeMentions.length > 1) continue;
     const candidates = code
       ? numbers.filter((number) => number.raw !== code)
       : numbers;
-    const places = candidates.at(-1)?.value;
+    const directPlaces = chunk.match(/\b(\d{1,4})\s*(?:places|posti|seats)\b/i)?.[1];
+    const places = directPlaces ? Number(directPlaces) : candidates.at(-1)?.value;
     if (places == null || places > 5000) continue;
     const originalGroup = chunk
-      .replace(/\b(?:category|categoria)\s*\d{3,4}\b/i, "")
+      .replace(/\b(?:category|categoria|cat\.?)\s*\d{3,4}\b/i, "")
       .replace(/\b\d{1,4}\s*(?:places|posti|seats)\b/i, "")
       .replace(/\s+/g, " ")
       .trim()
@@ -509,7 +641,7 @@ function quotaRowsFromChunks(chunks: string[]): ScopedQuotaRow[] {
 
 export function extractScopedQuotaRows(body: string): ScopedQuotaRow[] {
   const htmlRows = (body.match(/<tr[\s\S]*?<\/tr>/gi) || []).map((row) =>
-    row.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim()
+    normalizeOfficialText(row.replace(/<[^>]+>/g, " "))
   );
   const text = stripHtml(body);
   const categoryChunks = text
@@ -517,17 +649,26 @@ export function extractScopedQuotaRows(body: string): ScopedQuotaRow[] {
     .filter(Boolean)
     .map((chunk) => chunk.slice(0, 700));
   const inlineChunks: string[] = [];
+  for (const match of text.matchAll(
+    /\b(\d{1,4})\s*(?:places|posti|seats)\s*(?:for|per|:)?\s*([^+;.\n]{3,220})/gi
+  )) {
+    inlineChunks.push(match[0]);
+  }
+  // CMS pages often render quota tables as one long line. Split on the next
+  // labelled amount so every row keeps its own applicant group. Real HTML
+  // tables are already represented by htmlRows; splitting them again can
+  // cross row boundaries and attach the wrong quantity to a category.
   if (htmlRows.length === 0) {
     for (const match of text.matchAll(
-      /\b(\d{1,4})\s*(?:places|posti|seats)\s*(?:for|per|:)?\s*([^+;.\n]{3,220})/gi
+      /\b(\d{1,4})\s*(?:places|posti|seats)\b([\s\S]{0,420}?)(?=\s+\d{1,4}\s*(?:places|posti|seats)\b|$)/gi
     )) {
       inlineChunks.push(match[0]);
     }
-    for (const match of text.matchAll(
-      /([^+;.\n]{3,180}?)\s*[:–—-]\s*(\d{1,4})\s*(?:places|posti|seats)\b/gi
-    )) {
-      inlineChunks.push(match[0]);
-    }
+  }
+  for (const match of text.matchAll(
+    /([^+;.\n]{3,180}?)\s*[:–—-]\s*(\d{1,4})\s*(?:places|posti|seats)\b/gi
+  )) {
+    inlineChunks.push(match[0]);
   }
   return quotaRowsFromChunks([
     ...htmlRows,
@@ -696,7 +837,7 @@ function extractTableSeatsFromHtml(html: string): {
   let totalSeats: CallField<number> | null = null;
   const rows = html.match(/<tr[\s\S]*?<\/tr>/gi) || [];
   for (const row of rows) {
-    const plain = row.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const plain = normalizeOfficialText(row.replace(/<[^>]+>/g, " "));
     if (!/posti|seats|places/i.test(plain)) continue;
     const numMatch = plain.match(/(\d{1,4})/);
     if (!numMatch) continue;
@@ -947,7 +1088,7 @@ export function parseCallText(
   }
 
   const looksHtml = /<html|<body|<p[\s>]|<div[\s>]/i.test(raw.slice(0, 2000));
-  let text = looksHtml ? stripHtml(raw) : raw.replace(/\s+/g, " ").trim();
+  let text = looksHtml ? stripHtml(raw) : normalizeOfficialText(raw);
   // SPA / token shells: keep access cues from embedded catalogue JSON, demote length.
   const spaShell =
     /theme_token|dl_start pushed|var\s+Language\s*=|jQuery\.noConflict/i.test(
@@ -1012,11 +1153,12 @@ export function parseCallText(
     confidence: examsConfidence,
     admissionGate,
     evaluationOnly,
+    snippet: examsSnippet,
   } = extractExams(admissionText || text);
   // Heading windows can end before a later "SAT or TOLC" line. Fall back to
   // full text only when the relevant sections yielded no admission exam.
   if (exams.length === 0 && admissionText && admissionText !== text) {
-    ({ exams, alternatives, confidence: examsConfidence, admissionGate, evaluationOnly } =
+    ({ exams, alternatives, confidence: examsConfidence, admissionGate, evaluationOnly, snippet: examsSnippet } =
       extractExams(text));
   }
   const careerOutcomes = extractCareer(text, windows);
@@ -1044,7 +1186,7 @@ export function parseCallText(
     admissionGate,
     evaluationOnly,
     exams: alternatives.length >= 2 ? alternatives : exams,
-    examsSnippet: (alternatives[0] || exams[0])?.name ?? null,
+    examsSnippet: examsSnippet ?? (alternatives[0] || exams[0])?.name ?? null,
     examsConfidence,
     languageRequirement: languageLevel?.value ?? null,
     languageSnippet: languageLevel?.snippet ?? null,

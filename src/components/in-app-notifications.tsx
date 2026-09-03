@@ -26,8 +26,8 @@ export function InAppNotificationsPanel({
       {items.map((n) => (
         <li
           key={n.id}
-          className={`rounded-md border px-3 py-2 text-sm ${
-            n.readAt ? "border-border opacity-70" : "border-[var(--brand)]/40 bg-muted/30"
+          className={`surface-card px-3 py-2.5 text-sm ${
+            n.readAt ? "opacity-70" : ""
           }`}
         >
           <div className="flex items-start justify-between gap-2">

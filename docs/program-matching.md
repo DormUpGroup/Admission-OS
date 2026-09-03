@@ -1,6 +1,6 @@
 # Program Matching Engine
 
-> **Current state:** matching uses evidence-aware programme facts. Universitaly is discovery-only; admission decisions are resolved from quoted, year-specific and applicant-scoped official facts. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false**. When AI is off, regex/PDF deep-enrich fills the second filter; when AI is on, the second filter is AI-only (no regex/PDF on AI failure).
+> **Current state:** matching uses evidence-aware programme facts. Universitaly is discovery-only; admission decisions are resolved from quoted, year-specific and applicant-scoped official facts. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false**. When AI is enabled, Luna/Terra is the first extractor; an invalid or empty AI result falls back to deterministic HTML/PDF extraction and still saves only quoted, validated facts.
 
 Italy-specific program matching for IMMIGROME OS. Matches use the **existing questionnaires** as source of truth, a local **Program Database** with fact-level provenance, deterministic **eligibility**, configurable **fit score**, and **curator verification** before student shortlist.
 
@@ -29,7 +29,17 @@ Matching does **not** scrape the whole of Italy on each click. Caps: max **10 pa
 | `OPENAI_PROGRAM_ENRICHMENT_ESCALATION_MODEL` | `gpt-5.6-terra` |
 | `OPENAI_PROGRAM_ENRICHMENT_MAX_CANDIDATES` | `35` |
 
-Tools are limited to `inspect_programme_site` / `follow_official_link` / `read_official_section` / `read_official_pdf` (no free web search). Every saved fact requires a quote present in its `SourceDocument`. Monitor only selected programmes: `npm run programs:monitor-selected`.
+Tools are limited to `inspect_programme_site` / `follow_official_link` / `read_official_section` / `read_official_pdf` (no free web search). Tool replies and the final model pack use **deterministic section retrieval** (ranked official fragments), not the first N characters of each page. Every saved fact still requires a verbatim quote present in the full inspected document text. Monitor only selected programmes: `npm run programs:monitor-selected`.
+
+### Section retrieval (no embeddings yet)
+
+Official pages/PDFs are split into `SourceDocumentSection` rows (headings, tabs/accordions, tables, IT/EN admission cues). Extraction is deterministic — no LLM and no embeddings. On ingest, sections are rebuilt only when `SourceDocument.contentHash` changes (or when an older document has no sections yet).
+
+At enrichment time, sections are filtered by programme / academic year / applicant-category hints / current source documents, then ranked by section type, keywords, freshness, and source authority. Shortlist prefers `ADMISSION` / `EXAMS` / `LANGUAGE` / `SEATS` / `DOCUMENTS`; full dossier also pulls `DEADLINES` / `TUITION`. Context size is bounded by dropping whole low-ranked sections (quotes are never mid-cut).
+
+Eligible, non-superseded `ProgramFact`s already backed by the current official documents are not re-extracted. Cache fingerprint remains the hash of source document content (sections are derived from that content).
+
+**Future RAG boundary:** embeddings may later re-rank only among metadata-filtered sections. They must never become the source of truth for facts, matching, or eligibility.
 
 ## Universitaly / Cineca API
 
@@ -93,7 +103,7 @@ officialUrl → fetch page
 
 Fingerprint = hash of all direction×lingua queries + excluded cities. Same student + fingerprint within **24h** reuses local `programAcademicYearIds`.
 
-When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits AI. Failed AI attempts are recorded as failed and do **not** run regex/PDF; deterministic deep-enrich runs only when AI enrichment is disabled.
+When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits AI. If both AI passes return invalid or unusable JSON, the run records `FALLBACK_REGEX` as its model and executes deterministic deep-enrich. This fallback is evidence-first: it cannot make an unquoted or category-unmapped fact eligible.
 
 ## Decision fact resolution
 
@@ -112,6 +122,7 @@ When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits
 - `University` / `Program` — catalogue (extended, not duplicated)
 - `ProgramAcademicYear` — year-specific admission state + data confidence
 - `SourceDocument` — raw snapshot + `contentHash`
+- `SourceDocumentSection` — deterministic, metadata-filtered document sections for retrieval; embeddings may later rank only among these sections and are never a source of truth
 - `ProgramFact` — field-level provenance
 - `AdmissionRequirement` / `AdmissionCycle` / `TuitionInfo`
 - `ProgramMatch` — persisted engine output + curator status
@@ -201,6 +212,7 @@ npm test
 - Hybrid live Universitaly search (capped); fixtures remain seed/fallback for CLI ingest
 - PDF OCR is **gated** (`BANDO_OCR=1`); without page rasterizer, scanned PDFs need stub or image input
 - No admission probability model / custom ML
+- No embeddings / vector DB yet — section retrieval is deterministic only; semantic ranking may be added later only after hard metadata filtering and never as a source of truth
 - No weekly full-catalog mirror / cron worker (CLI: `programs:refresh`, `programs:enrich-dossiers`, `bando:eval`)
 - Budget / TOLC scores often `UNKNOWN` until questionnaire collects them
 - Background refresh is CLI-first (no cron worker yet)

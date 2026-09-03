@@ -9,6 +9,7 @@ import {
   verifyProgramDossierFactsAction,
 } from "@/server/actions";
 import { MapPin, ExternalLink } from "lucide-react";
+import { UniversityMonogram } from "@/components/university-monogram";
 import type { ProgramFieldStatusMap } from "@/lib/program-matching/field-status";
 
 export type CuratorMatchView = {
@@ -230,13 +231,14 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
     "Не указано";
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
-      <div className="flex items-start gap-3 border-b border-[var(--border)] bg-[var(--brand-soft)] px-4 py-3">
+    <article className="flex flex-col overflow-hidden surface-card">
+      <div className="flex items-start gap-3.5 border-b border-border px-5 py-4">
+        <UniversityMonogram name={match.universityName} size="sm" />
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold leading-snug text-[var(--brand)]">
+          <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-foreground">
             {match.universityName}
           </h3>
-          <p className="mt-0.5 text-sm font-medium">{match.programName}</p>
+          <p className="mt-0.5 text-[13px] font-medium">{match.programName}</p>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {match.city ? (
               <span className="inline-flex items-center gap-1">
@@ -262,12 +264,12 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold tabular-nums text-[var(--brand)]">
+          <span className="surface-chip rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--brand)]">
             Совпадение {match.fitScore}/100
           </span>
           <span
             className={cn(
-              "rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
               statusColor(match.eligibilityStatus)
             )}
           >
@@ -286,7 +288,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
 
       <div className="flex flex-1 flex-col gap-3 px-4 py-3.5 text-sm">
         {match.whyIncluded ? (
-          <p className="rounded-md bg-[var(--brand-soft)]/60 px-2.5 py-1.5 text-xs text-[var(--brand)]">
+          <p className="surface-well rounded-xl px-3 py-2 text-[13px] text-muted-foreground">
             {match.inclusionKind ? (
               <span className="mr-1 font-semibold uppercase tracking-wide opacity-80">
                 {match.inclusionKind}
@@ -374,7 +376,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           </div>
         </dl>
 
-        <details className="rounded-lg border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
+        <details className="rounded-2xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
           <summary className="cursor-pointer font-medium text-muted-foreground">
             Подтвердить досье (куратор)
           </summary>
@@ -391,7 +393,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 name="applicantCategory"
                 defaultValue={match.applicantCategory || "UNKNOWN"}
                 required
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               >
                 <option value="UNKNOWN" disabled>
                   Выберите категорию
@@ -416,7 +418,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                     ? new Date(match.deadline).toISOString().slice(0, 10)
                     : ""
                 }
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5">
@@ -425,7 +427,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 name="tuitionMin"
                 type="number"
                 defaultValue={match.tuitionMin ?? ""}
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5">
@@ -434,7 +436,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 name="tuitionMax"
                 type="number"
                 defaultValue={match.tuitionMax ?? match.tuitionFixed ?? ""}
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5">
@@ -442,7 +444,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               <select
                 name="accessMode"
                 defaultValue={match.accessMode || "UNKNOWN"}
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               >
                 <option value="UNKNOWN">Не указано</option>
                 <option value="OPEN">Свободный доступ</option>
@@ -457,7 +459,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 name="nonEuSeats"
                 type="number"
                 defaultValue={match.nonEuSeats ?? ""}
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
@@ -467,7 +469,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 type="text"
                 defaultValue={match.examsDisplay ?? ""}
                 placeholder="SAT ≥ 1200 или TOLC-E"
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
@@ -478,7 +480,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 name="manualSourceUrl"
                 type="url"
                 required
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
@@ -486,7 +488,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               <textarea
                 name="evidenceQuote"
                 required
-                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
             <Button type="submit" size="sm" className="sm:col-span-2">

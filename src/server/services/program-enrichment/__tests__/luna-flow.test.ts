@@ -287,6 +287,86 @@ describe("shared cache / fake client call counting", () => {
     expect(client.callCount).toBe(2);
     vi.unstubAllEnvs();
   });
+
+  it("recovers with inspected evidence when a model returns invalid final JSON", async () => {
+    vi.stubEnv("OPENAI_PROGRAM_ENRICHMENT_ESCALATION_ENABLED", "false");
+    const officialUrl = "https://example.edu/programme";
+    const quote = "All applicants must take the SAT Suite test for admission.";
+    const finalJson = JSON.stringify({
+      ...emptyOutput(),
+      admissionExams: [
+        {
+          value: { alternatives: [{ name: "SAT" }] },
+          sourceDocumentId: "doc-root",
+          sourceUrl: officialUrl,
+          quote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      siteNavigationSummary: { hops: ["root"], documentsUsed: ["doc-root"] },
+    });
+    const client = createFakeEnrichmentClient([
+      {
+        content: null,
+        tool_calls: [
+          {
+            id: "1",
+            name: "inspect_programme_site",
+            arguments: JSON.stringify({ officialUrl }),
+          },
+        ],
+      },
+      { content: "not valid json", tool_calls: [] },
+      (req) => {
+        expect(req.tool_choice).toBe("none");
+        expect(req.messages.at(-1)?.content).toContain("doc-root");
+        return { content: finalJson, tool_calls: [] };
+      },
+    ]);
+    const nav = createFakeOfficialSiteNavigator({
+      pages: {
+        root: {
+          url: officialUrl,
+          sourceDocumentId: "doc-root",
+          html: `<html><body><p>${quote}</p></body></html>`,
+        },
+      },
+    });
+    const ctx: MinimalMatchingContext = {
+      targetAcademicYear: "2026/2027",
+      degreeLevel: "BACHELOR",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      directions: ["Economics"],
+      miurCodes: [],
+      preferredTeachingLanguages: ["English"],
+      preferredCities: [],
+      excludedCities: [],
+      maxTuition: null,
+      program: {
+        name: "Example programme",
+        universityName: "Example University",
+        degreeClass: "L-18",
+        language: "English",
+        durationYears: 3,
+        campusCity: null,
+        officialUrl,
+      },
+    };
+
+    const result = await runLunaTerraEnrichment({
+      ctx,
+      navigator: nav,
+      client,
+      forShortlist: true,
+    });
+
+    expect(result.output?.admissionExams[0]?.quote).toBe(quote);
+    expect(client.callCount).toBe(3);
+    vi.unstubAllEnvs();
+  });
 });
 
 describe("enrichment disabled flag", () => {

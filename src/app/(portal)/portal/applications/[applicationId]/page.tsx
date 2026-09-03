@@ -13,8 +13,8 @@ import {
   ArrowLeft,
   CalendarDays,
   ExternalLink,
-  MapPin,
 } from "lucide-react";
+import { UniversityMonogram } from "@/components/university-monogram";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -35,11 +35,11 @@ function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-[var(--border)] bg-white", className)}>
-      <h2 className="border-b border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--brand)]">
+    <section className={cn("surface-card", className)}>
+      <h2 className="px-5 pt-4 text-[17px] font-semibold tracking-tight text-foreground">
         {title}
       </h2>
-      <div className="px-4 py-3">{children}</div>
+      <div className="px-5 py-4">{children}</div>
     </section>
   );
 }
@@ -81,45 +81,49 @@ export default async function PortalApplicationDetailPage({
         Все подачи
       </Link>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
-        <div className="border-b border-[var(--border)] bg-[var(--brand-soft)] px-4 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold leading-snug text-[var(--brand)]">
-                {university.name}
-              </h1>
-              <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{program.name}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {university.city ? (
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {university.city}
-                    {university.region ? `, ${university.region}` : ""}
-                  </span>
-                ) : null}
-                {university.website ? (
-                  <a
-                    href={university.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[var(--brand)] hover:underline"
-                  >
-                    Сайт университета
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : null}
+      <div className="overflow-hidden surface-card">
+        <div className="px-5 pt-5">
+          <div className="flex items-start gap-3.5">
+            <UniversityMonogram name={university.name} size="lg" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-[22px] font-semibold leading-snug tracking-tight text-foreground">
+                    {university.name}
+                  </h1>
+                  <p className="mt-1 text-[15px] font-medium text-foreground">{program.name}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+                    {university.city ? (
+                      <span>
+                        {university.city}
+                        {university.region ? `, ${university.region}` : ""}
+                      </span>
+                    ) : null}
+                    {university.website ? (
+                      <a
+                        href={university.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[var(--brand)] hover:underline"
+                      >
+                        Сайт университета
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+                <StatusBadge status={app.status} kind="application" />
               </div>
             </div>
-            <StatusBadge status={app.status} kind="application" />
           </div>
         </div>
 
-        <div className="space-y-4 px-4 py-4">
+        <div className="space-y-4 px-5 py-4">
           <ProgressBar value={app.readinessPercent} showLabel size="md" />
 
           {blockers.length > 0 ? (
-            <div className="rounded-xl border border-[var(--brand-muted)] bg-[var(--brand-soft)] px-3 py-2.5 text-sm text-[var(--foreground)]">
-              <span className="font-medium text-[var(--brand)]">Что осталось: </span>
+            <div className="rounded-xl bg-muted px-3 py-2.5 text-sm text-foreground">
+              <span className="font-medium text-foreground">Что осталось: </span>
               {blockers.map((b) => b.name).join(", ")}
             </div>
           ) : null}
@@ -232,7 +236,7 @@ export default async function PortalApplicationDetailPage({
             {app.deadlines.map((d) => (
               <li
                 key={d.id}
-                className="flex items-center justify-between gap-3 rounded-lg bg-[var(--brand-soft)] px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2"
               >
                 <span className="text-sm text-[var(--foreground)]">{d.title}</span>
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">

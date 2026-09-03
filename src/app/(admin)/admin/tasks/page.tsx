@@ -101,7 +101,7 @@ function PriorityCell({ priority }: { priority: string }) {
     return (
       <span
         className={cn(
-          "inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium",
+          "inline-flex rounded-xl px-1.5 py-0.5 text-[11px] font-medium",
           priority === "URGENT"
             ? "bg-[var(--danger-bg)] text-[var(--danger-fg)]"
             : "bg-[var(--warning-bg)] text-[var(--warning-fg)]"
@@ -210,9 +210,9 @@ export default async function AdminTasksPage({
             key={v.key}
             href={`/admin/tasks?view=${v.key}`}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-xl px-2.5 py-1 text-xs font-medium transition-colors",
               view === v.key
-                ? "bg-[var(--brand)] text-white"
+                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
                 : "bg-muted text-muted-foreground hover:text-foreground"
             )}
           >

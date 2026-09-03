@@ -2,12 +2,11 @@ import { cn } from "@/lib/utils";
 import type { JourneyStageView } from "@/server/services/student-journey";
 
 const STATUS_CLASS: Record<string, string> = {
-  CURRENT: "border-[var(--brand)] bg-white text-[var(--foreground)] shadow-sm",
-  WAITING_CURATOR:
-    "border-[var(--brand)] bg-white text-[var(--foreground)] shadow-sm",
-  DONE: "border-[var(--ok)]/30 bg-[var(--ok-bg)] text-[var(--ok-fg)]",
-  NEXT: "border-[var(--border)] bg-white text-muted-foreground",
-  UNAVAILABLE: "border-transparent bg-transparent text-muted-foreground/80",
+  CURRENT: "surface-card text-foreground",
+  WAITING_CURATOR: "surface-card text-foreground",
+  DONE: "border-transparent bg-[var(--ok-bg)] text-[var(--ok-fg)]",
+  NEXT: "surface-card text-muted-foreground",
+  UNAVAILABLE: "border-transparent bg-transparent text-muted-foreground/80 shadow-none",
 };
 
 const DOT_CLASS: Record<string, string> = {
@@ -28,9 +27,9 @@ export function JourneyRoute({ stages }: { stages: JourneyStageView[] }) {
           <li key={stage.id} className="min-w-0">
             <div
               className={cn(
-                "h-full rounded-2xl border px-3 py-3",
+                "h-full rounded-[22px] px-4 py-4",
                 STATUS_CLASS[stage.status],
-                active ? "ring-1 ring-[var(--brand)]/15" : ""
+                active ? "ring-1 ring-[var(--brand)]/25" : ""
               )}
             >
               <p className="text-[11px] tabular-nums text-muted-foreground">
@@ -38,13 +37,13 @@ export function JourneyRoute({ stages }: { stages: JourneyStageView[] }) {
               </p>
               <p
                 className={cn(
-                  "mt-1 text-sm",
-                  active ? "font-semibold text-[var(--foreground)]" : "font-medium"
+                  "mt-1 text-[15px]",
+                  active ? "font-semibold text-foreground" : "font-medium"
                 )}
               >
                 {stage.label}
               </p>
-              <p className="mt-2 flex items-center gap-1.5 text-xs">
+              <p className="mt-2 flex items-center gap-1.5 text-[13px]">
                 <span
                   className={cn(
                     "h-1.5 w-1.5 shrink-0 rounded-full",

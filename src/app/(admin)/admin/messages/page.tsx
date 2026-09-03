@@ -133,7 +133,7 @@ export default async function AdminMessagesPage({
               <li key={item.studentId}>
                 <Link
                   href={`/admin/messages?studentId=${item.studentId}`}
-                  className={`block rounded-md border px-3 py-2 ${
+                  className={`block rounded-xl border px-3 py-2 ${
                     item.studentId === selectedId
                       ? "border-[var(--brand)] bg-white"
                       : "border-transparent hover:bg-white"
@@ -173,7 +173,7 @@ export default async function AdminMessagesPage({
                     {thread.map((message) => (
                       <li
                         key={message.id}
-                        className="rounded-lg border border-border bg-white px-4 py-3"
+                        className="rounded-2xl border border-border bg-white px-4 py-3"
                       >
                         <p className="text-xs text-muted-foreground">
                           {message.author} · {formatDate(message.createdAt)}
@@ -193,7 +193,7 @@ export default async function AdminMessagesPage({
                     rows={4}
                     maxLength={2000}
                     placeholder="Написать студенту"
-                    className="min-h-24 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    className="min-h-24 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm"
                   />
                   <Button type="submit" size="sm">
                     Отправить

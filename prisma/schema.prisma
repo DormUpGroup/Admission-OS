@@ -395,14 +395,40 @@ model SourceDocument {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  university          University?          @relation(fields: [universityId], references: [id])
-  program             Program?             @relation(fields: [programId], references: [id])
-  programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
+  university          University?             @relation(fields: [universityId], references: [id])
+  program             Program?                @relation(fields: [programId], references: [id])
+  programAcademicYear ProgramAcademicYear?    @relation(fields: [programAcademicYearId], references: [id])
   facts               ProgramFact[]
   changeEvents        ProgramChangeEvent[]
+  sections            SourceDocumentSection[]
 
   @@index([contentHash])
   @@index([url])
+}
+
+// Deterministic official-document sections for retrieval.
+// Embeddings may be added later only as a second retrieval stage after hard
+// metadata filtering. They are never a source of truth for facts or eligibility.
+model SourceDocumentSection {
+  id               String   @id @default(cuid())
+  sourceDocumentId String
+  heading          String   @default("")
+  sectionType      String
+  position         Int
+  text             String
+  contentHash      String
+  // Extensible JSON: applicantCategoryHints, academicYearHint, sourceAuthority,
+  // parentHeading, splitIndex, htmlKind. Reserved for a future embedding id —
+  // not used as evidence.
+  metadataJson     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sourceDocument SourceDocument @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([sourceDocumentId, sectionType])
+  @@index([sourceDocumentId, position])
+  @@index([contentHash])
 }
 
 model ProgramFact {

@@ -89,9 +89,9 @@ export default async function AdminDocumentsPage({
             key={v.key}
             href={`/admin/documents?view=${v.key}`}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-xl px-2.5 py-1 text-xs font-medium transition-colors",
               view === v.key
-                ? "bg-[var(--brand)] text-white"
+                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
                 : "bg-muted text-muted-foreground hover:text-foreground"
             )}
           >

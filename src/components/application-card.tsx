@@ -3,6 +3,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { RiskBadge } from "@/components/risk-badge";
 import { ProgressBar } from "@/components/progress-bar";
+import { UniversityMonogram } from "@/components/university-monogram";
 import type { ApplicationStatus, RiskLevel } from "@/lib/enums";
 
 export interface ApplicationCardProps {
@@ -32,28 +33,33 @@ export function ApplicationCard({
   const content = (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card p-3.5 shadow-sm transition-colors",
-        href && "hover:border-neutral-300 hover:bg-neutral-50/80",
+        "surface-card p-4",
+        href && "surface-card-hover",
         className
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-foreground">
-            {programName}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {universityName}
-            {studentName ? ` · ${studentName}` : ""}
-          </p>
+      <div className="flex items-start gap-3">
+        <UniversityMonogram name={universityName} size="sm" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+                {programName}
+              </p>
+              <p className="truncate text-[13px] text-muted-foreground">
+                {universityName}
+                {studentName ? ` · ${studentName}` : ""}
+              </p>
+            </div>
+            <StatusBadge status={status} kind="application" />
+          </div>
         </div>
-        <StatusBadge status={status} kind="application" />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {riskLevel ? <RiskBadge level={riskLevel} /> : null}
         {deadline ? (
-          <span className="text-[11px] text-muted-foreground tabular-nums">
+          <span className="text-[12px] text-muted-foreground tabular-nums">
             Срок: {formatDate(deadline)}
           </span>
         ) : null}

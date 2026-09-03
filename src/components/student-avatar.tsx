@@ -37,7 +37,7 @@ export function StudentAvatar({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--brand)] font-medium text-white",
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-muted font-medium text-foreground",
         sizes[size],
         className
       )}

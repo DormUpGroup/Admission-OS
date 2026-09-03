@@ -114,7 +114,7 @@ export default async function AdminProgramsPage() {
                     id="universityId"
                     name="universityId"
                     required
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">Выберите…</option>
                     {universities.map((u) => (
@@ -134,7 +134,7 @@ export default async function AdminProgramsPage() {
                     id="degreeLevel"
                     name="degreeLevel"
                     defaultValue="BACHELOR"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="BACHELOR">Бакалавриат</option>
                     <option value="MASTER">Магистратура</option>

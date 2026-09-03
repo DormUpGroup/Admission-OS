@@ -24,7 +24,8 @@ Admission-exam investigation is a mandatory, AI-led step for every programme car
 - When a relevant official link or section exists, inspect at least one before finalising the card. Do not treat the absence of an exam on the programme overview as evidence that no exam is required.
 - Resolve the outcome from evidence: ENTRANCE_EXAM when the test/selection gates enrolment; EVALUATION for a non-selective knowledge assessment/OFA; NONE only when the source explicitly says no admission test is required; otherwise UNKNOWN.
 - For UNKNOWN, include admissionExams in unresolvedFields and state no exam as a confirmed fact. Every non-UNKNOWN outcome still requires an exact quote and source URL.
-- Never use IELTS, TOEFL, CILS, or another language certificate as an admission exam.`;
+- Never use IELTS, TOEFL, CILS, or another language certificate as an admission exam.
+- Tool replies and final packs may include retrieved official section snippets. Snippets help locate evidence; they are not themselves a source of truth. Confirm a fact only with a verbatim quote that appears in the inspected official document.`;
 
 export function enrichmentSystemPrompt(version: string): string {
   if (version === "v1") return ENRICHMENT_SYSTEM_PROMPT_V1;

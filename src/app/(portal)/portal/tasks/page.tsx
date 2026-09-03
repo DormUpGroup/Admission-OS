@@ -23,8 +23,8 @@ export default async function PortalTasksPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight">Задачи</h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <h1 className="text-[28px] font-semibold tracking-tight">Задачи</h1>
+        <p className="mt-1 text-[15px] text-muted-foreground">
           Действия, которые назначил вам куратор
         </p>
       </div>
@@ -38,25 +38,25 @@ export default async function PortalTasksPage() {
         <div className="space-y-6">
           {open.length > 0 ? (
             <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
                 Открытые
               </h2>
               <ul className="space-y-3">
                 {open.map((task) => (
                   <li
                     key={task.id}
-                    className="rounded-xl border border-neutral-200 bg-white p-4"
+                    className="surface-card p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-neutral-900">{task.title}</p>
+                        <p className="font-medium text-foreground">{task.title}</p>
                         {task.description ? (
-                          <p className="mt-1 text-sm text-neutral-500">
+                          <p className="mt-1 text-sm text-muted-foreground">
                             {task.description}
                           </p>
                         ) : null}
                         {task.dueDate ? (
-                          <p className="mt-1 text-xs text-neutral-400">
+                          <p className="mt-1 text-[13px] text-muted-foreground">
                             Срок: {formatDate(task.dueDate)}
                           </p>
                         ) : null}
@@ -79,16 +79,16 @@ export default async function PortalTasksPage() {
 
           {done.length > 0 ? (
             <section className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
                 Выполненные
               </h2>
               <ul className="space-y-2">
                 {done.map((task) => (
                   <li
                     key={task.id}
-                    className="flex items-center justify-between rounded-xl border border-neutral-100 bg-neutral-50/80 px-4 py-3"
+                    className="surface-card flex items-center justify-between px-4 py-3"
                   >
-                    <span className="text-sm text-neutral-600 line-through">
+                    <span className="text-sm text-muted-foreground line-through">
                       {task.title}
                     </span>
                     <StatusBadge status={task.status} kind="task" />

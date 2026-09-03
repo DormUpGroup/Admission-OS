@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { UniversityMonogram } from "@/components/university-monogram";
 import { formatDate } from "@/lib/utils";
 import {
   labelApplicantCategory,
@@ -13,7 +14,6 @@ import {
 } from "@/lib/labels";
 import {
   humanizeLanguage,
-  humanizeWhyFits,
   previousYearCallNote,
 } from "@/server/services/student-journey/humanize";
 import { unknownFieldReasonLabel } from "@/server/services/work-queue/field-reasons";
@@ -212,7 +212,7 @@ function DecisionRow({
               name="applicantCategory"
               defaultValue={applicantCategory || "UNKNOWN"}
               required
-              className="h-7 rounded-md border border-input bg-card px-2 text-xs"
+              className="h-7 rounded-xl border border-input bg-card px-2 text-xs"
             >
               <option value="UNKNOWN" disabled>
                 Категория абитуриента
@@ -229,7 +229,7 @@ function DecisionRow({
             {confirmField === "accessMode" ? (
               <select
                 name="accessMode"
-                className="h-7 rounded-md border border-input bg-card px-2 text-xs"
+                className="h-7 rounded-xl border border-input bg-card px-2 text-xs"
                 defaultValue="OPEN"
               >
                 <option value="OPEN">Свободный доступ</option>
@@ -242,7 +242,7 @@ function DecisionRow({
                 type="number"
                 placeholder="Места"
                 required
-                className="h-7 w-24 rounded-md border border-input bg-card px-2 text-xs"
+                className="h-7 w-24 rounded-xl border border-input bg-card px-2 text-xs"
               />
             ) : null}
             {confirmField === "examsDisplay" ? (
@@ -251,7 +251,7 @@ function DecisionRow({
                 type="text"
                 placeholder="Экзамен"
                 required
-                className="h-7 w-40 rounded-md border border-input bg-card px-2 text-xs"
+                className="h-7 w-40 rounded-xl border border-input bg-card px-2 text-xs"
               />
             ) : null}
             <input
@@ -259,14 +259,14 @@ function DecisionRow({
               type="url"
               placeholder="Ссылка на официальный источник"
               required
-              className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
+              className="h-7 w-52 rounded-xl border border-input bg-card px-2 text-xs"
             />
             <input
               name="evidenceQuote"
               type="text"
               placeholder="Точная цитата"
               required
-              className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
+              className="h-7 w-52 rounded-xl border border-input bg-card px-2 text-xs"
             />
             <Button type="submit" size="sm">
               Сохранить
@@ -288,7 +288,6 @@ export function CuratorProgramLevelsCard({
   catalog?: boolean;
 }) {
   const language = languageText(match);
-  const whyFits = humanizeWhyFits(match.reasons);
   const shortlistLabel = match.onShortlist
     ? "В коротком списке"
     : SHORTLIST_LABELS[match.curatorStatus] ?? "Автоподбор";
@@ -308,29 +307,32 @@ export function CuratorProgramLevelsCard({
   return (
     <article
       id={`program-${match.programAcademicYearId}`}
-      className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"
+      className="overflow-hidden surface-card"
     >
-      <div className="space-y-2 border-b border-border px-4 py-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="text-[15px] font-semibold text-[var(--brand)]">
-              {match.universityName}
-            </h3>
-            <p className="text-sm font-medium">{match.programName}</p>
-            <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-              {match.city ? (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {match.city}
-                </span>
-              ) : null}
-              {language ? <span>{language}</span> : null}
-              <span>{labelOf(match.degreeLevel)}</span>
-              <span>{match.academicYear}</span>
-            </p>
+      <div className="space-y-3 border-b border-border px-5 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <UniversityMonogram name={match.universityName} size="sm" />
+            <div className="min-w-0">
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
+                {match.universityName}
+              </h3>
+              <p className="text-[13px] font-medium">{match.programName}</p>
+              <p className="mt-1 flex flex-wrap gap-x-2 text-[13px] text-muted-foreground">
+                {match.city ? (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {match.city}
+                  </span>
+                ) : null}
+                {language ? <span>{language}</span> : null}
+                <span>{labelOf(match.degreeLevel)}</span>
+                <span>{match.academicYear}</span>
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="rounded-md bg-[var(--brand-soft)] px-2 py-1 text-xs font-semibold tabular-nums text-[var(--brand)]">
+            <span className="surface-chip rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--brand)]">
               Совпадение {match.fitScore}/100
             </span>
             <Badge variant={match.onShortlist ? "success" : "muted"}>
@@ -338,11 +340,6 @@ export function CuratorProgramLevelsCard({
             </Badge>
           </div>
         </div>
-        {whyFits ? (
-          <p className="rounded-md bg-[var(--brand-soft)]/60 px-2.5 py-1.5 text-sm text-foreground">
-            {whyFits}
-          </p>
-        ) : null}
       </div>
 
       <div className="px-4 py-3">
@@ -518,7 +515,7 @@ export function CuratorProgramLevelsCard({
             </div>
           ) : null}
           {match.aiEnrichment ? (
-            <div className="rounded-md bg-muted/40 px-2 py-1.5 text-muted-foreground">
+            <div className="rounded-xl bg-muted/40 px-2 py-1.5 text-muted-foreground">
               Обогащение:{" "}
               {match.aiEnrichment.disabled
                 ? "выключено (fallback regex/PDF)"

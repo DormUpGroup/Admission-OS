@@ -129,7 +129,7 @@ export default async function ApplicationDetailPage({
       </div>
 
       {blockers.length > 0 ? (
-        <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
           <span className="font-medium">Что мешает: </span>
           {blockers.map((b) => b.name).join(", ")}
         </div>
@@ -222,7 +222,7 @@ export default async function ApplicationDetailPage({
                     id="type"
                     name="type"
                     defaultValue="DOCUMENT"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
                   >
                     <option value="DOCUMENT">Документ</option>
                     <option value="EXAM">Экзамен</option>
@@ -307,7 +307,7 @@ export default async function ApplicationDetailPage({
                     id="priority"
                     name="priority"
                     defaultValue="MEDIUM"
-                    className="flex h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px]"
+                    className="flex h-8 w-full rounded-xl border border-input bg-card px-2.5 text-[13px]"
                   >
                     <option value="LOW">Низкий</option>
                     <option value="MEDIUM">Средний</option>

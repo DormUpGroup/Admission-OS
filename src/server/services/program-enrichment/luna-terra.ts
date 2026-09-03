@@ -1,4 +1,13 @@
 import { getEnrichmentConfig } from "./config";
+import {
+  formatRetrievalContext,
+  retrieveSections,
+  sectionsFromExtracted,
+  type RetrievalQuery,
+  type RetrievalSectionInput,
+} from "./document-sections";
+import type { CriticalField } from "./schema";
+import { enrichmentFieldsForMode } from "./eligible-facts";
 import type { MinimalMatchingContext } from "./matching-context";
 import type {
   ChatMessage,
@@ -21,7 +30,7 @@ export const NAVIGATOR_TOOLS: ToolDefinition[] = [
     function: {
       name: "inspect_programme_site",
       description:
-        "Fetch and inspect the programme officialUrl only. Returns cleaned text, classified internal links, tabs/accordions, and sourceDocumentId.",
+        "Fetch and inspect the programme officialUrl only. Returns classified internal links, section labels, ranked relevant snippets, and sourceDocumentId (not the full page text).",
       parameters: {
         type: "object",
         properties: {
@@ -64,7 +73,7 @@ export const NAVIGATOR_TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "read_official_pdf",
-      description: "Read a previously allowed PDF linkId via text layer / OCR pipeline.",
+      description: "Read a previously allowed PDF linkId via text layer / OCR pipeline. Returns ranked relevant snippets and sourceDocumentId (not the full PDF text).",
       parameters: {
         type: "object",
         properties: { linkId: { type: "string" } },
@@ -74,13 +83,22 @@ export const NAVIGATOR_TOOLS: ToolDefinition[] = [
   },
 ];
 
-function userPrompt(ctx: MinimalMatchingContext, forShortlist: boolean): string {
+function userPrompt(
+  ctx: MinimalMatchingContext,
+  forShortlist: boolean,
+  alreadyResolvedFields: CriticalField[] = []
+): string {
   return JSON.stringify(
     {
       instruction: forShortlist
         ? "Extract only the decision fields needed for an initial curator shortlist: campus, access, selection, admission exams, language requirements, seats, and required documents. Admission-exam investigation is mandatory: inspect the programme page, then use the official links/sections yourself to check an exam/admission path when one is available. Do not return an empty admissionExams array as a conclusion: return documented evidence, documented selection NONE, or add admissionExams to unresolvedFields. Do not navigate to fee/tuition pages and do not look for application deadlines. Return empty arrays for deadlines and tuition."
         : "Extract proven programme card fields for this applicant category using tools only. Return final JSON when done.",
       matchingContext: ctx,
+      alreadyResolvedFields,
+      alreadyResolvedNote:
+        alreadyResolvedFields.length > 0
+          ? "Do not re-extract alreadyResolvedFields. Eligible official facts already exist for them."
+          : undefined,
     },
     null,
     2
@@ -130,28 +148,129 @@ async function dispatchTool(
   }
 }
 
-function inspectedDocumentSummary(
-  documents: Map<string, { url: string; text: string }>
-): string {
-  const chunks: string[] = [];
-  let used = 0;
-  for (const [id, doc] of documents.entries()) {
-    const remaining = 18_000 - used;
-    if (remaining <= 0) break;
-    const text = doc.text.slice(0, Math.min(remaining, 6_000));
-    used += text.length;
-    chunks.push(
-      JSON.stringify({
+function collectNavigatorSections(
+  navigator: OfficialSiteNavigator
+): RetrievalSectionInput[] {
+  const sections: RetrievalSectionInput[] = [];
+  for (const [id, doc] of navigator.getDocuments().entries()) {
+    sections.push(
+      ...sectionsFromExtracted({
         sourceDocumentId: id,
         sourceUrl: doc.url,
-        text,
+        academicYear: doc.academicYear,
+        sourceType: doc.sourceType,
+        sourceAuthority: doc.sourceAuthority,
+        sections: doc.sections,
       })
     );
   }
-  return chunks.length
-    ? chunks.join("\n")
-    : "No official documents were successfully inspected.";
+  return sections;
 }
+
+function retrievalQuery(
+  ctx: MinimalMatchingContext,
+  forShortlist: boolean,
+  sourceDocumentIds?: string[]
+): RetrievalQuery {
+  return {
+    academicYear: ctx.targetAcademicYear,
+    applicantCategory: ctx.applicantCategory,
+    mode: forShortlist ? "shortlist" : "dossier",
+    sourceDocumentIds,
+    neededFields: enrichmentFieldsForMode(forShortlist),
+  };
+}
+
+function buildRetrievalPack(
+  navigator: OfficialSiteNavigator,
+  ctx: MinimalMatchingContext,
+  forShortlist: boolean,
+  sourceDocumentIds?: string[]
+): string {
+  const result = retrieveSections(
+    collectNavigatorSections(navigator),
+    retrievalQuery(ctx, forShortlist, sourceDocumentIds)
+  );
+  return formatRetrievalContext(result);
+}
+
+function slimToolResult(
+  name: string,
+  raw: string,
+  navigator: OfficialSiteNavigator,
+  ctx: MinimalMatchingContext,
+  forShortlist: boolean
+): string {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return raw;
+  }
+  if (parsed.error) return raw;
+
+  if (name === "inspect_programme_site" || name === "follow_official_link") {
+    const sourceDocumentId = String(parsed.sourceDocumentId ?? "");
+    const snippets = retrieveSections(
+      collectNavigatorSections(navigator).filter(
+        (section) => !sourceDocumentId || section.sourceDocumentId === sourceDocumentId
+      ),
+      retrievalQuery(ctx, forShortlist, sourceDocumentId ? [sourceDocumentId] : undefined)
+    );
+    return JSON.stringify({
+      pageId: parsed.pageId,
+      url: parsed.url,
+      title: parsed.title,
+      sourceDocumentId: parsed.sourceDocumentId,
+      contentHash: parsed.contentHash,
+      links: parsed.links,
+      sections: Array.isArray(parsed.sections)
+        ? (parsed.sections as Array<{ sectionId?: string; label?: string; kind?: string }>).map(
+            (section) => ({
+              sectionId: section.sectionId,
+              label: section.label,
+              kind: section.kind,
+            })
+          )
+        : [],
+      relevantSnippets: snippets.snippets.map((snippet) => ({
+        sourceDocumentId: snippet.sourceDocumentId,
+        sourceUrl: snippet.sourceUrl,
+        heading: snippet.heading,
+        sectionType: snippet.sectionType,
+        text: snippet.text,
+      })),
+    });
+  }
+
+  if (name === "read_official_pdf") {
+    const sourceDocumentId = String(parsed.sourceDocumentId ?? "");
+    const snippets = retrieveSections(
+      collectNavigatorSections(navigator).filter(
+        (section) => !sourceDocumentId || section.sourceDocumentId === sourceDocumentId
+      ),
+      retrievalQuery(ctx, forShortlist, sourceDocumentId ? [sourceDocumentId] : undefined)
+    );
+    return JSON.stringify({
+      sourceDocumentId: parsed.sourceDocumentId,
+      url: parsed.url,
+      contentHash: parsed.contentHash,
+      method: parsed.method,
+      relevantSnippets: snippets.snippets.map((snippet) => ({
+        sourceDocumentId: snippet.sourceDocumentId,
+        sourceUrl: snippet.sourceUrl,
+        heading: snippet.heading,
+        sectionType: snippet.sectionType,
+        text: snippet.text,
+      })),
+    });
+  }
+
+  return raw;
+}
+
+const RETRIEVAL_FINAL_INSTRUCTIONS =
+  "Tool budget is exhausted. Do not call tools again. Return only the final JSON using the official evidence already available below. Retrieved sections help locate evidence in inspected official documents; they are not themselves a source of truth. Confirm a fact only with a verbatim quote that appears in the official document. If a field cannot be proven, add it to unresolvedFields.\n\nRetrieved official sections:\n";
 
 function parseOutput(content: string | null): EnrichmentOutput | null {
   if (!content?.trim()) return null;
@@ -179,12 +298,12 @@ function collectFacts(output: EnrichmentOutput): EvidenceFact[] {
   ];
 }
 
-function relevantCriticalFields(forShortlist: boolean) {
-  return forShortlist
-    ? CRITICAL_FIELDS.filter(
-        (field) => field !== "deadlines" && field !== "tuition"
-      )
-    : [...CRITICAL_FIELDS];
+function relevantCriticalFields(
+  forShortlist: boolean,
+  alreadyResolved: CriticalField[] = []
+) {
+  const resolved = new Set<CriticalField>(alreadyResolved);
+  return enrichmentFieldsForMode(forShortlist).filter((field) => !resolved.has(field));
 }
 
 /**
@@ -194,9 +313,10 @@ function relevantCriticalFields(forShortlist: boolean) {
  */
 function markMissingCriticalFields(
   output: EnrichmentOutput,
-  forShortlist: boolean
+  forShortlist: boolean,
+  alreadyResolved: CriticalField[] = []
 ): EnrichmentOutput {
-  const missing = relevantCriticalFields(forShortlist).filter(
+  const missing = relevantCriticalFields(forShortlist, alreadyResolved).filter(
     (field) => output[field].length === 0
   );
   return {
@@ -208,19 +328,29 @@ function markMissingCriticalFields(
 /**
  * A shortlist result containing only language/campus metadata is not a useful
  * second filter. Require at least one admission decision fact; otherwise the
- * AI run is failed/null and no regex/PDF fallback runs while AI enrichment is
- * enabled (deterministic deep-enrich is used only when AI is disabled).
+ * AI run is failed/null so the caller can start deterministic, evidence-first
+ * fallback instead of persisting an empty programme card.
  */
 export function isUsableEnrichmentOutput(
   output: EnrichmentOutput,
-  forShortlist: boolean
+  forShortlist: boolean,
+  alreadyResolved: CriticalField[] = []
 ): boolean {
-  if (!forShortlist) return collectFacts(output).length > 0;
+  const resolvedAdmission = alreadyResolved.some((field) =>
+    field === "access" ||
+    field === "selection" ||
+    field === "admissionExams" ||
+    field === "seats"
+  );
+  if (!forShortlist) {
+    return collectFacts(output).length > 0 || alreadyResolved.length > 0;
+  }
   return (
     output.access.length > 0 ||
     output.selection.length > 0 ||
     output.admissionExams.length > 0 ||
-    output.seats.length > 0
+    output.seats.length > 0 ||
+    resolvedAdmission
   );
 }
 
@@ -268,21 +398,25 @@ export function shouldEscalateToTerra(input: {
   invalidCritical: string[];
   forShortlist: boolean;
   categorySpecificRules: boolean;
+  alreadyResolvedFields?: CriticalField[];
 }): boolean {
   const cfg = getEnrichmentConfig();
   if (!cfg.escalationEnabled) return false;
   if (!input.output) return true;
   if (input.quoteRejects > 0) return true;
-  const relevantInvalidCritical = input.forShortlist
-    ? input.invalidCritical.filter((field) => field !== "deadlines" && field !== "tuition")
-    : input.invalidCritical;
+  const resolved = new Set<string>(input.alreadyResolvedFields ?? []);
+  const relevantInvalidCritical = relevantCriticalFields(
+    input.forShortlist,
+    input.alreadyResolvedFields
+  ).filter((field) => input.invalidCritical.includes(field));
   if (relevantInvalidCritical.length > 0) return true;
   if (input.output.sourceConflicts.length > 0) return true;
-  const relevantCritical: readonly string[] = input.forShortlist
-    ? CRITICAL_FIELDS.filter((field) => field !== "deadlines" && field !== "tuition")
-    : CRITICAL_FIELDS;
+  const relevantCritical = relevantCriticalFields(
+    input.forShortlist,
+    input.alreadyResolvedFields
+  );
   const unresolvedCritical = input.output.unresolvedFields.filter((f) =>
-    relevantCritical.includes(f as (typeof CRITICAL_FIELDS)[number])
+    relevantCritical.includes(f as CriticalField) && !resolved.has(f)
   );
   if (unresolvedCritical.length > 0 && input.forShortlist) return true;
   if (input.categorySpecificRules && unresolvedCritical.length > 0) return true;
@@ -304,8 +438,11 @@ export async function runLunaTerraEnrichment(input: {
   navigator: OfficialSiteNavigator;
   client: EnrichmentLlmClient;
   forShortlist?: boolean;
+  alreadyResolvedFields?: CriticalField[];
 }): Promise<LunaTerraResult> {
   const cfg = getEnrichmentConfig();
+  const alreadyResolved = input.alreadyResolvedFields ?? [];
+  const forShortlist = input.forShortlist ?? false;
   const officialUrl = input.ctx.program.officialUrl;
   if (!officialUrl) {
     return {
@@ -329,7 +466,7 @@ export async function runLunaTerraEnrichment(input: {
         role: "system",
         content: enrichmentSystemPrompt(cfg.promptVersion),
       },
-      { role: "user", content: userPrompt(input.ctx, input.forShortlist ?? false) },
+      { role: "user", content: userPrompt(input.ctx, forShortlist, alreadyResolved) },
     ];
 
     let inputTokens = 0;
@@ -343,8 +480,8 @@ export async function runLunaTerraEnrichment(input: {
         messages.push({
           role: "user",
           content:
-            "Tool budget is exhausted. Do not call tools again. Return only the final JSON using the official evidence already available below. If a field cannot be proven from the inspected documents, add it to unresolvedFields.\n\nInspected official documents:\n" +
-            inspectedDocumentSummary(input.navigator.getDocuments()),
+            RETRIEVAL_FINAL_INSTRUCTIONS +
+            buildRetrievalPack(input.navigator, input.ctx, forShortlist),
         });
         forcedFinal = true;
       }
@@ -378,14 +515,46 @@ export async function runLunaTerraEnrichment(input: {
           messages.push({
             role: "tool",
             tool_call_id: call.id,
-            content: result,
+            content: slimToolResult(
+              call.name,
+              result,
+              input.navigator,
+              input.ctx,
+              forShortlist
+            ),
           });
         }
         continue;
       }
 
+      const parsed = parseOutput(res.content);
+      const needsRecovery =
+        !parsed || !isUsableEnrichmentOutput(parsed, forShortlist, alreadyResolved);
+      if (!needsRecovery || forcedFinal) {
+        return { output: parsed, inputTokens, outputTokens };
+      }
+
+      // A model can finish after inspecting the right source but still emit an
+      // invalid/empty JSON object. Do one final, tool-free pass over the
+      // documents already fetched instead of throwing that evidence away.
+      messages.push({
+        role: "user",
+        content:
+          "The prior final answer was empty, invalid, or insufficient for a programme card. Do not call tools. Return only schema-valid final JSON. Preserve exact quotes; mark unproven fields unresolved.\n\n" +
+          RETRIEVAL_FINAL_INSTRUCTIONS +
+          buildRetrievalPack(input.navigator, input.ctx, forShortlist),
+      });
+      const recovery = await input.client.complete({
+        model,
+        messages,
+        tool_choice: "none",
+        response_format: { type: "json_object" },
+        max_tokens: cfg.maxOutputTokens,
+      });
+      inputTokens += recovery.usage?.inputTokens ?? 0;
+      outputTokens += recovery.usage?.outputTokens ?? 0;
       return {
-        output: parseOutput(res.content),
+        output: parseOutput(recovery.content),
         inputTokens,
         outputTokens,
       };
@@ -407,7 +576,8 @@ export async function runLunaTerraEnrichment(input: {
     const v = validateOutputQuotes(output, docTexts);
     output = markMissingCriticalFields(
       v.valid,
-      input.forShortlist ?? false
+      forShortlist,
+      alreadyResolved
     );
     quoteRejectCount = v.rejectCount;
     invalidCritical = v.invalidCritical;
@@ -423,8 +593,9 @@ export async function runLunaTerraEnrichment(input: {
     output,
     quoteRejects: quoteRejectCount,
     invalidCritical,
-    forShortlist: input.forShortlist ?? false,
+    forShortlist,
     categorySpecificRules: categorySpecific,
+    alreadyResolvedFields: alreadyResolved,
   });
 
   let escalated = false;
@@ -447,7 +618,8 @@ export async function runLunaTerraEnrichment(input: {
       // Only keep Terra facts that pass quote validation; do not keep invalid Luna facts
       output = markMissingCriticalFields(
         v.valid,
-        input.forShortlist ?? false
+        forShortlist,
+        alreadyResolved
       );
       quoteRejectCount = v.rejectCount;
     } else {
@@ -469,7 +641,7 @@ export async function runLunaTerraEnrichment(input: {
 
   if (
     output &&
-    !isUsableEnrichmentOutput(output, input.forShortlist ?? false)
+    !isUsableEnrichmentOutput(output, forShortlist, alreadyResolved)
   ) {
     output = null;
   }

@@ -47,7 +47,7 @@ export function AnketaDecisionScreen({
       />
 
       {error ? (
-        <p className="rounded-lg border border-[var(--danger)] bg-[var(--danger-bg)]/40 px-4 py-2 text-sm text-[var(--danger-fg)]">
+        <p className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-bg)]/40 px-4 py-2 text-sm text-[var(--danger-fg)]">
           {error}
         </p>
       ) : null}
@@ -79,7 +79,7 @@ export function AnketaDecisionScreen({
               name="note"
               rows={2}
               placeholder="Что уточнить у ученика"
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-input bg-card px-3 py-2 text-sm"
             />
             <Button
               type="submit"

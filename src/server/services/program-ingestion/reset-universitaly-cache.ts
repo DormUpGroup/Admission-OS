@@ -82,6 +82,17 @@ export async function resetUniversitalyCache(): Promise<ResetUniversitalyCacheRe
       where: { programId: { in: liveIds } },
     });
 
+    await prisma.sourceDocumentSection.deleteMany({
+      where: {
+        sourceDocument: {
+          OR: [
+            { programId: { in: liveIds } },
+            ...(payIds.length ? [{ programAcademicYearId: { in: payIds } }] : []),
+          ],
+        },
+      },
+    });
+
     await prisma.sourceDocument.deleteMany({
       where: {
         OR: [
@@ -108,6 +119,9 @@ export async function resetUniversitalyCache(): Promise<ResetUniversitalyCacheRe
     });
     const emptyUniIds = emptyUnis.map((row) => row.id);
     if (emptyUniIds.length > 0) {
+      await prisma.sourceDocumentSection.deleteMany({
+        where: { sourceDocument: { universityId: { in: emptyUniIds } } },
+      });
       await prisma.sourceDocument.deleteMany({
         where: { universityId: { in: emptyUniIds } },
       });
