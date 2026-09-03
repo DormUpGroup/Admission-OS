@@ -74,8 +74,11 @@ function bestDocument(
   trace: EnrichmentTrace,
   preferAdmissionCall = false
 ): EnrichmentDocumentTrace | null {
-  if (trace.documents.length === 0) return null;
-  const ordered = [...trace.documents].sort((a, b) => {
+  // ENRICHMENT_TRACE rows created before document tracing was introduced do
+  // not contain this property. Treat them as having no traced documents.
+  const documents = Array.isArray(trace.documents) ? trace.documents : [];
+  if (documents.length === 0) return null;
+  const ordered = [...documents].sort((a, b) => {
     if (preferAdmissionCall) {
       const aCall = a.sourceType === "ADMISSION_CALL" ? 1 : 0;
       const bCall = b.sourceType === "ADMISSION_CALL" ? 1 : 0;
@@ -199,8 +202,11 @@ export function buildFieldStatusesFromDossier(input: {
   const fieldFreshness: "current" | "indicative" | null =
     prevMark ? "indicative" : freshness;
 
-  if (trace.manualVerifiedFields.length > 0 && input.fieldStatusFact) {
-    for (const field of trace.manualVerifiedFields) {
+  const manualVerifiedFields = Array.isArray(trace.manualVerifiedFields)
+    ? trace.manualVerifiedFields
+    : [];
+  if (manualVerifiedFields.length > 0 && input.fieldStatusFact) {
+    for (const field of manualVerifiedFields) {
       if (input.fieldStatusFact[field]?.value != null) {
         base[field] = {
           ...input.fieldStatusFact[field],

@@ -38,6 +38,39 @@ const baseTrace = (patch: Partial<EnrichmentTrace> = {}): EnrichmentTrace => ({
 });
 
 describe("field-reason-classifier", () => {
+  it("accepts legacy enrichment traces without array fields", () => {
+    const legacyTrace = {
+      ...baseTrace(),
+      documents: undefined,
+      manualVerifiedFields: undefined,
+    } as unknown as EnrichmentTrace;
+
+    expect(() =>
+      buildFieldStatusesFromDossier({
+        dossier: {
+          teachingLanguages: ["English"],
+          languageRequirement: "B2",
+          accessMode: "OPEN",
+          selection: "UNKNOWN",
+          examsDisplay: null,
+          tuitionMin: null,
+          tuitionMax: null,
+          tuitionFixed: null,
+          deadlines: [],
+          euSeats: null,
+          nonEuSeats: null,
+          seatsUnlimited: true,
+          callFreshness: "indicative",
+          academicYear: "2026/2027",
+          officialUrl: "https://example.edu/programme",
+          admissionCallUrl: null,
+          extractQuality: "OK",
+        },
+        trace: legacyTrace,
+      })
+    ).not.toThrow();
+  });
+
   it("marks missing call for target year as NOT_PUBLISHED_FOR_TARGET_YEAR", () => {
     const statuses = buildFieldStatusesFromDossier({
       dossier: {
