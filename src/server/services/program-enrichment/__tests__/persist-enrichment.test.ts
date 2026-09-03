@@ -350,6 +350,81 @@ describe("persistEnrichmentOutput", () => {
       })
     );
   });
+
+  it("defers deadlines and tuition on shortlist while saving selection", async () => {
+    const selectionQuote = "The programme has no admission test.";
+    const deadlineQuote = "Application deadline: 15 May 2026";
+    const tuitionQuote = "Annual tuition is 156 euro";
+    const doc =
+      `${selectionQuote} ${deadlineQuote}. ${tuitionQuote}.`;
+    const output: EnrichmentOutput = {
+      campuses: [],
+      access: [],
+      selection: [
+        {
+          value: "NONE",
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://example.edu/programme",
+          quote: selectionQuote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      admissionExams: [],
+      languageRequirements: [],
+      deadlines: [
+        {
+          value: "2026-05-15",
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://example.edu/programme",
+          quote: deadlineQuote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      tuition: [
+        {
+          value: { fixed: 156 },
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://example.edu/programme",
+          quote: tuitionQuote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      seats: [],
+      requiredDocuments: [],
+      importantNotes: [],
+      sourceConflicts: [],
+      unresolvedFields: [],
+      siteNavigationSummary: { hops: [], documentsUsed: [] },
+    };
+
+    const result = await persistEnrichmentOutput({
+      programId: "p1",
+      programAcademicYearId: "pay1",
+      academicYear: "2026/2027",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      output,
+      documentTexts: new Map([["doc1", doc]]),
+      extractionMethod: "OPENAI_test",
+      deferAdministrativeFields: true,
+    });
+
+    expect(result.savedFields).toEqual(["SELECTION"]);
+    const createdFields = mockFactCreate.mock.calls.map(
+      (call) => (call[0] as { data: { field: string } }).data.field
+    );
+    expect(createdFields).toEqual(["SELECTION"]);
+    expect(createdFields).not.toContain("APPLICATION_DEADLINE");
+    expect(createdFields).not.toContain("TUITION");
+  });
 });
 
 describe("footer noise fingerprint", () => {

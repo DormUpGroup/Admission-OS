@@ -194,6 +194,27 @@ function buildRetrievalPack(
   return formatRetrievalContext(result);
 }
 
+function relevantSnippetsForDocument(
+  navigator: OfficialSiteNavigator,
+  ctx: MinimalMatchingContext,
+  forShortlist: boolean,
+  sourceDocumentId: string
+) {
+  const snippets = retrieveSections(
+    collectNavigatorSections(navigator).filter(
+      (section) => !sourceDocumentId || section.sourceDocumentId === sourceDocumentId
+    ),
+    retrievalQuery(ctx, forShortlist, sourceDocumentId ? [sourceDocumentId] : undefined)
+  );
+  return snippets.snippets.map((snippet) => ({
+    sourceDocumentId: snippet.sourceDocumentId,
+    sourceUrl: snippet.sourceUrl,
+    heading: snippet.heading,
+    sectionType: snippet.sectionType,
+    text: snippet.text,
+  }));
+}
+
 function slimToolResult(
   name: string,
   raw: string,
@@ -211,12 +232,6 @@ function slimToolResult(
 
   if (name === "inspect_programme_site" || name === "follow_official_link") {
     const sourceDocumentId = String(parsed.sourceDocumentId ?? "");
-    const snippets = retrieveSections(
-      collectNavigatorSections(navigator).filter(
-        (section) => !sourceDocumentId || section.sourceDocumentId === sourceDocumentId
-      ),
-      retrievalQuery(ctx, forShortlist, sourceDocumentId ? [sourceDocumentId] : undefined)
-    );
     return JSON.stringify({
       pageId: parsed.pageId,
       url: parsed.url,
@@ -233,36 +248,28 @@ function slimToolResult(
             })
           )
         : [],
-      relevantSnippets: snippets.snippets.map((snippet) => ({
-        sourceDocumentId: snippet.sourceDocumentId,
-        sourceUrl: snippet.sourceUrl,
-        heading: snippet.heading,
-        sectionType: snippet.sectionType,
-        text: snippet.text,
-      })),
+      relevantSnippets: relevantSnippetsForDocument(
+        navigator,
+        ctx,
+        forShortlist,
+        sourceDocumentId
+      ),
     });
   }
 
   if (name === "read_official_pdf") {
     const sourceDocumentId = String(parsed.sourceDocumentId ?? "");
-    const snippets = retrieveSections(
-      collectNavigatorSections(navigator).filter(
-        (section) => !sourceDocumentId || section.sourceDocumentId === sourceDocumentId
-      ),
-      retrievalQuery(ctx, forShortlist, sourceDocumentId ? [sourceDocumentId] : undefined)
-    );
     return JSON.stringify({
       sourceDocumentId: parsed.sourceDocumentId,
       url: parsed.url,
       contentHash: parsed.contentHash,
       method: parsed.method,
-      relevantSnippets: snippets.snippets.map((snippet) => ({
-        sourceDocumentId: snippet.sourceDocumentId,
-        sourceUrl: snippet.sourceUrl,
-        heading: snippet.heading,
-        sectionType: snippet.sectionType,
-        text: snippet.text,
-      })),
+      relevantSnippets: relevantSnippetsForDocument(
+        navigator,
+        ctx,
+        forShortlist,
+        sourceDocumentId
+      ),
     });
   }
 

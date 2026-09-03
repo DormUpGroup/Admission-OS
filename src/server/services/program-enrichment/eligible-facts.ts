@@ -5,13 +5,18 @@ import {
   CRITICAL_FIELDS,
   FIELD_TO_PROGRAM_FACT,
   type CriticalField,
-  type EnrichmentOutput,
 } from "./schema";
 
+/** Administrative groups deferred on the initial curator shortlist. */
+export const SHORTLIST_DEFERRED_FIELDS = [
+  "deadlines",
+  "tuition",
+] as const satisfies readonly CriticalField[];
+
 export function enrichmentFieldsForMode(forShortlist: boolean): CriticalField[] {
-  return forShortlist
-    ? CRITICAL_FIELDS.filter((field) => field !== "deadlines" && field !== "tuition")
-    : [...CRITICAL_FIELDS];
+  if (!forShortlist) return [...CRITICAL_FIELDS];
+  const deferred = new Set<string>(SHORTLIST_DEFERRED_FIELDS);
+  return CRITICAL_FIELDS.filter((field) => !deferred.has(field));
 }
 
 export async function findEligibleFactsForCurrentSources(input: {
@@ -66,20 +71,4 @@ export async function findEligibleFactsForCurrentSources(input: {
   }
 
   return { coveredFields: [...covered], factIds };
-}
-
-export function omitResolvedFields(
-  output: EnrichmentOutput,
-  resolved: CriticalField[]
-): EnrichmentOutput {
-  if (resolved.length === 0) return output;
-  const resolvedSet = new Set<string>(resolved);
-  const next: EnrichmentOutput = { ...output };
-  for (const field of resolved) {
-    next[field] = [];
-  }
-  next.unresolvedFields = output.unresolvedFields.filter(
-    (field) => !resolvedSet.has(field)
-  );
-  return next;
 }

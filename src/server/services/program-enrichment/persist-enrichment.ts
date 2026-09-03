@@ -10,6 +10,7 @@ import {
   factAppliesToCategory,
   scopeForApplicantCategory,
 } from "./matching-context";
+import { SHORTLIST_DEFERRED_FIELDS } from "./eligible-facts";
 import { validateEvidenceQuote } from "./quote-validator";
 import {
   FIELD_TO_PROGRAM_FACT,
@@ -126,9 +127,9 @@ export async function persistEnrichmentOutput(input: {
     ["seats", input.output.seats],
     ["requiredDocuments", input.output.requiredDocuments],
   ];
-  const groups = allGroups.filter(([group]) =>
-    !input.deferAdministrativeFields ||
-    (group !== "deadlines" && group !== "tuition")
+  const deferred = new Set<string>(SHORTLIST_DEFERRED_FIELDS);
+  const groups = allGroups.filter(
+    ([group]) => !input.deferAdministrativeFields || !deferred.has(group)
   );
 
   const campusEntries: Array<{
