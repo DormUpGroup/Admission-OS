@@ -9,6 +9,7 @@ import {
 import type { CriticalProgramField } from "@/lib/program-matching/field-status";
 import {
   examinerLinkForExam,
+  formatExamAlternatives,
 } from "@/lib/program-matching/examiner-links";
 import {
   regionForCity,
@@ -507,11 +508,19 @@ export async function getProgramDossier(
       : [];
     const labels =
       alternatives.length > 0
-        ? alternatives.map((item) =>
-            typeof item === "string"
-              ? item
-              : String((item as Record<string, unknown>).name || "")
-          )
+        ? [
+            formatExamAlternatives(
+              alternatives.map((item) => {
+                if (typeof item === "string") return { name: item };
+                const record = item as Record<string, unknown>;
+                return {
+                  name: String(record.name || ""),
+                  detail:
+                    record.detail == null ? null : String(record.detail),
+                };
+              })
+            ),
+          ]
         : [factText(value)].filter((label): label is string => !!label);
     return labels.filter(Boolean).map((label) => {
       const link = examinerLinkForExam(label);
@@ -668,17 +677,20 @@ export function canReuseLegacyDossier(
   return !aiEnabled && legacyDossierFresh;
 }
 
+export function shouldUseDeterministicDossierFallback(
+  aiEnabled: boolean
+): boolean {
+  return !aiEnabled;
+}
+
 /**
  * For each PAY: reuse shared dossier if fresh, otherwise AI-enrich (when enabled)
- * or deep-enrich from official URL (regex/PDF fallback).
+ * or deep-enrich from official URL only when AI enrichment is disabled.
  */
 export async function ensureProgramDossiers(
   programAcademicYearIds: string[],
   options?: EnsureDossiersOptions
 ): Promise<EnsureDossierResult[]> {
-  const { deepEnrichProgram } = await import(
-    "@/server/services/program-ingestion/program-deep-enrich"
-  );
   const {
     isProgramEnrichmentEnabled,
     enrichProgramWithAi,
@@ -723,64 +735,43 @@ export async function ensureProgramDossiers(
         options?.onProgress?.(done, unique.length, `AI ${done}/${unique.length}`);
         continue;
       }
-      // Fall through to regex/PDF parser
-      const enriched = await deepEnrichProgram(id, {
-        deferAdministrativeFields: true,
-      });
-      const { createEnrichmentRun } = await import(
-        "@/server/services/program-enrichment/enrichment-cache"
-      );
-      const { getEnrichmentConfig } = await import(
-        "@/server/services/program-enrichment/config"
-      );
-      await createEnrichmentRun({
-        programAcademicYearId: id,
-        applicantCategory: options.applicantCategory,
-        status: "FALLBACK_REGEX",
-        origin: "FALLBACK_REGEX",
-        promptVersion: getEnrichmentConfig().promptVersion,
-        sourceFingerprint: `fallback:${ai.runId || "failed"}`,
-        error: ai.error || ai.status,
-        finishedAt: new Date(),
-      });
       results.push({
         programAcademicYearId: id,
         reused: false,
-        enriched: enriched.ok,
-        aiStatus: "FALLBACK_REGEX",
-        reason: enriched.reason ?? ai.error ?? ai.status,
+        enriched: false,
+        aiStatus: ai.status,
+        reason: ai.error ?? ai.status,
       });
       done += 1;
-      options?.onProgress?.(done, unique.length, `Fallback ${done}/${unique.length}`);
+      options?.onProgress?.(done, unique.length, `AI ${done}/${unique.length}`);
       continue;
     }
 
+    if (!shouldUseDeterministicDossierFallback(aiOn)) {
+      results.push({
+        programAcademicYearId: id,
+        reused: false,
+        enriched: false,
+        reason: "missing_matching_context",
+        aiStatus: "FAILED",
+      });
+      done += 1;
+      options?.onProgress?.(done, unique.length, `AI ${done}/${unique.length}`);
+      continue;
+    }
+
+    const { deepEnrichProgram } = await import(
+      "@/server/services/program-ingestion/program-deep-enrich"
+    );
     const enriched = await deepEnrichProgram(id, {
       deferAdministrativeFields: true,
     });
-    if (aiOn) {
-      const [{ createEnrichmentRun }, { getEnrichmentConfig }] =
-        await Promise.all([
-          import("@/server/services/program-enrichment/enrichment-cache"),
-          import("@/server/services/program-enrichment/config"),
-        ]);
-      await createEnrichmentRun({
-        programAcademicYearId: id,
-        applicantCategory: options?.applicantCategory ?? "UNKNOWN",
-        status: "FALLBACK_REGEX",
-        origin: "FALLBACK_REGEX",
-        promptVersion: getEnrichmentConfig().promptVersion,
-        sourceFingerprint: "fallback:no_context",
-        error: "missing_matching_context",
-        finishedAt: new Date(),
-      });
-    }
     results.push({
       programAcademicYearId: id,
       reused: false,
       enriched: enriched.ok,
       reason: enriched.reason,
-      aiStatus: aiOn ? "FALLBACK_REGEX" : "DISABLED",
+      aiStatus: "DISABLED",
     });
     done += 1;
     options?.onProgress?.(done, unique.length, `Обогащение ${done}/${unique.length}`);

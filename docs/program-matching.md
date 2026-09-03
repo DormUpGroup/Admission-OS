@@ -1,6 +1,6 @@
 # Program Matching Engine
 
-> **Current state:** matching uses evidence-aware programme facts. Universitaly is discovery-only; admission decisions are resolved from quoted, year-specific and applicant-scoped official facts. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false** (regex/PDF remains a non-authoritative fallback where evidence is incomplete).
+> **Current state:** matching uses evidence-aware programme facts. Universitaly is discovery-only; admission decisions are resolved from quoted, year-specific and applicant-scoped official facts. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false**. When AI is off, regex/PDF deep-enrich fills the second filter; when AI is on, the second filter is AI-only (no regex/PDF on AI failure).
 
 Italy-specific program matching for IMMIGROME OS. Matches use the **existing questionnaires** as source of truth, a local **Program Database** with fact-level provenance, deterministic **eligibility**, configurable **fit score**, and **curator verification** before student shortlist.
 
@@ -9,7 +9,7 @@ Italy-specific program matching for IMMIGROME OS. Matches use the **existing que
 ```text
 Questionnaire → MatchingProfile → Universitaly (lingua × MIUR classe)
   → Soft-gate + upsert → Deterministic fit (Pass 1)
-  → AI enrichment queue (≤35) OR regex/PDF dossier fallback
+  → AI enrichment queue (≤35) when enabled, else regex/PDF dossier enrich
   → Re-score + compose (≤25, no padding) → Curator review
   → Select ≤5 for monitoring → programs:monitor-selected
 ```
@@ -93,7 +93,7 @@ officialUrl → fetch page
 
 Fingerprint = hash of all direction×lingua queries + excluded cities. Same student + fingerprint within **24h** reuses local `programAcademicYearIds`.
 
-When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits AI. Failed AI attempts may run regex/PDF and are recorded as `FALLBACK_REGEX`, not as successful AI enrichment.
+When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits AI. Failed AI attempts are recorded as failed and do **not** run regex/PDF; deterministic deep-enrich runs only when AI enrichment is disabled.
 
 ## Decision fact resolution
 

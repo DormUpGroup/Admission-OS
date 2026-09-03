@@ -130,6 +130,29 @@ async function dispatchTool(
   }
 }
 
+function inspectedDocumentSummary(
+  documents: Map<string, { url: string; text: string }>
+): string {
+  const chunks: string[] = [];
+  let used = 0;
+  for (const [id, doc] of documents.entries()) {
+    const remaining = 18_000 - used;
+    if (remaining <= 0) break;
+    const text = doc.text.slice(0, Math.min(remaining, 6_000));
+    used += text.length;
+    chunks.push(
+      JSON.stringify({
+        sourceDocumentId: id,
+        sourceUrl: doc.url,
+        text,
+      })
+    );
+  }
+  return chunks.length
+    ? chunks.join("\n")
+    : "No official documents were successfully inspected.";
+}
+
 function parseOutput(content: string | null): EnrichmentOutput | null {
   if (!content?.trim()) return null;
   try {
@@ -185,7 +208,8 @@ function markMissingCriticalFields(
 /**
  * A shortlist result containing only language/campus metadata is not a useful
  * second filter. Require at least one admission decision fact; otherwise the
- * caller must run the deterministic fallback.
+ * AI run is failed/null and no regex/PDF fallback runs while AI enrichment is
+ * enabled (deterministic deep-enrich is used only when AI is disabled).
  */
 export function isUsableEnrichmentOutput(
   output: EnrichmentOutput,
@@ -311,13 +335,24 @@ export async function runLunaTerraEnrichment(input: {
     let inputTokens = 0;
     let outputTokens = 0;
     const maxRounds = cfg.maxToolCalls + 2;
+    let forcedFinal = false;
 
     for (let round = 0; round < maxRounds; round++) {
+      const toolBudgetExhausted = input.navigator.toolCallCount() >= cfg.maxToolCalls;
+      if (toolBudgetExhausted && !forcedFinal) {
+        messages.push({
+          role: "user",
+          content:
+            "Tool budget is exhausted. Do not call tools again. Return only the final JSON using the official evidence already available below. If a field cannot be proven from the inspected documents, add it to unresolvedFields.\n\nInspected official documents:\n" +
+            inspectedDocumentSummary(input.navigator.getDocuments()),
+        });
+        forcedFinal = true;
+      }
       const res = await input.client.complete({
         model,
         messages,
-        tools: NAVIGATOR_TOOLS,
-        tool_choice: "auto",
+        tools: forcedFinal ? undefined : NAVIGATOR_TOOLS,
+        tool_choice: forcedFinal ? "none" : "auto",
         response_format: { type: "json_object" },
         max_tokens: cfg.maxOutputTokens,
       });

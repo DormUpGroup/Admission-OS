@@ -9,6 +9,7 @@ import {
   resolveDossierAccessMode,
   resolveDossierSelection,
   resolvePublicPrivate,
+  shouldUseDeterministicDossierFallback,
 } from "@/server/services/program-matching/program-dossier";
 import {
   formatExamAlternatives,
@@ -23,6 +24,11 @@ describe("dossier cache boundary", () => {
   it("never lets a fresh legacy dossier block enabled AI", () => {
     expect(canReuseLegacyDossier(true, true)).toBe(false);
     expect(canReuseLegacyDossier(false, true)).toBe(true);
+  });
+
+  it("uses deterministic fallback only when AI enrichment is disabled", () => {
+    expect(shouldUseDeterministicDossierFallback(true)).toBe(false);
+    expect(shouldUseDeterministicDossierFallback(false)).toBe(true);
   });
 });
 

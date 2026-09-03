@@ -29,8 +29,7 @@ export type AiEnrichResult = {
     | "REUSED"
     | "SUCCEEDED"
     | "FAILED"
-    | "NO_OFFICIAL_URL"
-    | "FALLBACK_REGEX";
+    | "NO_OFFICIAL_URL";
   runId?: string;
   reused?: boolean;
   model?: string;

@@ -192,6 +192,101 @@ describe("shared cache / fake client call counting", () => {
 
     vi.unstubAllEnvs();
   });
+
+  it("forces a final JSON answer when the tool budget is exhausted", async () => {
+    vi.stubEnv("OPENAI_PROGRAM_ENRICHMENT_ESCALATION_ENABLED", "false");
+    vi.stubEnv("OPENAI_PROGRAM_ENRICHMENT_MAX_TOOL_CALLS", "1");
+
+    const officialUrl = "https://example.edu/programme";
+    const quote = "No admission test is required";
+    const finalJson = JSON.stringify({
+      campuses: [],
+      access: [],
+      selection: [
+        {
+          value: "NONE",
+          sourceDocumentId: "doc-root",
+          sourceUrl: officialUrl,
+          quote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      admissionExams: [],
+      languageRequirements: [],
+      deadlines: [],
+      tuition: [],
+      seats: [],
+      requiredDocuments: [],
+      importantNotes: [],
+      sourceConflicts: [],
+      unresolvedFields: ["admissionExams"],
+      siteNavigationSummary: {
+        hops: ["root"],
+        documentsUsed: ["doc-root"],
+      },
+    });
+    const client = createFakeEnrichmentClient([
+      {
+        content: null,
+        tool_calls: [
+          {
+            id: "1",
+            name: "inspect_programme_site",
+            arguments: JSON.stringify({ officialUrl }),
+          },
+        ],
+      },
+      (req) => {
+        expect(req.tool_choice).toBe("none");
+        expect(req.tools).toBeUndefined();
+        expect(req.messages.at(-1)?.content).toContain("doc-root");
+        return { content: finalJson, tool_calls: [] };
+      },
+    ]);
+    const nav = createFakeOfficialSiteNavigator({
+      pages: {
+        root: {
+          url: officialUrl,
+          sourceDocumentId: "doc-root",
+          html: `<html><body><p>${quote}</p></body></html>`,
+        },
+      },
+    });
+    const ctx: MinimalMatchingContext = {
+      targetAcademicYear: "2026/2027",
+      degreeLevel: "BACHELOR",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      directions: ["Economics"],
+      miurCodes: [],
+      preferredTeachingLanguages: ["English"],
+      preferredCities: [],
+      excludedCities: [],
+      maxTuition: null,
+      program: {
+        name: "Open Programme",
+        universityName: "Example University",
+        degreeClass: "L-18",
+        language: "English",
+        durationYears: 3,
+        campusCity: null,
+        officialUrl,
+      },
+    };
+
+    const result = await runLunaTerraEnrichment({
+      ctx,
+      navigator: nav,
+      client,
+      forShortlist: true,
+    });
+
+    expect(result.output?.selection[0]?.value).toBe("NONE");
+    expect(client.callCount).toBe(2);
+    vi.unstubAllEnvs();
+  });
 });
 
 describe("enrichment disabled flag", () => {

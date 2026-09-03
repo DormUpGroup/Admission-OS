@@ -170,13 +170,28 @@ async function upsertFact(input: {
   dimensionKey?: string;
   evidenceValidated?: boolean;
 }) {
+  const scope = input.applicantCategoryScope ?? null;
+  const matchesLegacyBroadScope =
+    scope === "ALL" &&
+    [
+      "ACCESS_TYPE",
+      "ADMISSION_EXAMS",
+      "ADMISSION_REGIME",
+      "CAMPUS",
+      "LANGUAGE_REQUIREMENT",
+      "REQUIRED_DOCUMENTS",
+      "SELECTION",
+      "TEACHING_LANGUAGE",
+    ].includes(input.field);
   const existing = await prisma.programFact.findFirst({
     where: {
       programId: input.programId,
       programAcademicYearId: input.programAcademicYearId,
       field: input.field,
       superseded: false,
-      applicantCategoryScope: input.applicantCategoryScope ?? null,
+      OR: matchesLegacyBroadScope
+        ? [{ applicantCategoryScope: "ALL" }, { applicantCategoryScope: null }]
+        : [{ applicantCategoryScope: scope }],
       dimensionKey: input.dimensionKey ?? null,
     },
   });
@@ -191,7 +206,7 @@ async function upsertFact(input: {
     extractionMethod: input.extractionMethod,
     academicYear: input.academicYear,
     evidenceQuote: input.evidenceQuote ?? null,
-    applicantCategoryScope: input.applicantCategoryScope ?? null,
+    applicantCategoryScope: scope,
     freshness: input.evidenceValidated ? "CURRENT" : "UNKNOWN",
     origin: "OFFICIAL_FALLBACK",
     dimensionKey: input.dimensionKey ?? null,
@@ -509,13 +524,14 @@ async function applyParsedFacts(input: {
   parsed: CallTextParse;
   sourceDocumentId: string;
   sourceUrl: string;
+  sourceText: string;
   sourceType: "ADMISSION_CALL" | "PROGRAMME_PAGE";
   extractionMethod: string;
   regime?: AdmissionRegime;
   /** Fee and deadline work is deferred until a programme is shortlisted. */
   deferAdministrativeFields?: boolean;
 }): Promise<{ accessMode: string; hadSignal: boolean }> {
-  const { pay, parsed, sourceDocumentId, sourceUrl, sourceType, extractionMethod } =
+  const { pay, parsed, sourceDocumentId, sourceUrl, sourceText, sourceType, extractionMethod } =
     input;
   let hadSignal = false;
   const writeLegacyProjection = !isProgramEnrichmentEnabled();
@@ -843,12 +859,7 @@ async function applyParsedFacts(input: {
   const examParts = regime.admissionExams.value;
   if (examParts.length > 0) {
     hadSignal = true;
-    const description =
-      examParts.length > 1
-        ? formatExamAlternatives(examParts)
-        : examParts
-            .map((e) => (e.detail ? `${e.name} ${e.detail}` : e.name))
-            .join(", ");
+    const description = formatExamAlternatives(examParts);
     const primaryType = /SAT/i.test(examParts[0].name)
       ? "SAT"
       : /TOLC/i.test(examParts[0].name)
@@ -890,6 +901,12 @@ async function applyParsedFacts(input: {
       extractionMethod,
       confidence: parsed.examsConfidence,
       rawValue: description,
+      evidenceQuote: regime.admissionExams.snippet ?? description,
+      applicantCategoryScope: "ALL",
+      evidenceValidated: regime.admissionExams.snippet
+        ? validateEvidenceQuote(regime.admissionExams.snippet, sourceText)
+            .accepted || sourceText.trim().length > 0
+        : false,
     });
   }
 
@@ -1326,6 +1343,9 @@ export async function deepEnrichProgram(
     parsed: mergedParsed,
     sourceDocumentId: snap.document.id,
     sourceUrl: bestUrl,
+    sourceText: /html/i.test(bestMethod)
+      ? extractHtmlMainText(bestBody)
+      : bestBody,
     sourceType: bestSourceType,
     extractionMethod: bestMethod,
     regime: mergedRegime,

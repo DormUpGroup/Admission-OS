@@ -53,11 +53,21 @@ export function examinerLinkForExam(examName: string): {
   return null;
 }
 
+export function humanizeExamName(name: string): string {
+  const upper = name.trim().toUpperCase();
+  if (upper === "ADMISSION_TEST") return "вступительный экзамен";
+  if (upper === "BOCCONI_TEST") return "тест Bocconi";
+  return name.trim();
+}
+
 /** Format exam alternatives for display: "SAT ≥ 1200 или TOLC-E". */
 export function formatExamAlternatives(
   parts: Array<{ name: string; detail?: string | null }>
 ): string {
   return parts
-    .map((p) => (p.detail ? `${p.name} ${p.detail}`.trim() : p.name))
+    .map((p) => {
+      const name = humanizeExamName(p.name);
+      return p.detail ? `${name} ${p.detail}`.trim() : name;
+    })
     .join(" или ");
 }
