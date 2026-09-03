@@ -569,25 +569,30 @@ export async function persistProgramMatches(
       : null;
 
   report("save", "Сохранение результатов", 97);
-  const preserved = await prisma.programMatch.findMany({
-    where: {
-      studentId,
-      curatorStatus: { in: ["APPROVED", "REJECTED", "SHORTLISTED", "SELECTED"] },
-    },
-  });
-  const preservedByPay = new Map(preserved.map((p) => [p.programAcademicYearId, p]));
+  // Replacing automatic cards must be all-or-nothing. Otherwise a failure
+  // after deleteMany leaves the curator with an empty programme selection.
+  await prisma.$transaction(async (tx) => {
+    const preserved = await tx.programMatch.findMany({
+      where: {
+        studentId,
+        curatorStatus: { in: ["APPROVED", "REJECTED", "SHORTLISTED", "SELECTED"] },
+      },
+    });
+    const preservedByPay = new Map(
+      preserved.map((p) => [p.programAcademicYearId, p])
+    );
 
-  await prisma.programMatch.deleteMany({
-    where: {
-      studentId,
-      curatorStatus: { in: ["AUTO_MATCHED", "NEEDS_REVIEW"] },
-    },
-  });
+    await tx.programMatch.deleteMany({
+      where: {
+        studentId,
+        curatorStatus: { in: ["AUTO_MATCHED", "NEEDS_REVIEW"] },
+      },
+    });
 
-  for (const m of generated) {
-    const existing = preservedByPay.get(m.programAcademicYearId);
-    if (existing) {
-      await prisma.programMatch.update({
+    for (const m of generated) {
+      const existing = preservedByPay.get(m.programAcademicYearId);
+      if (existing) {
+        await tx.programMatch.update({
         where: { id: existing.id },
         data: {
           eligibilityStatus: m.eligibilityStatus,
@@ -602,12 +607,12 @@ export async function persistProgramMatches(
           generatedAt: new Date(),
           matchingEngineVersion: MATCHING_ENGINE_VERSION,
         },
-      });
-      continue;
-    }
+        });
+        continue;
+      }
 
-    await prisma.programMatch.create({
-      data: {
+      await tx.programMatch.create({
+        data: {
         studentId,
         programAcademicYearId: m.programAcademicYearId,
         eligibilityStatus: m.eligibilityStatus,
@@ -622,12 +627,12 @@ export async function persistProgramMatches(
         matchingEngineVersion: MATCHING_ENGINE_VERSION,
         curatorStatus:
           m.eligibilityStatus === "NEEDS_REVIEW" ? "NEEDS_REVIEW" : "AUTO_MATCHED",
-      },
-    });
-  }
+        },
+      });
+    }
 
-  await prisma.activity.create({
-    data: {
+    await tx.activity.create({
+      data: {
       type: "PROGRAM_MATCH_GENERATED",
       studentId,
       metadata: JSON.stringify({
@@ -674,8 +679,9 @@ export async function persistProgramMatches(
         directionBalanceApplied: compositionMeta.directionBalanceApplied,
         programAcademicYearIds: generated.map((g) => g.programAcademicYearId),
       }),
-    },
-  });
+      },
+    });
+  }, { timeout: 20_000 });
 
   report(
     "done",

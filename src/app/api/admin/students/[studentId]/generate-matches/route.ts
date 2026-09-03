@@ -31,7 +31,13 @@ export async function POST(
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let lastStage = "before_start";
+      let lastLabel = "запуск";
       const send = (event: StreamEvent) => {
+        if ("label" in event) {
+          lastStage = event.stage;
+          lastLabel = event.label;
+        }
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
 
@@ -54,12 +60,18 @@ export async function POST(
           engine: MATCHING_ENGINE_VERSION,
         });
       } catch (error) {
+        // Keep the stack and last completed stage in server logs. The previous
+        // implementation exposed a bare JavaScript message, which made a
+        // production failure impossible to diagnose.
+        console.error("[program-matching] generation failed", {
+          studentId,
+          stage: lastStage,
+          label: lastLabel,
+          error,
+        });
         send({
           stage: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Не удалось подобрать программы",
+          message: `Подбор остановлен на этапе «${lastLabel}». Результаты не изменены.`,
         });
       } finally {
         controller.close();

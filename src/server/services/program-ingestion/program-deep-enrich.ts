@@ -405,9 +405,27 @@ async function persistScopedQuotaFacts(
  * tasse/requisiti page can be the only source for fees or language. Merge
  * fields instead of treating one high-coverage document as the whole dossier.
  */
+function normalizeParsedArrays(parsed: CallTextParse): CallTextParse {
+  // A malformed/partial document must be treated as an empty extraction for
+  // each list field, never crash the entire programme matching run.
+  return {
+    ...parsed,
+    languages: Array.isArray(parsed.languages) ? parsed.languages : [],
+    deadlines: Array.isArray(parsed.deadlines) ? parsed.deadlines : [],
+    quotaRows: Array.isArray(parsed.quotaRows) ? parsed.quotaRows : [],
+    exams: Array.isArray(parsed.exams) ? parsed.exams : [],
+    examAlternatives: Array.isArray(parsed.examAlternatives)
+      ? parsed.examAlternatives
+      : [],
+  };
+}
+
 function mergeParsedDocuments(documents: ParsedDocument[]): CallTextParse | null {
   if (documents.length === 0) return null;
-  const ordered = [...documents].sort((a, b) => {
+  const ordered = documents.map((document) => ({
+    ...document,
+    parsed: normalizeParsedArrays(document.parsed),
+  })).sort((a, b) => {
     const source = sourceRank(b.sourceType) - sourceRank(a.sourceType);
     if (source !== 0) return source;
     return fieldCoverageScore(b.parsed) - fieldCoverageScore(a.parsed);
@@ -1110,21 +1128,22 @@ export async function deepEnrichProgram(
     method: string,
     fetchOk = true
   ) => {
+    const normalized = normalizeParsedArrays(parsed);
     documentTraces.push(
       traceFromFetch(url, body, sourceType, method, fetchOk, pay.academicYear)
     );
-    if (parsed.quality === "EMPTY") return;
-    parsedDocuments.push({ parsed, url, body, sourceType, method });
-    const cov = fieldCoverageScore(parsed);
+    if (normalized.quality === "EMPTY") return;
+    parsedDocuments.push({ parsed: normalized, url, body, sourceType, method });
+    const cov = fieldCoverageScore(normalized);
     const better =
       cov > bestCoverage ||
       (cov === bestCoverage &&
         sourceType === "ADMISSION_CALL" &&
         bestSourceType !== "ADMISSION_CALL") ||
-      (cov === bestCoverage && parsed.quality === "OK" && bestParsed?.quality !== "OK");
+      (cov === bestCoverage && normalized.quality === "OK" && bestParsed?.quality !== "OK");
     if (better) {
       bestCoverage = cov;
-      bestParsed = parsed;
+      bestParsed = normalized;
       bestUrl = url;
       bestBody = body;
       bestSourceType = sourceType;
@@ -1232,7 +1251,9 @@ export async function deepEnrichProgram(
   }
 
   const quality = bestParsed?.quality ?? "EMPTY";
-  const mergedParsed = mergeParsedDocuments(parsedDocuments) ?? bestParsed;
+  const mergedParsed =
+    mergeParsedDocuments(parsedDocuments) ??
+    (bestParsed ? normalizeParsedArrays(bestParsed) : null);
   const mergedRegime =
     parsedDocuments.length > 0
       ? mergeAdmissionRegime(parsedDocuments.map(regimeFromDocument))
