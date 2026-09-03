@@ -345,6 +345,8 @@ export type MatchProgressEvent = {
   label: string;
   percent: number;
   detail?: string;
+  done?: number;
+  total?: number;
 };
 
 export async function persistProgramMatches(
@@ -359,10 +361,19 @@ export async function persistProgramMatches(
     stage: MatchProgressStage,
     label: string,
     percent: number,
-    detail?: string
-  ) => options?.onProgress?.({ stage, label, percent, detail });
+    detail?: string,
+    counts?: { done?: number; total?: number }
+  ) =>
+    options?.onProgress?.({
+      stage,
+      label,
+      percent,
+      detail,
+      done: counts?.done,
+      total: counts?.total,
+    });
 
-  report("profile", "Читаем профиль анкеты", 5);
+  report("profile", "Читаем профиль анкеты", 3);
   const profile = await buildMatchingProfile(studentId);
   let liveMeta: Awaited<
     ReturnType<
@@ -371,7 +382,7 @@ export async function persistProgramMatches(
   > | null = null;
 
   if (profile && !options?.skipLiveSearch) {
-    report("universitaly", "Поиск программ на Universitaly", 15);
+    report("universitaly", "Поиск программ на Universitaly", 5);
     const { searchUniversitalyForProfile } = await import(
       "./universitaly-live-search"
     );
@@ -381,16 +392,16 @@ export async function persistProgramMatches(
     report(
       "universitaly",
       "Поиск на Universitaly завершён",
-      45,
+      20,
       liveMeta.candidateCount != null
         ? `${liveMeta.candidateCount} кандидатов`
         : undefined
     );
   } else {
-    report("universitaly", "Используем локальный каталог", 45);
+    report("universitaly", "Используем локальный каталог", 20);
   }
 
-  report("score", "Оценка fit и eligibility", 55);
+  report("score", "Оценка fit и eligibility", 25);
   // Pass 1: hard eligibility + fit on discovery pool (no enrich yet).
   const aiCap = isProgramEnrichmentEnabled()
     ? getEnrichmentConfig().maxCandidates
@@ -404,7 +415,7 @@ export async function persistProgramMatches(
     useDecisionFacts: false,
   });
 
-  report("documents", "Официальные документы программ", 62);
+  report("documents", "Официальные документы программ", 28);
   let enrichedCount = 0;
   let reusedCount = 0;
   let aiProcessed = 0;
@@ -443,10 +454,13 @@ export async function persistProgramMatches(
       report(
         "ai_extract",
         isProgramEnrichmentEnabled()
-          ? `AI extraction: 0 / ${ids.length}`
-          : `${labelPrefix}: regex/PDF fallback`,
-        70,
-        isProgramEnrichmentEnabled() ? undefined : "AI enrichment выключен"
+          ? `AI-извлечение: 0 / ${ids.length}`
+          : `${labelPrefix}: 0 / ${ids.length}`,
+        30,
+        isProgramEnrichmentEnabled()
+          ? undefined
+          : "AI enrichment выключен",
+        { done: 0, total: ids.length }
       );
       return ensureProgramDossiers(ids, {
         applicantCategory: profile.applicantCategory,
@@ -455,9 +469,11 @@ export async function persistProgramMatches(
           report(
             "ai_extract",
             isProgramEnrichmentEnabled()
-              ? `AI extraction: ${done} / ${total}`
+              ? `AI-извлечение: ${done} / ${total}`
               : `Обогащение: ${done} / ${total}`,
-            70 + Math.round((done / Math.max(total, 1)) * 10)
+            30 + Math.round((done / Math.max(total, 1)) * 58),
+            undefined,
+            { done, total }
           );
         },
       });
@@ -518,7 +534,7 @@ export async function persistProgramMatches(
     }
   }
 
-  report("rank", "Финальное ранжирование", 85);
+  report("rank", "Финальное ранжирование", 92);
   // Pass 2: re-score after dossier ensure (language / tuition / facts may have updated).
   const enrichScopeIds =
     enrichedPayIds.length > 0
@@ -552,7 +568,7 @@ export async function persistProgramMatches(
       ? `Only ${generated.length} programmes matched (target up to ${MATCH_LIMIT_DEFAULT}; no artificial padding).`
       : null;
 
-  report("save", "Сохранение результатов", 95);
+  report("save", "Сохранение результатов", 97);
   const preserved = await prisma.programMatch.findMany({
     where: {
       studentId,

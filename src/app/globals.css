@@ -130,3 +130,27 @@ h4 {
   background: var(--brand-muted);
   color: var(--foreground);
 }
+
+@keyframes match-progress-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes match-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.match-progress-shimmer {
+  animation: match-progress-shimmer 1.4s ease-in-out infinite;
+}
+
+.match-step-spin {
+  animation: match-step-spin 0.8s linear infinite;
+}
+

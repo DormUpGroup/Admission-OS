@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,13 +8,19 @@ import type {
   MatchProgressEvent,
   MatchProgressStage,
 } from "@/server/services/program-matching/program-matching";
+import {
+  estimateRemainingSeconds,
+  formatElapsed,
+  formatEtaLabel,
+  smoothEta,
+} from "@/components/match-progress-eta";
 
 const STEPS: { id: MatchProgressStage; label: string }[] = [
   { id: "profile", label: "Профиль анкеты" },
   { id: "universitaly", label: "Поиск на Universitaly" },
   { id: "score", label: "Оценка программ" },
   { id: "documents", label: "Официальные документы" },
-  { id: "ai_extract", label: "AI extraction" },
+  { id: "ai_extract", label: "AI-извлечение" },
   { id: "rank", label: "Ранжирование" },
   { id: "save", label: "Сохранение" },
 ];
@@ -27,6 +33,9 @@ type StreamEvent =
 function stepIndex(stage: MatchProgressStage | "complete" | "error" | null) {
   if (!stage || stage === "complete" || stage === "error" || stage === "done") {
     return STEPS.length;
+  }
+  if (stage === "enrich") {
+    return STEPS.findIndex((s) => s.id === "ai_extract");
   }
   return STEPS.findIndex((s) => s.id === stage);
 }
@@ -43,11 +52,59 @@ export function GenerateProgramMatchesButton({
   const [progress, setProgress] = useState<MatchProgressEvent | null>(null);
   const [completeCount, setCompleteCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
+
+  const startedAtRef = useRef<number | null>(null);
+  const stageStartedAtRef = useRef<number | null>(null);
+  const lastStageRef = useRef<MatchProgressStage | null>(null);
+  const etaSmoothRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!loading) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [loading]);
+
+  useEffect(() => {
+    if (!loading || !progress || !startedAtRef.current) return;
+
+    if (lastStageRef.current !== progress.stage) {
+      lastStageRef.current = progress.stage;
+      stageStartedAtRef.current = Date.now();
+      etaSmoothRef.current = null;
+    }
+
+    const elapsedSeconds =
+      (nowMs - (startedAtRef.current ?? nowMs)) / 1000;
+    const elapsedInStageSeconds =
+      (nowMs - (stageStartedAtRef.current ?? nowMs)) / 1000;
+
+    const raw = estimateRemainingSeconds({
+      stage: progress.stage,
+      percent: progress.percent,
+      elapsedSeconds,
+      elapsedInStageSeconds,
+      done: progress.done,
+      total: progress.total,
+    });
+    const smoothed = smoothEta(etaSmoothRef.current, raw);
+    etaSmoothRef.current = smoothed;
+    setEtaSeconds(smoothed);
+  }, [loading, progress, nowMs]);
 
   async function handleGenerate() {
+    const start = Date.now();
+    startedAtRef.current = start;
+    stageStartedAtRef.current = start;
+    lastStageRef.current = "profile";
+    etaSmoothRef.current = null;
+
     setLoading(true);
     setError(null);
     setCompleteCount(null);
+    setEtaSeconds(null);
+    setNowMs(start);
     setProgress({
       stage: "profile",
       label: "Запуск подбора программ…",
@@ -94,6 +151,7 @@ export function GenerateProgramMatchesButton({
 
           if (event.stage === "complete") {
             setCompleteCount(event.count);
+            setEtaSeconds(0);
             setProgress({
               stage: "done",
               label: `Готово: ${event.count} программ`,
@@ -118,6 +176,15 @@ export function GenerateProgramMatchesButton({
 
   const activeIndex = stepIndex(progress?.stage ?? null);
   const showProgress = loading || completeCount != null;
+  const elapsedSeconds =
+    startedAtRef.current != null
+      ? Math.max(0, (nowMs - startedAtRef.current) / 1000)
+      : 0;
+
+  const statusLabel =
+    progress?.done != null && progress.total != null
+      ? `${progress.done} / ${progress.total} программ`
+      : null;
 
   return (
     <div className="max-w-lg space-y-3">
@@ -126,7 +193,7 @@ export function GenerateProgramMatchesButton({
         onClick={handleGenerate}
         disabled={disabled || loading}
       >
-        {loading ? "Подбор программ…" : "Generate Program Matches"}
+        {loading ? "Подбор программ…" : "Подобрать программы"}
       </Button>
 
       {showProgress ? (
@@ -137,17 +204,41 @@ export function GenerateProgramMatchesButton({
         >
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>{progress?.label ?? "Подбор программ…"}</span>
-              <span>{progress?.percent ?? 0}%</span>
+              <span className="min-w-0 truncate">
+                {progress?.label ?? "Подбор программ…"}
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {progress?.percent ?? 0}%
+              </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className={cn(
                   "h-full rounded-full bg-primary transition-[width] duration-500 ease-out",
-                  loading && progress?.stage === "universitaly" && "animate-pulse"
+                  loading && "animate-pulse"
                 )}
                 style={{ width: `${progress?.percent ?? 0}%` }}
               />
+              {loading ? (
+                <div
+                  className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent match-progress-shimmer"
+                  aria-hidden
+                />
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="tabular-nums">
+                прошло {formatElapsed(elapsedSeconds)}
+                {loading || etaSeconds != null ? (
+                  <>
+                    {" "}
+                    · осталось {formatEtaLabel(loading ? etaSeconds : 0)}
+                  </>
+                ) : null}
+              </span>
+              {statusLabel ? (
+                <span className="tabular-nums">{statusLabel}</span>
+              ) : null}
             </div>
             {progress?.detail ? (
               <p className="text-xs text-muted-foreground">{progress.detail}</p>
@@ -171,13 +262,20 @@ export function GenerateProgramMatchesButton({
                   <span
                     className={cn(
                       "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px]",
-                      done && "border-primary bg-primary text-primary-foreground",
-                      active && "border-primary",
+                      done &&
+                        "border-primary bg-primary text-primary-foreground",
+                      active && "border-primary animate-pulse",
                       !done && !active && "border-muted-foreground/30"
                     )}
                     aria-hidden
                   >
-                    {done ? "✓" : active ? "…" : index + 1}
+                    {done ? (
+                      "✓"
+                    ) : active ? (
+                      <span className="block h-2.5 w-2.5 rounded-full border border-primary border-t-transparent match-step-spin" />
+                    ) : (
+                      index + 1
+                    )}
                   </span>
                   {step.label}
                 </li>

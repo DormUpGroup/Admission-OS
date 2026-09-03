@@ -60,15 +60,72 @@ function examsText(match: CuratorMatchView): string | null {
   return null;
 }
 
+function languageText(match: CuratorMatchView): string | null {
+  const teaching = humanizeLanguage(
+    match.teachingLanguages[0] ?? match.language
+  );
+  const reqRaw = (match.languageRequirement ?? "").trim();
+  let requirement: string | null = null;
+  if (reqRaw) {
+    if (/^[ABC][12]\+?$/i.test(reqRaw)) {
+      requirement = reqRaw.toUpperCase();
+    } else {
+      requirement = humanizeLanguage(reqRaw) || reqRaw;
+    }
+  }
+
+  if (teaching && requirement) {
+    const reqLower = requirement.toLowerCase();
+    if (
+      reqLower.includes("английск") ||
+      reqLower.includes("итальянск") ||
+      (teaching && reqLower.includes(teaching.toLowerCase()))
+    ) {
+      return requirement;
+    }
+    return `${teaching} ${requirement}`;
+  }
+  return teaching || requirement || null;
+}
+
 function seatsText(match: CuratorMatchView): string | null {
   if (match.seatsUnlimited) return "Без лимита мест";
-  if (match.quotaSeats == null) return null;
+  const seatsCount =
+    match.quotaSeats ?? match.nonEuSeats ?? match.euSeats ?? null;
+  if (seatsCount == null) {
+    const statusValue = match.fieldStatuses?.seats?.value as
+      | { eu?: number | null; nonEu?: number | null; unlimited?: boolean }
+      | null
+      | undefined;
+    if (statusValue?.unlimited) return "Без лимита мест";
+    const fromStatus = statusValue?.nonEu ?? statusValue?.eu;
+    if (fromStatus == null) return null;
+    const scopeLabel = match.quotaScope
+      ? labelApplicantCategory(match.quotaScope)
+      : null;
+    return scopeLabel && scopeLabel !== "Не указано"
+      ? `${fromStatus} мест · ${scopeLabel}`
+      : `${fromStatus} мест`;
+  }
   const scopeLabel = match.quotaScope
     ? labelApplicantCategory(match.quotaScope)
     : null;
   return scopeLabel && scopeLabel !== "Не указано"
-    ? `${match.quotaSeats} мест · ${scopeLabel}`
-    : `${match.quotaSeats} мест`;
+    ? `${seatsCount} мест · ${scopeLabel}`
+    : `${seatsCount} мест`;
+}
+
+function indicativeNote(match: CuratorMatchView): string | null {
+  if (match.callFreshness !== "indicative" && !match.indicativeFromYear) {
+    return null;
+  }
+  return (
+    previousYearCallNote(
+      match.academicYear,
+      match.intake,
+      match.indicativeFromYear
+    ) ?? "Есть ориентир за прошлый год"
+  );
 }
 
 function fieldReason(
@@ -77,20 +134,22 @@ function fieldReason(
 ): string {
   const status = match.fieldStatuses?.[field];
   if (status && !isFieldFilled(status) && status.reason) {
+    if (status.reason === "ONLY_PREVIOUS_YEAR_AVAILABLE") {
+      return (
+        previousYearCallNote(
+          status.sourceAcademicYear || match.academicYear,
+          match.intake,
+          match.indicativeFromYear
+        ) ?? unknownFieldReasonLabel(status.reason, match.intake)
+      );
+    }
     return unknownFieldReasonLabel(
       status.reason as FieldUnknownReason,
       match.intake || status.targetIntakeYear
     );
   }
-  if (match.callFreshness === "indicative" || match.indicativeFromYear) {
-    return (
-      previousYearCallNote(
-        match.academicYear,
-        match.intake,
-        match.indicativeFromYear
-      ) ?? "Есть ориентир за прошлый год"
-    );
-  }
+  const note = indicativeNote(match);
+  if (note) return note;
   if (match.callFreshness === "unknown") {
     return unknownFieldReasonLabel(
       "NOT_PUBLISHED_FOR_TARGET_YEAR",
@@ -104,6 +163,7 @@ function DecisionRow({
   label,
   value,
   reason,
+  note,
   confirmField,
   studentId,
   programAcademicYearId,
@@ -112,23 +172,29 @@ function DecisionRow({
   label: string;
   value: string | null;
   reason: string;
+  note?: string | null;
   confirmField?: string;
   studentId: string;
   programAcademicYearId: string;
   applicantCategory?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-border/70 py-2 last:border-0 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-1 border-b border-border/70 py-2 last:border-0">
       <div className="min-w-0">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         {value ? (
-          <p className="text-sm font-medium">{value}</p>
+          <>
+            <p className="text-sm font-medium">{value}</p>
+            {note ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>
+            ) : null}
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">{reason}</p>
         )}
       </div>
       {!value && confirmField ? (
-        <details className="shrink-0">
+        <details className="w-full">
           <summary className="cursor-pointer text-xs text-[var(--brand)]">
             Подтвердить вручную
           </summary>
@@ -221,9 +287,7 @@ export function CuratorProgramLevelsCard({
   focused?: boolean;
   catalog?: boolean;
 }) {
-  const language =
-    humanizeLanguage(match.languageRequirement) ||
-    humanizeLanguage(match.teachingLanguages[0] ?? match.language);
+  const language = languageText(match);
   const whyFits = humanizeWhyFits(match.reasons);
   const shortlistLabel = match.onShortlist
     ? "В коротком списке"
@@ -231,19 +295,15 @@ export function CuratorProgramLevelsCard({
   const access = accessText(match);
   const exams = examsText(match);
   const seats = seatsText(match);
+  const orientir = indicativeNote(match);
   const callFreshness =
     match.callFreshness === "current"
       ? `Опубликован набор ${match.academicYear}`
-      : match.callFreshness === "indicative" || match.indicativeFromYear
-        ? previousYearCallNote(
-            match.academicYear,
-            match.intake,
-            match.indicativeFromYear
-          ) ?? "Есть ориентир за прошлый год"
-        : unknownFieldReasonLabel(
-            "NOT_PUBLISHED_FOR_TARGET_YEAR",
-            match.intake
-          );
+      : orientir ??
+        unknownFieldReasonLabel(
+          "NOT_PUBLISHED_FOR_TARGET_YEAR",
+          match.intake
+        );
 
   return (
     <article
@@ -294,15 +354,16 @@ export function CuratorProgramLevelsCard({
             label="Доступ и отбор"
             value={access}
             reason={fieldReason(match, "access")}
+            note={access ? orientir : null}
             confirmField="accessMode"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
             applicantCategory={match.applicantCategory}
           />
           <DecisionRow
-            label="Язык обучения / требование"
+            label="Язык"
             value={language || null}
-            reason="Требование к языку не опубликовано"
+            reason="Язык и требование не опубликованы"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
             applicantCategory={match.applicantCategory}
@@ -311,6 +372,7 @@ export function CuratorProgramLevelsCard({
             label="Экзамены"
             value={exams}
             reason={fieldReason(match, "exams")}
+            note={exams ? orientir : null}
             confirmField="examsDisplay"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
@@ -320,6 +382,7 @@ export function CuratorProgramLevelsCard({
             label="Места для категории"
             value={seats}
             reason={fieldReason(match, "seats")}
+            note={seats ? orientir : null}
             confirmField="nonEuSeats"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}

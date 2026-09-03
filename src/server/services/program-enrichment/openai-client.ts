@@ -58,6 +58,10 @@ export function createOpenAiEnrichmentClient(
         tool_choice: req.tool_choice,
         response_format: req.response_format,
         max_tokens: req.max_tokens,
+        // gpt-5.6-luna accepts function tools in Chat Completions only when
+        // reasoning is explicitly disabled. Without this, enrichment fails
+        // before the model can inspect any official admissions pages.
+        reasoning_effort: "none",
       });
       const choice = res.choices[0]?.message;
       const tool_calls = (choice?.tool_calls ?? [])
