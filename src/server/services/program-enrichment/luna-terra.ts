@@ -156,6 +156,50 @@ function collectFacts(output: EnrichmentOutput): EvidenceFact[] {
   ];
 }
 
+function relevantCriticalFields(forShortlist: boolean) {
+  return forShortlist
+    ? CRITICAL_FIELDS.filter(
+        (field) => field !== "deadlines" && field !== "tuition"
+      )
+    : [...CRITICAL_FIELDS];
+}
+
+/**
+ * Models occasionally return a schema-valid object with empty arrays and no
+ * unresolvedFields. Make missing coverage explicit so Luna escalates instead
+ * of silently passing an empty card to persistence.
+ */
+function markMissingCriticalFields(
+  output: EnrichmentOutput,
+  forShortlist: boolean
+): EnrichmentOutput {
+  const missing = relevantCriticalFields(forShortlist).filter(
+    (field) => output[field].length === 0
+  );
+  return {
+    ...output,
+    unresolvedFields: [...new Set([...output.unresolvedFields, ...missing])],
+  };
+}
+
+/**
+ * A shortlist result containing only language/campus metadata is not a useful
+ * second filter. Require at least one admission decision fact; otherwise the
+ * caller must run the deterministic fallback.
+ */
+export function isUsableEnrichmentOutput(
+  output: EnrichmentOutput,
+  forShortlist: boolean
+): boolean {
+  if (!forShortlist) return collectFacts(output).length > 0;
+  return (
+    output.access.length > 0 ||
+    output.selection.length > 0 ||
+    output.admissionExams.length > 0 ||
+    output.seats.length > 0
+  );
+}
+
 export function validateOutputQuotes(
   output: EnrichmentOutput,
   documentTexts: Map<string, string>
@@ -326,7 +370,10 @@ export async function runLunaTerraEnrichment(input: {
   let output = luna.output;
   if (output) {
     const v = validateOutputQuotes(output, docTexts);
-    output = v.valid;
+    output = markMissingCriticalFields(
+      v.valid,
+      input.forShortlist ?? false
+    );
     quoteRejectCount = v.rejectCount;
     invalidCritical = v.invalidCritical;
   }
@@ -363,7 +410,10 @@ export async function runLunaTerraEnrichment(input: {
       );
       const v = validateOutputQuotes(terra.output, refreshedTexts);
       // Only keep Terra facts that pass quote validation; do not keep invalid Luna facts
-      output = v.valid;
+      output = markMissingCriticalFields(
+        v.valid,
+        input.forShortlist ?? false
+      );
       quoteRejectCount = v.rejectCount;
     } else {
       // Terra failed — do not keep dubious Luna critical facts with bad quotes
@@ -382,7 +432,13 @@ export async function runLunaTerraEnrichment(input: {
     }
   }
 
-  void collectFacts;
+  if (
+    output &&
+    !isUsableEnrichmentOutput(output, input.forShortlist ?? false)
+  ) {
+    output = null;
+  }
+
   return {
     output,
     model,

@@ -28,6 +28,7 @@ export async function POST(
   }
 
   const encoder = new TextEncoder();
+  let streamOpen = true;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -38,7 +39,20 @@ export async function POST(
           lastStage = event.stage;
           lastLabel = event.label;
         }
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        if (!streamOpen) return;
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        } catch (error) {
+          // A tab refresh, navigation, or proxy timeout can close the response
+          // while enrichment is still running. Losing progress delivery must
+          // not abort the server-side matching job.
+          streamOpen = false;
+          console.warn("[program-matching] progress stream disconnected", {
+            studentId,
+            stage: lastStage,
+            error,
+          });
+        }
       };
 
       try {
@@ -71,11 +85,22 @@ export async function POST(
         });
         send({
           stage: "error",
-          message: `Подбор остановлен на этапе «${lastLabel}». Результаты не изменены.`,
+          message: `Подбор остановлен на этапе «${lastLabel}». Список программ не обновлён.`,
         });
       } finally {
-        controller.close();
+        if (streamOpen) {
+          try {
+            controller.close();
+          } catch {
+            streamOpen = false;
+          }
+        }
       }
+    },
+    cancel() {
+      // Do not cancel persistProgramMatches: facts and the final shortlist
+      // must finish even when the browser no longer consumes progress.
+      streamOpen = false;
     },
   });
 
