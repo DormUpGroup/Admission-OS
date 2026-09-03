@@ -80,7 +80,7 @@ export default async function PortalProgramsPage() {
                 href={`/portal/applications/${app.id}`}
                 universityName={app.program.university.name}
                 programName={app.program.name}
-                city={app.program.university.city}
+                city={null}
                 intake={app.intake}
                 status={app.status}
                 readinessPercent={app.readinessPercent}
@@ -111,6 +111,11 @@ export default async function PortalProgramsPage() {
                   ) : (
                     <form action={requestApplicationAction}>
                       <input type="hidden" name="programId" value={m.programId} />
+                      <input
+                        type="hidden"
+                        name="programAcademicYearId"
+                        value={m.programAcademicYearId || ""}
+                      />
                       <Button type="submit" size="sm" className="w-full h-11 sm:h-8">
                         Хочу подать
                       </Button>

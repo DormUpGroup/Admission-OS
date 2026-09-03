@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { regionForCity } from "@/lib/program-matching/taxonomy";
 import type { ApplicantCategory } from "@/lib/program-matching/types";
+import {
+  factDimensionKey,
+  PROGRAMME_FACT_RESOLVER_VERSION,
+} from "@/server/services/program-matching/programme-fact-contract";
 import {
   factAppliesToCategory,
   scopeForApplicantCategory,
@@ -15,6 +20,7 @@ import {
 
 export type PersistEnrichmentResult = {
   savedFields: string[];
+  savedFactIds: string[];
   quoteRejectCount: number;
   conflicts: number;
   campusesUpdated: boolean;
@@ -29,14 +35,16 @@ async function supersedeAutomaticFact(input: {
   programAcademicYearId: string;
   field: string;
   applicantCategoryScope: string;
-}) {
-  const existing = await prisma.programFact.findMany({
+  dimensionKey: string;
+}, db: Prisma.TransactionClient) {
+  const existing = await db.programFact.findMany({
     where: {
       programId: input.programId,
       programAcademicYearId: input.programAcademicYearId,
       field: input.field,
       superseded: false,
       applicantCategoryScope: input.applicantCategoryScope,
+      dimensionKey: input.dimensionKey,
     },
   });
   for (const fact of existing) {
@@ -47,7 +55,7 @@ async function supersedeAutomaticFact(input: {
     ) {
       continue;
     }
-    await prisma.programFact.update({
+    await db.programFact.update({
       where: { id: fact.id },
       data: { superseded: true },
     });
@@ -60,6 +68,34 @@ async function supersedeAutomaticFact(input: {
   );
 }
 
+function discriminatorForFact(group: CriticalField, fact: EvidenceFact): {
+  roundName?: string;
+  categoryCode?: string;
+  discriminator?: string;
+} {
+  const value =
+    fact.value && typeof fact.value === "object"
+      ? (fact.value as Record<string, unknown>)
+      : {};
+  if (group === "deadlines") {
+    return { roundName: String(value.roundName || value.round || "primary") };
+  }
+  if (group === "seats") {
+    return {
+      categoryCode: value.categoryCode ? String(value.categoryCode) : undefined,
+      discriminator: String(value.originalGroup || value.category || fact.scope),
+    };
+  }
+  if (group === "campuses") {
+    return { discriminator: String(value.city || fact.value) };
+  }
+  return {
+    discriminator: String(
+      value.name || value.type || value.language || value.description || fact.value
+    ).slice(0, 120),
+  };
+}
+
 export async function persistEnrichmentOutput(input: {
   programId: string;
   programAcademicYearId: string;
@@ -68,16 +104,21 @@ export async function persistEnrichmentOutput(input: {
   output: EnrichmentOutput;
   documentTexts: Map<string, string>;
   extractionMethod: string;
+  /** Initial matching intentionally defers time-sensitive administrative fields. */
+  deferAdministrativeFields?: boolean;
 }): Promise<PersistEnrichmentResult> {
+  return prisma.$transaction(async (db) => {
   const savedFields: string[] = [];
+  const savedFactIds: string[] = [];
   let quoteRejectCount = 0;
   let campusesUpdated = false;
   const profileScope = scopeForApplicantCategory(input.applicantCategory);
   const allowCategorySpecific = input.applicantCategory !== "UNKNOWN";
 
-  const groups: Array<[CriticalField, EvidenceFact[]]> = [
+  const allGroups: Array<[CriticalField, EvidenceFact[]]> = [
     ["campuses", input.output.campuses],
     ["access", input.output.access],
+    ["selection", input.output.selection],
     ["admissionExams", input.output.admissionExams],
     ["languageRequirements", input.output.languageRequirements],
     ["deadlines", input.output.deadlines],
@@ -85,6 +126,10 @@ export async function persistEnrichmentOutput(input: {
     ["seats", input.output.seats],
     ["requiredDocuments", input.output.requiredDocuments],
   ];
+  const groups = allGroups.filter(([group]) =>
+    !input.deferAdministrativeFields ||
+    (group !== "deadlines" && group !== "tuition")
+  );
 
   const campusEntries: Array<{
     name?: string;
@@ -117,31 +162,38 @@ export async function persistEnrichmentOutput(input: {
 
       const scope =
         fact.scope === "ALL" ? "ALL" : fact.scope || profileScope;
+      const dimensionKey = factDimensionKey({
+        field,
+        scope,
+        ...discriminatorForFact(group, fact),
+      });
 
       const protectedFacts = await supersedeAutomaticFact({
         programId: input.programId,
         programAcademicYearId: input.programAcademicYearId,
         field,
         applicantCategoryScope: scope,
-      });
+        dimensionKey,
+      }, db);
       if (protectedFacts.length > 0) {
         // MANUAL_VERIFIED wins — do not write automatic replacement
         continue;
       }
 
-      const oldFacts = await prisma.programFact.findMany({
+      const oldFacts = await db.programFact.findMany({
         where: {
           programId: input.programId,
           programAcademicYearId: input.programAcademicYearId,
           field,
           superseded: true,
           applicantCategoryScope: scope,
+          dimensionKey,
         },
         orderBy: { retrievedAt: "desc" },
         take: 1,
       });
 
-      const created = await prisma.programFact.create({
+      const created = await db.programFact.create({
         data: {
           programId: input.programId,
           programAcademicYearId: input.programAcademicYearId,
@@ -155,6 +207,13 @@ export async function persistEnrichmentOutput(input: {
             confidence: fact.confidence,
             group,
           }),
+          origin: input.extractionMethod.startsWith("OPENAI_")
+            ? "AI"
+            : "OFFICIAL_FALLBACK",
+          dimensionKey,
+          decisionStatus: "ELIGIBLE",
+          evidenceValidatedAt: new Date(),
+          resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
           sourceDocumentId: fact.sourceDocumentId,
           sourceUrl: fact.sourceUrl,
           sourceType:
@@ -172,7 +231,7 @@ export async function persistEnrichmentOutput(input: {
         oldFacts[0] &&
         oldFacts[0].normalizedValueJson !== created.normalizedValueJson
       ) {
-        await prisma.programChangeEvent.create({
+        await db.programChangeEvent.create({
           data: {
             sourceDocumentId: fact.sourceDocumentId,
             programId: input.programId,
@@ -186,6 +245,7 @@ export async function persistEnrichmentOutput(input: {
       }
 
       savedFields.push(field);
+      savedFactIds.push(created.id);
 
       if (group === "campuses") {
         const city =
@@ -215,7 +275,7 @@ export async function persistEnrichmentOutput(input: {
   }
 
   for (const conflict of input.output.sourceConflicts) {
-    await prisma.programFact.create({
+    await db.programFact.create({
       data: {
         programId: input.programId,
         programAcademicYearId: input.programAcademicYearId,
@@ -225,6 +285,11 @@ export async function persistEnrichmentOutput(input: {
         evidenceQuote: conflict.description.slice(0, 1000),
         applicantCategoryScope: "ALL",
         freshness: "CONFLICT",
+        origin: input.extractionMethod.startsWith("OPENAI_")
+          ? "AI"
+          : "OFFICIAL_FALLBACK",
+        decisionStatus: "CONFLICT",
+        resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
         sourceType: "PROGRAMME_PAGE",
         academicYear: input.academicYear,
         confidence: "LOW",
@@ -236,7 +301,7 @@ export async function persistEnrichmentOutput(input: {
 
   if (campusEntries.length > 0) {
     const uniqueCities = [...new Set(campusEntries.map((c) => c.city))];
-    await prisma.program.update({
+    await db.program.update({
       where: { id: input.programId },
       data: {
         campusesJson: JSON.stringify(campusEntries),
@@ -252,8 +317,10 @@ export async function persistEnrichmentOutput(input: {
 
   return {
     savedFields: [...new Set(savedFields)],
+    savedFactIds,
     quoteRejectCount,
     conflicts: input.output.sourceConflicts.length,
     campusesUpdated,
   };
+  });
 }

@@ -3,6 +3,7 @@ import { ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
+import { labelOf } from "@/lib/labels";
 import {
   humanizeLanguage,
   humanizeWhyFits,
@@ -28,28 +29,21 @@ const SHORTLIST_LABELS: Record<string, string> = {
   SELECTED: "Выбрана",
 };
 
-function tuitionText(match: CuratorMatchView): string | null {
-  if (match.tuitionFixed != null) return `€${match.tuitionFixed}`;
-  if (match.tuitionMin != null && match.tuitionMax != null) {
-    return match.tuitionMin === match.tuitionMax
-      ? `€${match.tuitionMin}`
-      : `€${match.tuitionMin}–${match.tuitionMax}`;
-  }
-  if (match.tuitionMin != null) return `от €${match.tuitionMin}`;
-  if (match.tuitionMax != null) return `до €${match.tuitionMax}`;
-  return null;
-}
-
 function accessText(match: CuratorMatchView): string | null {
+  let access: string | null = null;
   if (match.accessMode === "OPEN") {
-    return match.seatsUnlimited ? "Свободный доступ, без лимита мест" : "Свободный доступ";
+    access = match.seatsUnlimited ? "Свободный доступ, без лимита мест" : "Свободный доступ";
   }
   if (match.accessMode === "CLOSED") {
-    return match.nonEuSeats != null
-      ? `Конкурс · ${match.nonEuSeats} мест non-EU`
-      : "Конкурсный набор";
+    access = "Конкурсный набор";
   }
-  return null;
+  const selection =
+    match.selection === "ENTRANCE_EXAM"
+      ? "вступительный экзамен"
+      : match.selection === "EVALUATION"
+        ? "оценка / тест"
+        : null;
+  return [access, selection].filter(Boolean).join(" · ") || null;
 }
 
 function examsText(match: CuratorMatchView): string | null {
@@ -61,15 +55,13 @@ function examsText(match: CuratorMatchView): string | null {
 
 function seatsText(match: CuratorMatchView): string | null {
   if (match.seatsUnlimited) return "Без лимита мест";
-  const parts: string[] = [];
-  if (match.euSeats != null) parts.push(`EU: ${match.euSeats}`);
-  if (match.nonEuSeats != null) parts.push(`non-EU: ${match.nonEuSeats}`);
-  return parts.length ? parts.join(" · ") : null;
+  if (match.quotaSeats == null) return null;
+  return `${match.quotaSeats} мест · ${match.quotaScope || "scope unknown"}`;
 }
 
 function fieldReason(
   match: CuratorMatchView,
-  field: "tuition" | "deadline" | "access" | "exams" | "seats" | "admissionCall"
+  field: "access" | "exams" | "seats" | "admissionCall"
 ): string {
   const status = match.fieldStatuses?.[field];
   if (status && !isFieldFilled(status) && status.reason) {
@@ -103,13 +95,15 @@ function DecisionRow({
   confirmField,
   studentId,
   programAcademicYearId,
+  applicantCategory,
 }: {
   label: string;
   value: string | null;
   reason: string;
-  confirmField: string;
+  confirmField?: string;
   studentId: string;
   programAcademicYearId: string;
+  applicantCategory?: string;
 }) {
   return (
     <div className="flex flex-col gap-1 border-b border-border/70 py-2 last:border-0 sm:flex-row sm:items-start sm:justify-between">
@@ -121,7 +115,7 @@ function DecisionRow({
           <p className="text-sm text-muted-foreground">{reason}</p>
         )}
       </div>
-      {!value ? (
+      {!value && confirmField ? (
         <details className="shrink-0">
           <summary className="cursor-pointer text-xs text-[var(--brand)]">
             Подтвердить вручную
@@ -136,23 +130,18 @@ function DecisionRow({
               name="programAcademicYearId"
               value={programAcademicYearId}
             />
-            {confirmField === "deadline" ? (
-              <input
-                name="deadline"
-                type="date"
-                required
-                className="h-7 rounded-md border border-input bg-card px-2 text-xs"
-              />
-            ) : null}
-            {confirmField === "tuitionMin" ? (
-              <input
-                name="tuitionMin"
-                type="number"
-                placeholder="€"
-                required
-                className="h-7 w-24 rounded-md border border-input bg-card px-2 text-xs"
-              />
-            ) : null}
+            <select
+              name="applicantCategory"
+              defaultValue={applicantCategory || "UNKNOWN"}
+              required
+              className="h-7 rounded-md border border-input bg-card px-2 text-xs"
+            >
+              <option value="UNKNOWN" disabled>Applicant category</option>
+              <option value="EU_CITIZEN">EU citizen</option>
+              <option value="EU_EQUIVALENT">EU equivalent</option>
+              <option value="NON_EU_RESIDENT_ITALY">Non-EU resident Italy</option>
+              <option value="NON_EU_RESIDENT_ABROAD">Non-EU resident abroad</option>
+            </select>
             {confirmField === "accessMode" ? (
               <select
                 name="accessMode"
@@ -181,6 +170,20 @@ function DecisionRow({
                 className="h-7 w-40 rounded-md border border-input bg-card px-2 text-xs"
               />
             ) : null}
+            <input
+              name="manualSourceUrl"
+              type="url"
+              placeholder="Official source URL"
+              required
+              className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
+            />
+            <input
+              name="evidenceQuote"
+              type="text"
+              placeholder="Exact evidence quote"
+              required
+              className="h-7 w-52 rounded-md border border-input bg-card px-2 text-xs"
+            />
             <Button type="submit" size="sm">
               Сохранить
             </Button>
@@ -207,13 +210,9 @@ export function CuratorProgramLevelsCard({
   const shortlistLabel = match.onShortlist
     ? "В shortlist"
     : SHORTLIST_LABELS[match.curatorStatus] ?? "Автоподбор";
-  const tuition = tuitionText(match);
   const access = accessText(match);
   const exams = examsText(match);
   const seats = seatsText(match);
-  const deadline = match.deadline
-    ? formatDate(match.deadline)
-    : null;
   const callFreshness =
     match.callFreshness === "current"
       ? `Опубликован call ${match.academicYear}`
@@ -248,69 +247,68 @@ export function CuratorProgramLevelsCard({
                 </span>
               ) : null}
               {language ? <span>{language}</span> : null}
+              <span>{labelOf(match.degreeLevel)}</span>
+              <span>{match.academicYear}</span>
             </p>
           </div>
-          <Badge variant={match.onShortlist ? "success" : "muted"}>
-            {shortlistLabel}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <span className="rounded-md bg-[var(--brand-soft)] px-2 py-1 text-xs font-semibold tabular-nums text-[var(--brand)]">
+              Fit {match.fitScore}/100
+            </span>
+            <Badge variant={match.onShortlist ? "success" : "muted"}>
+              {shortlistLabel}
+            </Badge>
+          </div>
         </div>
         {whyFits ? (
-          <p className="text-sm text-foreground">{whyFits}</p>
+          <p className="rounded-md bg-[var(--brand-soft)]/60 px-2.5 py-1.5 text-sm text-foreground">
+            {whyFits}
+          </p>
         ) : null}
       </div>
 
       <div className="px-4 py-3">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Решение
+          Проверить перед shortlist
         </p>
-        <DecisionRow
-          label="Актуальность call"
-          value={match.callFreshness === "current" ? callFreshness : null}
-          reason={callFreshness}
-          confirmField="deadline"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
-        <DecisionRow
-          label="Доступ"
-          value={access}
-          reason={fieldReason(match, "access")}
-          confirmField="accessMode"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
-        <DecisionRow
-          label="Экзамены"
-          value={exams}
-          reason={fieldReason(match, "exams")}
-          confirmField="examsDisplay"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
-        <DecisionRow
-          label="Tuition"
-          value={tuition}
-          reason={fieldReason(match, "tuition")}
-          confirmField="tuitionMin"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
-        <DecisionRow
-          label="Дедлайн"
-          value={deadline}
-          reason={fieldReason(match, "deadline")}
-          confirmField="deadline"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
-        <DecisionRow
-          label="Квоты"
-          value={seats}
-          reason={fieldReason(match, "seats")}
-          confirmField="nonEuSeats"
-          studentId={match.studentId}
-          programAcademicYearId={match.programAcademicYearId}
-        />
+        <div className="grid gap-x-5 sm:grid-cols-2">
+          <DecisionRow
+            label="Доступ и отбор"
+            value={access}
+            reason={fieldReason(match, "access")}
+            confirmField="accessMode"
+            studentId={match.studentId}
+            programAcademicYearId={match.programAcademicYearId}
+            applicantCategory={match.applicantCategory}
+          />
+          <DecisionRow
+            label="Язык обучения / требование"
+            value={language || null}
+            reason="Требование к языку не опубликовано"
+            studentId={match.studentId}
+            programAcademicYearId={match.programAcademicYearId}
+            applicantCategory={match.applicantCategory}
+          />
+          <DecisionRow
+            label="Экзамены"
+            value={exams}
+            reason={fieldReason(match, "exams")}
+            confirmField="examsDisplay"
+            studentId={match.studentId}
+            programAcademicYearId={match.programAcademicYearId}
+            applicantCategory={match.applicantCategory}
+          />
+          <DecisionRow
+            label="Места для категории"
+            value={seats}
+            reason={fieldReason(match, "seats")}
+            confirmField="nonEuSeats"
+            studentId={match.studentId}
+            programAcademicYearId={match.programAcademicYearId}
+            applicantCategory={match.applicantCategory}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{callFreshness}</p>
       </div>
 
       <details className="border-t border-border px-4 py-3" open={focused}>
@@ -348,11 +346,15 @@ export function CuratorProgramLevelsCard({
               Качество извлечения: нужна проверка куратора
             </p>
           ) : null}
-          {match.verifiedFacts && match.verifiedFacts.length > 0 ? (
+          {match.verifiedFacts && match.verifiedFacts.some(
+            (fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field)
+          ) ? (
             <div>
               <p className="text-muted-foreground">Ручные подтверждения</p>
               <ul className="mt-1 space-y-0.5">
-                {match.verifiedFacts.map((fact) => (
+                {match.verifiedFacts
+                  .filter((fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field))
+                  .map((fact) => (
                   <li key={fact.field}>
                     {fact.field}
                     {fact.verifiedAt ? ` · ${formatDate(fact.verifiedAt)}` : ""}
@@ -363,11 +365,16 @@ export function CuratorProgramLevelsCard({
           ) : (
             <p className="text-muted-foreground">Ручных подтверждений пока нет</p>
           )}
-          {match.changeEvents && match.changeEvents.length > 0 ? (
+          {match.changeEvents && match.changeEvents.some(
+            (event) => !["TUITION", "APPLICATION_DEADLINE"].includes(event.field)
+          ) ? (
             <div>
               <p className="text-muted-foreground">История изменений</p>
               <ul className="mt-1 space-y-0.5">
-                {match.changeEvents.slice(0, 8).map((event) => (
+                {match.changeEvents
+                  .filter((event) => !["TUITION", "APPLICATION_DEADLINE"].includes(event.field))
+                  .slice(0, 8)
+                  .map((event) => (
                   <li key={event.id}>
                     {event.field}
                     {event.oldValue && event.newValue
@@ -379,15 +386,22 @@ export function CuratorProgramLevelsCard({
               </ul>
             </div>
           ) : null}
-          {match.criticalFacts && match.criticalFacts.length > 0 ? (
+          {match.criticalFacts && match.criticalFacts.some(
+            (fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field)
+          ) ? (
             <div>
               <p className="text-muted-foreground">Доказанные поля</p>
               <ul className="mt-1 space-y-1">
-                {match.criticalFacts.slice(0, 8).map((f) => (
-                  <li key={`${f.field}-${f.quote}`}>
+                {match.criticalFacts
+                  .filter((fact) => !["TUITION", "APPLICATION_DEADLINE"].includes(fact.field))
+                  .slice(0, 8)
+                  .map((f, index) => (
+                  <li key={`${f.field}-${index}-${f.sourceUrl ?? ""}`}>
                     <span className="font-medium">{f.field}</span>
                     {f.freshness ? ` · ${f.freshness}` : ""}
                     {f.scope ? ` · scope ${f.scope}` : ""}
+                    {f.confidence ? ` · confidence ${f.confidence}` : ""}
+                    {f.origin ? ` · ${f.origin}` : ""}
                     {f.quote ? (
                       <span className="block text-muted-foreground italic">
                         «{f.quote.slice(0, 120)}»
@@ -488,6 +502,11 @@ export function CuratorProgramLevelsCard({
               <form action={createApplicationAction}>
                 <input type="hidden" name="studentId" value={match.studentId} />
                 <input type="hidden" name="programId" value={match.programId} />
+                <input
+                  type="hidden"
+                  name="programAcademicYearId"
+                  value={match.programAcademicYearId}
+                />
                 <input type="hidden" name="intake" value={match.intake} />
                 <Button type="submit" size="sm" variant="outline">
                   Создать заявку

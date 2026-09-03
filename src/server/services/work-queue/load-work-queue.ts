@@ -11,6 +11,8 @@ import type {
   WorkQueueStudentInput,
   WorkQueueView,
 } from "./types";
+import { buildMatchingProfileFromStudent } from "@/server/services/program-matching/matching-profile";
+import { resolveProgramFact } from "@/server/services/program-matching/source-resolver";
 
 type MessageMeta = {
   note?: string;
@@ -136,19 +138,22 @@ export async function loadWorkQueue(input: {
           where: { id: { in: payIds } },
           include: {
             program: { include: { university: true } },
-            tuition: true,
             facts: {
               where: { superseded: false, field: "TUITION" },
-              select: {
-                verificationStatus: true,
-                sourceType: true,
-              },
             },
           },
         });
   const yearById = new Map(years.map((y) => [y.id, y]));
 
   const snapshots: WorkQueueStudentInput[] = students.map((s) => {
+    const applicantCategory =
+      buildMatchingProfileFromStudent(s).applicantCategory;
+    const resolvedTuition = (pay: (typeof years)[number] | undefined) =>
+      pay
+        ? resolveProgramFact(pay.facts, pay.academicYear, {
+            applicantCategory,
+          })
+        : null;
     const shortlistIds = new Set(
       s.shortlistItems.map((item) => item.programAcademicYearId)
     );
@@ -179,15 +184,10 @@ export async function loadWorkQueue(input: {
     const programsFromMatches: WorkQueueStudentInput["programs"] =
       s.programMatches.map((match) => {
       const pay = yearById.get(match.programAcademicYearId);
-      const tuitionMissing =
-        pay?.tuition?.minTuition == null &&
-        pay?.tuition?.maxTuition == null &&
-        pay?.tuition?.fixedTuition == null;
-      const tuitionVerified = (pay?.facts ?? []).some(
-        (f) =>
-          f.verificationStatus === "VERIFIED" ||
-          f.sourceType === "MANUAL_VERIFIED"
-      );
+      const tuitionFact = resolvedTuition(pay);
+      const tuitionMissing = !tuitionFact;
+      const tuitionVerified =
+        tuitionFact?.origin === "MANUAL_VERIFIED";
       return {
         matchId: match.id,
         programId: pay?.programId ?? match.programAcademicYear.programId,
@@ -226,15 +226,10 @@ export async function loadWorkQueue(input: {
       if (matchPayIds.has(item.programAcademicYearId)) continue;
       const pay = yearById.get(item.programAcademicYearId);
       if (!pay) continue;
-      const tuitionMissing =
-        pay.tuition?.minTuition == null &&
-        pay.tuition?.maxTuition == null &&
-        pay.tuition?.fixedTuition == null;
-      const tuitionVerified = pay.facts.some(
-        (f) =>
-          f.verificationStatus === "VERIFIED" ||
-          f.sourceType === "MANUAL_VERIFIED"
-      );
+      const tuitionFact = resolvedTuition(pay);
+      const tuitionMissing = !tuitionFact;
+      const tuitionVerified =
+        tuitionFact?.origin === "MANUAL_VERIFIED";
       programsFromMatches.push({
         matchId: item.programMatchId,
         programId: pay.programId,

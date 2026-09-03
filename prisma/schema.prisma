@@ -17,55 +17,55 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  curatedStudents  Student[]  @relation("CuratorStudents")
-  acceptedStudents Student[]  @relation("StudentAcceptedBy")
-  studentProfile   Student?   @relation("StudentUser")
-  assignedTasks    Task[]     @relation("TaskAssignee")
-  reviewedDocs     Document[]  @relation("DocumentReviewer")
+  curatedStudents  Student[]           @relation("CuratorStudents")
+  acceptedStudents Student[]           @relation("StudentAcceptedBy")
+  studentProfile   Student?            @relation("StudentUser")
+  assignedTasks    Task[]              @relation("TaskAssignee")
+  reviewedDocs     Document[]          @relation("DocumentReviewer")
   activities       Activity[]
   notifications    InAppNotification[]
 }
 
 model Student {
-  id                String   @id @default(cuid())
-  userId            String?  @unique
-  firstName         String
-  lastName          String
-  email             String   @unique
-  phone             String?
-  country           String?
-  nationality       String?
-  studyLevel        String   @default("BACHELOR")
-  intake            String
-  targetField       String?
-  preferredLanguage String?
-  preferredCities   String?
-  questionnaireAt   DateTime?
+  id                        String    @id @default(cuid())
+  userId                    String?   @unique
+  firstName                 String
+  lastName                  String
+  email                     String    @unique
+  phone                     String?
+  country                   String?
+  nationality               String?
+  studyLevel                String    @default("BACHELOR")
+  intake                    String
+  targetField               String?
+  preferredLanguage         String?
+  preferredCities           String?
+  questionnaireAt           DateTime?
   questionnairePersonalJson String?
   questionnaireProgramsJson String?
-  questionnaireProgramsAt DateTime?
-  status            String   @default("ACTIVE")
-  journeyStage      String   @default("PROFILE")
-  curatorId         String?
-  riskLevel         String   @default("NONE")
-  nextActionJson    String?
-  accompanimentStatus String @default("NONE")
-  acceptedAt        DateTime?
-  acceptedById      String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  questionnaireProgramsAt   DateTime?
+  status                    String    @default("ACTIVE")
+  journeyStage              String    @default("PROFILE")
+  curatorId                 String?
+  riskLevel                 String    @default("NONE")
+  nextActionJson            String?
+  accompanimentStatus       String    @default("NONE")
+  acceptedAt                DateTime?
+  acceptedById              String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  user         User?         @relation("StudentUser", fields: [userId], references: [id])
-  curator      User?         @relation("CuratorStudents", fields: [curatorId], references: [id])
-  acceptedBy   User?         @relation("StudentAcceptedBy", fields: [acceptedById], references: [id])
-  applications Application[]
-  documents    Document[]
-  tasks        Task[]
-  deadlines    Deadline[]
-  activities   Activity[]
+  user           User?                  @relation("StudentUser", fields: [userId], references: [id])
+  curator        User?                  @relation("CuratorStudents", fields: [curatorId], references: [id])
+  acceptedBy     User?                  @relation("StudentAcceptedBy", fields: [acceptedById], references: [id])
+  applications   Application[]
+  documents      Document[]
+  tasks          Task[]
+  deadlines      Deadline[]
+  activities     Activity[]
   programMatches ProgramMatch[]
   shortlistItems StudentShortlistItem[]
-  notifications InAppNotification[]
+  notifications  InAppNotification[]
 }
 
 model IntakeCohort {
@@ -78,18 +78,18 @@ model IntakeCohort {
 }
 
 model University {
-  id                     String    @id @default(cuid())
+  id                     String           @id @default(cuid())
   name                   String
-  slug                   String    @unique
+  slug                   String           @unique
   city                   String?
   region                 String?
-  country                String    @default("IT")
+  country                String           @default("IT")
   publicPrivate          String?
   website                String?
   universitalyExternalId String?
   notes                  String?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
   programs               Program[]
   sourceDocuments        SourceDocument[]
 }
@@ -123,11 +123,11 @@ model Program {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  university     University            @relation(fields: [universityId], references: [id])
-  applications   Application[]
-  templates      ApplicationTemplate[]
-  academicYears  ProgramAcademicYear[]
-  facts          ProgramFact[]
+  university      University            @relation(fields: [universityId], references: [id])
+  applications    Application[]
+  templates       ApplicationTemplate[]
+  academicYears   ProgramAcademicYear[]
+  facts           ProgramFact[]
   sourceDocuments SourceDocument[]
 
   @@unique([universityId, slug])
@@ -137,6 +137,7 @@ model Application {
   id                         String    @id @default(cuid())
   studentId                  String
   programId                  String
+  programAcademicYearId      String?
   status                     String    @default("SELECTED")
   intake                     String
   applicationRound           String?
@@ -155,12 +156,15 @@ model Application {
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
 
-  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  program      Program       @relation(fields: [programId], references: [id])
-  requirements Requirement[]
-  tasks        Task[]
-  deadlines    Deadline[]
-  activities   Activity[]
+  student             Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  program             Program              @relation(fields: [programId], references: [id])
+  programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
+  requirements        Requirement[]
+  tasks               Task[]
+  deadlines           Deadline[]
+  activities          Activity[]
+
+  @@index([programAcademicYearId])
 }
 
 model Requirement {
@@ -288,33 +292,34 @@ model ApplicationTemplateItem {
 }
 
 model ProgramAcademicYear {
-  id                String   @id @default(cuid())
-  programId         String
-  academicYear      String
-  status            String   @default("ACTIVE")
-  applicationStatus String   @default("UNKNOWN")
-  dataConfidence    String   @default("LOW")
-  indicativeFromYear String?
+  id                      String    @id @default(cuid())
+  programId               String
+  academicYear            String
+  status                  String    @default("ACTIVE")
+  applicationStatus       String    @default("UNKNOWN")
+  dataConfidence          String    @default("LOW")
+  indicativeFromYear      String?
   // OPEN | CLOSED | UNKNOWN
-  accessMode        String   @default("UNKNOWN")
+  accessMode              String    @default("UNKNOWN")
   // Last successful deep HTML dossier enrich (shared across students)
-  dossierEnrichedAt DateTime?
+  dossierEnrichedAt       DateTime?
   // Last monitoring poll (even when page unchanged) — cadence 7/14 days
   lastMonitoringCheckedAt DateTime?
-  verifiedAt        DateTime?
-  lastUpdatedAt     DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  verifiedAt              DateTime?
+  lastUpdatedAt           DateTime  @default(now())
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
-  program      Program               @relation(fields: [programId], references: [id], onDelete: Cascade)
-  cycles       AdmissionCycle[]
-  requirements AdmissionRequirement[]
-  tuition      TuitionInfo?
-  matches      ProgramMatch[]
-  shortlistItems StudentShortlistItem[]
-  facts        ProgramFact[]
+  program         Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  cycles          AdmissionCycle[]
+  requirements    AdmissionRequirement[]
+  tuition         TuitionInfo?
+  matches         ProgramMatch[]
+  shortlistItems  StudentShortlistItem[]
+  facts           ProgramFact[]
   sourceDocuments SourceDocument[]
-  enrichmentRuns ProgramEnrichmentRun[]
+  enrichmentRuns  ProgramEnrichmentRun[]
+  applications    Application[]
 
   @@unique([programId, academicYear])
 }
@@ -369,26 +374,26 @@ model TuitionInfo {
 }
 
 model SourceDocument {
-  id               String    @id @default(cuid())
-  sourceType       String
-  sourceAuthority  String?
-  url              String
-  title            String?
-  academicYear     String?
-  universityId     String?
-  programId        String?
+  id                    String    @id @default(cuid())
+  sourceType            String
+  sourceAuthority       String?
+  url                   String
+  title                 String?
+  academicYear          String?
+  universityId          String?
+  programId             String?
   programAcademicYearId String?
-  contentType      String    @default("html")
-  retrievedAt      DateTime  @default(now())
-  publishedAt      DateTime?
-  contentHash      String
-  rawStoragePath   String?
-  rawText          String?
-  parserVersion    String    @default("v1")
-  status           String    @default("FETCHED")
-  extractionQuality String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  contentType           String    @default("html")
+  retrievedAt           DateTime  @default(now())
+  publishedAt           DateTime?
+  contentHash           String
+  rawStoragePath        String?
+  rawText               String?
+  parserVersion         String    @default("v1")
+  status                String    @default("FETCHED")
+  extractionQuality     String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   university          University?          @relation(fields: [universityId], references: [id])
   program             Program?             @relation(fields: [programId], references: [id])
@@ -401,33 +406,44 @@ model SourceDocument {
 }
 
 model ProgramFact {
-  id                 String    @id @default(cuid())
-  programId          String
-  programAcademicYearId String?
-  field              String
-  normalizedValueJson String
-  rawValue           String?
-  evidenceQuote      String?
+  id                     String    @id @default(cuid())
+  programId              String
+  programAcademicYearId  String?
+  field                  String
+  normalizedValueJson    String
+  rawValue               String?
+  evidenceQuote          String?
   applicantCategoryScope String?
-  freshness          String?
+  freshness              String?
   extractionMetadataJson String?
-  sourceDocumentId   String?
-  sourceUrl          String?
-  sourceType         String
-  academicYear       String?
-  retrievedAt        DateTime  @default(now())
-  confidence         String    @default("MEDIUM")
-  extractionMethod   String    @default("MANUAL")
-  verificationStatus String    @default("UNVERIFIED")
-  verifiedById       String?
-  verifiedAt         DateTime?
-  verificationNote   String?
-  superseded         Boolean   @default(false)
+  // AI | OFFICIAL_FALLBACK | MANUAL_VERIFIED | LEGACY_CANDIDATE | DISCOVERY
+  origin                 String    @default("LEGACY_CANDIDATE")
+  // Stable discriminator for collection facts (quota category, round, campus, exam).
+  dimensionKey           String?
+  // ELIGIBLE | LEGACY_CANDIDATE | AMBIGUOUS | CONFLICT
+  decisionStatus         String    @default("LEGACY_CANDIDATE")
+  evidenceValidatedAt    DateTime?
+  resolverVersion        String?
+  sourceDocumentId       String?
+  sourceUrl              String?
+  sourceType             String
+  academicYear           String?
+  retrievedAt            DateTime  @default(now())
+  confidence             String    @default("MEDIUM")
+  extractionMethod       String    @default("MANUAL")
+  verificationStatus     String    @default("UNVERIFIED")
+  verifiedById           String?
+  verifiedAt             DateTime?
+  verificationNote       String?
+  superseded             Boolean   @default(false)
 
-  program             Program              @relation(fields: [programId], references: [id], onDelete: Cascade)
-  programAcademicYear ProgramAcademicYear? @relation(fields: [programAcademicYearId], references: [id])
-  sourceDocument      SourceDocument?      @relation(fields: [sourceDocumentId], references: [id])
+  program             Program                @relation(fields: [programId], references: [id], onDelete: Cascade)
+  programAcademicYear ProgramAcademicYear?   @relation(fields: [programAcademicYearId], references: [id])
+  sourceDocument      SourceDocument?        @relation(fields: [sourceDocumentId], references: [id])
   requirements        AdmissionRequirement[]
+
+  @@index([programAcademicYearId, field, academicYear, applicantCategoryScope])
+  @@index([programAcademicYearId, field, origin, decisionStatus, superseded])
 }
 
 model ProgramEnrichmentRun {
@@ -439,6 +455,10 @@ model ProgramEnrichmentRun {
   promptVersion         String
   sourceFingerprint     String
   sourceDocumentIdsJson String?
+  resolvedFactIdsJson   String?
+  origin                String    @default("AI")
+  academicYear          String?
+  resolverVersion       String?
   toolCallCount         Int       @default(0)
   inputTokens           Int?
   outputTokens          Int?
@@ -455,28 +475,28 @@ model ProgramEnrichmentRun {
 }
 
 model ProgramMatch {
-  id                    String    @id @default(cuid())
-  studentId             String
-  programAcademicYearId String
-  eligibilityStatus     String
-  fitScore              Int
-  scoreBreakdownJson    String?
+  id                      String    @id @default(cuid())
+  studentId               String
+  programAcademicYearId   String
+  eligibilityStatus       String
+  fitScore                Int
+  scoreBreakdownJson      String?
   requirementsSummaryJson String?
-  reasonsJson           String?
-  risksJson             String?
-  missingInformationJson String?
-  discoveryMetaJson     String?
-  dataConfidence        String    @default("LOW")
-  generatedAt           DateTime  @default(now())
-  matchingEngineVersion String
-  curatorStatus         String    @default("AUTO_MATCHED")
-  curatorNotes          String?
-  reviewedById          String?
-  reviewedAt            DateTime?
-  monitoringSelected    Boolean   @default(false)
-  monitoringSelectedAt  DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  reasonsJson             String?
+  risksJson               String?
+  missingInformationJson  String?
+  discoveryMetaJson       String?
+  dataConfidence          String    @default("LOW")
+  generatedAt             DateTime  @default(now())
+  matchingEngineVersion   String
+  curatorStatus           String    @default("AUTO_MATCHED")
+  curatorNotes            String?
+  reviewedById            String?
+  reviewedAt              DateTime?
+  monitoringSelected      Boolean   @default(false)
+  monitoringSelectedAt    DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   student             Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
@@ -503,22 +523,22 @@ model StudentShortlistItem {
 }
 
 model ScholarshipProgram {
-  id           String   @id @default(cuid())
+  id           String            @id @default(cuid())
   region       String
   authority    String
   name         String
   academicYear String
   sourceUrl    String?
   verifiedAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   rules        ScholarshipRule[]
 
   @@unique([authority, academicYear, name])
 }
 
 model ScholarshipRule {
-  id                    String  @id @default(cuid())
+  id                    String    @id @default(cuid())
   scholarshipProgramId  String
   iseeThreshold         Int?
   ispeThreshold         Int?
@@ -534,16 +554,16 @@ model ScholarshipRule {
 }
 
 model ProgramChangeEvent {
-  id               String   @id @default(cuid())
-  sourceDocumentId String?
-  programId        String?
+  id                    String   @id @default(cuid())
+  sourceDocumentId      String?
+  programId             String?
   programAcademicYearId String?
-  field            String
-  oldValue         String?
-  newValue         String?
-  severity         String   @default("INFO")
-  alerted          Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  field                 String
+  oldValue              String?
+  newValue              String?
+  severity              String   @default("INFO")
+  alerted               Boolean  @default(false)
+  createdAt             DateTime @default(now())
 
   sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
 }

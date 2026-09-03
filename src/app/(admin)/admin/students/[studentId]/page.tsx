@@ -173,7 +173,11 @@ export default async function StudentProfilePage({
   const programsAnswers = parseProgramsAnswers(student.questionnaireProgramsJson);
 
   const dossiers = await Promise.all(
-    persistedMatches.map((m) => getProgramDossier(m.programAcademicYearId))
+    persistedMatches.map((m) =>
+      getProgramDossier(m.programAcademicYearId, {
+        applicantCategory: matchingProfile?.applicantCategory,
+      })
+    )
   );
   const dossierByPay = new Map(
     dossiers
@@ -256,9 +260,9 @@ export default async function StudentProfilePage({
       programAcademicYearId: pay.id,
       programName: program.name,
       universityName: program.university.name,
-      city: program.campusCity,
+      city: null,
       universityCity: program.university.city,
-      region: program.region,
+      region: null,
       degreeLevel: program.degreeLevel,
       language: program.language,
       teachingLanguages,
@@ -266,6 +270,7 @@ export default async function StudentProfilePage({
       publicPrivate: program.university.publicPrivate || "UNKNOWN",
       field: program.field,
       academicYear: pay.academicYear,
+      applicantCategory: matchingProfile?.applicantCategory ?? "UNKNOWN",
       eligibilityStatus: m.eligibilityStatus,
       fitScore: m.fitScore,
       dataConfidence: m.dataConfidence,
@@ -275,14 +280,14 @@ export default async function StudentProfilePage({
       riskNotes,
       missingInformation,
       requirements,
-      deadline: pay.cycles[0]?.applicationDeadline ?? null,
-      tuitionMin: pay.tuition?.minTuition ?? null,
-      tuitionMax: pay.tuition?.maxTuition ?? null,
-      tuitionFixed: pay.tuition?.fixedTuition ?? null,
-      accessMode: pay.accessMode || "UNKNOWN",
+      deadline: null,
+      tuitionMin: null,
+      tuitionMax: null,
+      tuitionFixed: null,
+      accessMode: "UNKNOWN",
       selection: "UNKNOWN",
-      euSeats: pay.cycles[0]?.euSeats ?? null,
-      nonEuSeats: pay.cycles[0]?.nonEuSeats ?? null,
+      euSeats: null,
+      nonEuSeats: null,
       seatsUnlimited: false,
       exams: [],
       examsDisplay: null,
@@ -308,40 +313,8 @@ export default async function StudentProfilePage({
       whyIncluded,
       inclusionKind,
       monitoringSelected: m.monitoringSelected ?? false,
-      campuses: (() => {
-        try {
-          const raw = program.campusesJson
-            ? (JSON.parse(program.campusesJson) as Array<{
-                city: string;
-                quote?: string;
-                sourceUrl?: string;
-              }>)
-            : [];
-          return Array.isArray(raw) ? raw : [];
-        } catch {
-          return [];
-        }
-      })(),
-      criticalFacts: pay.facts
-        .filter((f) =>
-          [
-            "ACCESS_TYPE",
-            "APPLICATION_DEADLINE",
-            "TUITION",
-            "SEATS",
-            "ADMISSION_EXAMS",
-            "LANGUAGE_REQUIREMENT",
-            "CAMPUS",
-          ].includes(f.field)
-        )
-        .map((f) => ({
-          field: f.field,
-          value: f.rawValue || f.normalizedValueJson,
-          freshness: f.freshness,
-          scope: f.applicantCategoryScope,
-          quote: f.evidenceQuote,
-          sourceUrl: f.sourceUrl,
-        })),
+      campuses: [],
+      criticalFacts: [],
       aiEnrichment: (() => {
         const run = (
           pay as typeof pay & {
@@ -419,9 +392,7 @@ export default async function StudentProfilePage({
       publicPrivate: sp.publicPrivate,
       accessMode: sp.accessMode,
       hasExam: sp.hasExam,
-      tuitionMax: sp.tuitionMax,
       callFreshness: sp.callFreshness,
-      deadlineBefore: sp.deadlineBefore,
     }
   );
 
@@ -488,15 +459,17 @@ export default async function StudentProfilePage({
     })),
     programs: persistedMatches.map((m) => {
       const pay = m.programAcademicYear;
+      const dossier = dossierByPay.get(pay.id);
       const tuitionMissing =
-        pay.tuition?.minTuition == null &&
-        pay.tuition?.maxTuition == null &&
-        pay.tuition?.fixedTuition == null;
-      const tuitionVerified = pay.facts.some(
-        (f) =>
-          f.verificationStatus === "VERIFIED" ||
-          f.sourceType === "MANUAL_VERIFIED"
-      );
+        dossier?.tuitionMin == null &&
+        dossier?.tuitionMax == null &&
+        dossier?.tuitionFixed == null;
+      const tuitionVerified =
+        dossier?.criticalFacts.some(
+          (fact) =>
+            fact.field === "TUITION" &&
+            fact.origin === "MANUAL_VERIFIED"
+        ) ?? false;
       return {
         matchId: m.id,
         programId: pay.program.id,
@@ -1160,13 +1133,6 @@ export default async function StudentProfilePage({
                   <option value="SAT">SAT</option>
                   <option value="IELTS">IELTS</option>
                 </select>
-                <Input
-                  name="tuitionMax"
-                  type="number"
-                  placeholder="Max tuition €"
-                  defaultValue={sp.tuitionMax || ""}
-                  className="h-8 w-[130px]"
-                />
                 <select
                   name="callFreshness"
                   defaultValue={sp.callFreshness || ""}
@@ -1177,12 +1143,6 @@ export default async function StudentProfilePage({
                   <option value="indicative">Indicative</option>
                   <option value="unknown">Unknown</option>
                 </select>
-                <Input
-                  name="deadlineBefore"
-                  type="date"
-                  defaultValue={sp.deadlineBefore || ""}
-                  className="h-8 w-[150px]"
-                />
                 <Button type="submit" size="sm" variant="outline">
                   Apply
                 </Button>

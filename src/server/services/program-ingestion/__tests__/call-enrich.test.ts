@@ -271,5 +271,13 @@ describe("bando-url-discover", () => {
     expect(parsed.admissionRegime.selection.value).toBe("ENTRANCE_EXAM");
     expect(parsed.euSeats?.value).toBe(50);
     expect(parsed.nonEuSeats?.value).toBe(40);
+    expect(
+      parsed.quotaRows.find(
+        (row) => row.category === "NON_EU_RESIDENT_ABROAD"
+      )?.places
+    ).toBe(40);
+    expect(
+      parsed.quotaRows.find((row) => row.category === "EU_EQUIVALENT")?.places
+    ).toBe(50);
   });
 });

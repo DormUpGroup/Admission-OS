@@ -4,9 +4,11 @@ import {
 } from "@/server/services/program-match-legacy-helpers";
 import {
   generateProgramMatches,
+  buildMatchingProfile,
   listPersistedMatches,
 } from "@/server/services/program-matching/program-matching";
 import { listStudentShortlist } from "@/server/services/program-matching/shortlist";
+import { getProgramDossier } from "@/server/services/program-matching/program-dossier";
 
 export type ProgramMatch = {
   programId: string;
@@ -25,6 +27,12 @@ export type ProgramMatch = {
   dataConfidence?: string;
   matchId?: string;
   programAcademicYearId?: string;
+  deadline?: Date | null;
+  tuitionMin?: number | null;
+  tuitionMax?: number | null;
+  tuitionFixed?: number | null;
+  quotaSeats?: number | null;
+  quotaScope?: string | null;
 };
 
 export {
@@ -69,6 +77,9 @@ export async function matchProgramsForStudent(
         eligibilityStatus: m.eligibilityStatus,
         dataConfidence: m.dataConfidence,
         programAcademicYearId: m.programAcademicYearId,
+        deadline: m.deadline,
+        tuitionMin: m.tuitionMin,
+        tuitionMax: m.tuitionMax,
       }));
   }
 
@@ -87,9 +98,13 @@ export async function matchProgramsFromShortlist(
     select: { id: true, programId: true },
   });
   const applied = new Map(apps.map((a) => [a.programId, a.id]));
+  const profile = await buildMatchingProfile(studentId);
 
-  return items.map((item) => {
+  return Promise.all(items.map(async (item) => {
     const p = item.programAcademicYear.program;
+    const dossier = await getProgramDossier(item.programAcademicYearId, {
+      applicantCategory: profile?.applicantCategory,
+    });
     return {
       programId: p.id,
       programName: p.name,
@@ -98,7 +113,7 @@ export async function matchProgramsFromShortlist(
       field: p.field,
       universityId: p.universityId,
       universityName: p.university.name,
-      city: p.campusCity || p.university.city,
+      city: dossier?.city ?? null,
       score: 100,
       reasons: item.curatorNote
         ? [item.curatorNote]
@@ -106,8 +121,15 @@ export async function matchProgramsFromShortlist(
       alreadyApplied: applied.has(p.id),
       applicationId: applied.get(p.id),
       programAcademicYearId: item.programAcademicYearId,
+      deadline:
+        dossier?.deadlines.find((entry) => entry.deadline)?.deadline ?? null,
+      tuitionMin: dossier?.tuitionMin ?? null,
+      tuitionMax: dossier?.tuitionMax ?? null,
+      tuitionFixed: dossier?.tuitionFixed ?? null,
+      quotaSeats: dossier?.quotaSeats ?? null,
+      quotaScope: dossier?.quotaScope ?? null,
     };
-  });
+  }));
 }
 
 export async function getPersistedMatchCards(studentId: string) {

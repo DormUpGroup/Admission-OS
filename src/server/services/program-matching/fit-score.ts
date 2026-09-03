@@ -12,7 +12,7 @@ import {
   BROAD_SHARED_CLASSI,
   type RelevanceEvidence,
 } from "@/server/services/program-matching/candidate-relevance";
-import { compareLanguageLevel, isUnknown } from "./compare";
+import { compareLanguageLevel } from "./compare";
 
 export type FitClasseProvenance = MiurCodeProvenance;
 
@@ -278,12 +278,9 @@ export function calculateFitScore(
     geography = Math.round(FIT_SCORE_WEIGHTS.geography * 0.3);
   }
 
-  let budget = Math.round(FIT_SCORE_WEIGHTS.budget * 0.5);
-  if (!isUnknown(profile.maxTuition) && typeof profile.maxTuition === "number") {
-    const tuition = program.minTuition ?? program.maxTuition;
-    if (tuition == null) budget = Math.round(FIT_SCORE_WEIGHTS.budget * 0.3);
-    else budget = tuition <= profile.maxTuition ? FIT_SCORE_WEIGHTS.budget : 0;
-  }
+  // Price is intentionally deferred until the curator has shortlisted a
+  // programme. Keep this neutral component so Fit remains comparable /100.
+  const budget = Math.round(FIT_SCORE_WEIGHTS.budget * 0.5);
 
   let scholarship = Math.round(FIT_SCORE_WEIGHTS.scholarship * 0.5);
   if (profile.needsScholarship === true) {

@@ -26,6 +26,7 @@
     "programs:qa-report": "tsx scripts/run-match-quality-report.ts",
     "programs:diagnose-gaps": "tsx scripts/diagnose-field-gaps.ts",
     "programs:monitor-selected": "tsx scripts/monitor-selected-programs.ts",
+    "programs:migrate-facts-v2": "tsx scripts/migrate-programme-facts-v2.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

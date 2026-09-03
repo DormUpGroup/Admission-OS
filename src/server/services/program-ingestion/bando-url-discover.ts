@@ -166,7 +166,7 @@ export function sameRegistrableDomain(a: string, b: string): boolean {
 export function discoverBandoUrls(
   html: string,
   pageUrl: string,
-  options?: { academicYear?: string; limit?: number }
+  options?: { academicYear?: string; limit?: number; includeTuition?: boolean }
 ): BandoUrlCandidate[] {
   const limit = options?.limit ?? 5;
   const academicYear = options?.academicYear;
@@ -230,6 +230,7 @@ export function discoverBandoUrls(
   }
 
   return [...byUrl.values()]
+    .filter((candidate) => options?.includeTuition !== false || candidate.kind !== "tasse")
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
@@ -238,7 +239,10 @@ export function discoverBandoUrls(
  * Programme roots often omit enrolment content; synthesize common admission paths.
  * Covers Unibo corsi.*, Ca' Foscari-style /iscriversi, and generic EN/IT leaves.
  */
-export function admissionSiblingUrls(pageUrl: string): BandoUrlCandidate[] {
+export function admissionSiblingUrls(
+  pageUrl: string,
+  options?: { includeTuition?: boolean }
+): BandoUrlCandidate[] {
   try {
     const u = new URL(pageUrl);
     const host = u.hostname.toLowerCase();
@@ -254,20 +258,22 @@ export function admissionSiblingUrls(pageUrl: string): BandoUrlCandidate[] {
     if (/corsi\.unibo\.it$/i.test(host)) {
       suffixes.push("/how-to-enrol", "/admission");
       // Central ateneo fees (university-wide), same registrable domain.
-      out.push({
-        url: `${u.protocol}//www.unibo.it/en/teaching/enrolment-transfer-and-final-examination/tuition-fees-and-exemptions/tuition-fees`,
-        score: 75,
-        label: "unibo-tuition-fees",
-        isPdf: false,
-        kind: "tasse",
-      });
-      out.push({
-        url: `${u.protocol}//www.unibo.it/it/didattica/iscrizioni-trasferimenti-e-laurea/tasse-e-contributi/tasse-universitarie`,
-        score: 75,
-        label: "unibo-tasse",
-        isPdf: false,
-        kind: "tasse",
-      });
+      if (options?.includeTuition !== false) {
+        out.push({
+          url: `${u.protocol}//www.unibo.it/en/teaching/enrolment-transfer-and-final-examination/tuition-fees-and-exemptions/tuition-fees`,
+          score: 75,
+          label: "unibo-tuition-fees",
+          isPdf: false,
+          kind: "tasse",
+        });
+        out.push({
+          url: `${u.protocol}//www.unibo.it/it/didattica/iscrizioni-trasferimenti-e-laurea/tasse-e-contributi/tasse-universitarie`,
+          score: 75,
+          label: "unibo-tasse",
+          isPdf: false,
+          kind: "tasse",
+        });
+      }
     } else if (/unive\.it$/i.test(host)) {
       suffixes.push("/iscriversi", "/ammissione-e-immatricolazione");
     } else if (/unito\.it$/i.test(host) && /View\?doc=/i.test(pageUrl)) {
@@ -325,11 +331,12 @@ export function uniboAdmissionSiblingUrls(pageUrl: string): BandoUrlCandidate[] 
 export function pickFollowLinks(
   candidates: BandoUrlCandidate[],
   limit = 3,
-  pageUrl?: string
+  pageUrl?: string,
+  options?: { includeTuition?: boolean }
 ): BandoUrlCandidate[] {
   const follow = candidates.filter(
     (c) =>
-      c.kind === "tasse" ||
+      (options?.includeTuition !== false && c.kind === "tasse") ||
       c.kind === "requisiti" ||
       c.kind === "bando"
   );

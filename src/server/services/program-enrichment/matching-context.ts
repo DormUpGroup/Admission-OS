@@ -67,10 +67,9 @@ export function toMinimalMatchingContext(input: {
 /** Map profile category to fact scope / tab selection. */
 export function scopeForApplicantCategory(
   category: ApplicantCategory
-): "ALL" | "EU_CITIZEN" | "NON_EU_RESIDENT_ABROAD" | "NON_EU_RESIDENT_ITALY" {
-  if (category === "EU_CITIZEN" || category === "EU_EQUIVALENT") {
-    return "EU_CITIZEN";
-  }
+): "ALL" | Exclude<ApplicantCategory, "UNKNOWN"> {
+  if (category === "EU_CITIZEN") return "EU_CITIZEN";
+  if (category === "EU_EQUIVALENT") return "EU_EQUIVALENT";
   if (category === "NON_EU_RESIDENT_ABROAD") return "NON_EU_RESIDENT_ABROAD";
   if (category === "NON_EU_RESIDENT_ITALY") return "NON_EU_RESIDENT_ITALY";
   return "ALL";
@@ -82,6 +81,5 @@ export function factAppliesToCategory(
 ): boolean {
   if (!factScope || factScope === "ALL") return true;
   if (category === "UNKNOWN") return false;
-  const needed = scopeForApplicantCategory(category);
-  return factScope === needed;
+  return factScope === category;
 }

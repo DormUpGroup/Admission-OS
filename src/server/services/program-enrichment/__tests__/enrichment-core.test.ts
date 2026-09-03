@@ -66,8 +66,8 @@ describe("quote-validator", () => {
 });
 
 describe("applicant category scope", () => {
-  it("maps EU_EQUIVALENT to EU_CITIZEN scope", () => {
-    expect(scopeForApplicantCategory("EU_EQUIVALENT")).toBe("EU_CITIZEN");
+  it("keeps EU_EQUIVALENT as a distinct scope", () => {
+    expect(scopeForApplicantCategory("EU_EQUIVALENT")).toBe("EU_EQUIVALENT");
   });
 
   it("does not apply non-EU facts to EU", () => {

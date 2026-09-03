@@ -26,6 +26,7 @@ export type CuratorMatchView = {
   publicPrivate: string;
   field: string | null;
   academicYear: string;
+  applicantCategory?: string;
   eligibilityStatus: string;
   fitScore: number;
   dataConfidence: string;
@@ -43,6 +44,8 @@ export type CuratorMatchView = {
   selection?: "NONE" | "EVALUATION" | "ENTRANCE_EXAM" | "UNKNOWN";
   euSeats?: number | null;
   nonEuSeats: number | null;
+  quotaSeats?: number | null;
+  quotaScope?: string | null;
   seatsUnlimited?: boolean;
   exams: Array<{
     label: string;
@@ -86,6 +89,8 @@ export type CuratorMatchView = {
     value: string;
     freshness?: string | null;
     scope?: string | null;
+    confidence?: string | null;
+    origin?: string | null;
     quote?: string | null;
     sourceUrl?: string | null;
   }>;
@@ -163,7 +168,7 @@ function withIndicative(label: string, match: CuratorMatchView): string {
 }
 
 function tuitionLabel(match: CuratorMatchView) {
-  let label = "UNKNOWN";
+  let label = "Стоимость уточняется";
   if (match.tuitionFixed != null) label = `€${match.tuitionFixed}`;
   else {
     const min = match.tuitionMin;
@@ -181,9 +186,7 @@ function accessLabel(match: CuratorMatchView) {
     return match.seatsUnlimited ? "Open access · без лимита мест" : "Open access";
   }
   if (match.accessMode === "CLOSED") {
-    return match.nonEuSeats != null
-      ? `Closed · ${match.nonEuSeats} non-EU seats`
-      : "Closed access";
+    return "Closed access";
   }
   return "UNKNOWN";
 }
@@ -196,19 +199,16 @@ function selectionLabel(match: CuratorMatchView) {
 }
 
 function seatsLabel(match: CuratorMatchView) {
-  let label = "UNKNOWN";
+  let label = "Квота уточняется";
   if (match.seatsUnlimited) label = "без лимита мест";
-  else {
-    const parts: string[] = [];
-    if (match.euSeats != null) parts.push(`EU: ${match.euSeats}`);
-    if (match.nonEuSeats != null) parts.push(`non-EU: ${match.nonEuSeats}`);
-    if (parts.length) label = parts.join(" · ");
+  else if (match.quotaSeats != null) {
+    label = `${match.quotaSeats} · ${match.quotaScope || "scope unknown"}`;
   }
   return withIndicative(label, match);
 }
 
 function deadlineLabel(match: CuratorMatchView) {
-  if (!match.deadline) return "UNKNOWN";
+  if (!match.deadline) return "Дедлайн уточняется";
   const date = new Date(match.deadline).toLocaleDateString("ru-RU");
   return withIndicative(date, match);
 }
@@ -369,6 +369,21 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               name="programAcademicYearId"
               value={match.programAcademicYearId}
             />
+            <label className="grid gap-0.5 sm:col-span-2">
+              <span className="text-muted-foreground">Applicant category</span>
+              <select
+                name="applicantCategory"
+                defaultValue={match.applicantCategory || "UNKNOWN"}
+                required
+                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+              >
+                <option value="UNKNOWN" disabled>Select category</option>
+                <option value="EU_CITIZEN">EU citizen</option>
+                <option value="EU_EQUIVALENT">EU equivalent</option>
+                <option value="NON_EU_RESIDENT_ITALY">Non-EU resident Italy</option>
+                <option value="NON_EU_RESIDENT_ABROAD">Non-EU resident abroad</option>
+              </select>
+            </label>
             <label className="grid gap-0.5">
               <span className="text-muted-foreground">Deadline (YYYY-MM-DD)</span>
               <input
@@ -413,7 +428,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               </select>
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Non-EU seats</span>
+              <span className="text-muted-foreground">Quota seats for selected category</span>
               <input
                 name="nonEuSeats"
                 type="number"
@@ -428,6 +443,23 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                 type="text"
                 defaultValue={match.examsDisplay ?? ""}
                 placeholder="SAT ≥ 1200 или TOLC-E"
+                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+              />
+            </label>
+            <label className="grid gap-0.5 sm:col-span-2">
+              <span className="text-muted-foreground">Official source URL</span>
+              <input
+                name="manualSourceUrl"
+                type="url"
+                required
+                className="rounded border border-[var(--border)] bg-white px-2 py-1"
+              />
+            </label>
+            <label className="grid gap-0.5 sm:col-span-2">
+              <span className="text-muted-foreground">Exact evidence quote</span>
+              <textarea
+                name="evidenceQuote"
+                required
                 className="rounded border border-[var(--border)] bg-white px-2 py-1"
               />
             </label>
@@ -530,6 +562,11 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           <form action={createApplicationAction}>
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="programId" value={match.programId} />
+            <input
+              type="hidden"
+              name="programAcademicYearId"
+              value={match.programAcademicYearId}
+            />
             <input type="hidden" name="intake" value={match.intake} />
             <Button type="submit" size="sm" variant="secondary" className="w-full">
               Create application

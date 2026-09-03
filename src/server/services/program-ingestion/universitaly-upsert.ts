@@ -2,12 +2,10 @@ import { prisma } from "@/lib/db";
 import { normalizeMiurCode } from "@/lib/program-matching/miur-code";
 import {
   cityFromUniversityName,
-  regionForCity,
   slugify,
   tagsFromText,
 } from "@/lib/program-matching/taxonomy";
 import type { UniversitalyCorso } from "@/server/services/program-ingestion/universitaly-client";
-import { inferPublicPrivateFromUniversityName } from "@/server/services/program-ingestion/infer-public-private";
 import { upsertSourceDocument } from "@/server/services/program-ingestion/snapshot";
 
 function normalizedDegreeClass(codice: string | null | undefined): string | null {
@@ -59,10 +57,6 @@ export function resolveCampusCity(corso: UniversitalyCorso): string | null {
   return cityFromUniversityName(corso.nomeStruttura);
 }
 
-function cityHint(corso: UniversitalyCorso): string | null {
-  return resolveCampusCity(corso);
-}
-
 async function upsertFact(input: {
   programId: string;
   programAcademicYearId: string;
@@ -89,6 +83,10 @@ async function upsertFact(input: {
         sourceDocumentId: input.sourceDocumentId,
         sourceUrl: input.sourceUrl,
         sourceType: "UNIVERSITALY",
+        origin: "DISCOVERY",
+        decisionStatus: "LEGACY_CANDIDATE",
+        freshness: "UNKNOWN",
+        extractionMethod: "UNIVERSITALY_API",
         confidence: input.confidence,
         retrievedAt: new Date(),
       },
@@ -103,6 +101,9 @@ async function upsertFact(input: {
       sourceDocumentId: input.sourceDocumentId,
       sourceUrl: input.sourceUrl,
       sourceType: "UNIVERSITALY",
+      origin: "DISCOVERY",
+      decisionStatus: "LEGACY_CANDIDATE",
+      freshness: "UNKNOWN",
       academicYear: input.academicYear,
       confidence: input.confidence,
       extractionMethod: "UNIVERSITALY_API",
@@ -140,49 +141,27 @@ export async function upsertUniversitalyCandidates(
     const degreeLevel = degreeLevelFromCorso(corso);
     const language = languageFromCorso(corso);
     const academicYear = academicYearFromCorso(corso, fallbackYear);
-    const city = cityHint(corso);
-    const region = city ? regionForCity(city) : null;
-    // University HQ city may come from sede or name parse; never written to Program.campusCity.
-    const universityHqCity = city ?? cityFromUniversityName(uniName);
-    const universityHqRegion = universityHqCity
-      ? regionForCity(universityHqCity)
-      : null;
     const fieldTags = tagsFromText(`${titleEn} ${titleIt} ${corso.classe?.descrizione ?? ""}`);
     const field = fieldTags[0] || corso.area || corso.classe?.descrizione || null;
     const officialUrl = corso.url?.trim() || null;
-    const durationYears = Number(corso.durataAnni) || (degreeLevel === "MASTER" ? 2 : 3);
-    const publicPrivate = inferPublicPrivateFromUniversityName(
-      `${uniName} ${corso.nomeStruttura ?? ""}`
-    );
 
     const university = await prisma.university.upsert({
       where: { slug: uniSlug },
       create: {
         name: uniName,
         slug: uniSlug,
-        city: universityHqCity,
-        region: universityHqRegion,
         country: "IT",
-        publicPrivate,
         universitalyExternalId: corso.idStrutture
           ? String(corso.idStrutture)
           : null,
       },
       update: {
         name: uniName,
-        city: universityHqCity ?? undefined,
-        region: universityHqRegion ?? undefined,
         universitalyExternalId: corso.idStrutture
           ? String(corso.idStrutture)
           : undefined,
-        ...(publicPrivate !== "UNKNOWN" ? { publicPrivate } : {}),
       },
     });
-
-    // Programme campus stays null when Universitaly did not state a sede.
-    // University.city may still hold HQ city separately — never copy it here.
-    const resolvedCity = city;
-    const resolvedRegion = resolvedCity ? regionForCity(resolvedCity) : region;
 
     let program = await prisma.program.findFirst({
       where: { universitalyExternalId: externalId },
@@ -212,19 +191,9 @@ export async function upsertUniversitalyCandidates(
           teachingLanguagesJson: JSON.stringify(
             language === "Unknown" ? [] : [language]
           ),
-          campusCity: resolvedCity,
-          region: resolvedRegion,
           officialUrl: officialUrl ?? program.officialUrl,
           universitalyUrl: `https://www.universitaly.it/index.php/public/schedaCorso/${externalId}`,
           universitalyExternalId: externalId,
-          durationYears,
-          ects: degreeLevel === "MASTER" ? 120 : degreeLevel === "SINGLE_CYCLE" ? 300 : 180,
-          deliveryMode:
-            corso.modalitaErogazione?.codice === "T"
-              ? "online"
-              : corso.modalitaErogazione?.codice === "M"
-                ? "hybrid"
-                : "inPerson",
           active: true,
           aliasesJson: JSON.stringify([titleIt, titleEn, externalId]),
         },
@@ -245,19 +214,9 @@ export async function upsertUniversitalyCandidates(
           teachingLanguagesJson: JSON.stringify(
             language === "Unknown" ? [] : [language]
           ),
-          campusCity: resolvedCity,
-          region: resolvedRegion,
           officialUrl,
           universitalyUrl: `https://www.universitaly.it/index.php/public/schedaCorso/${externalId}`,
           universitalyExternalId: externalId,
-          durationYears,
-          ects: degreeLevel === "MASTER" ? 120 : degreeLevel === "SINGLE_CYCLE" ? 300 : 180,
-          deliveryMode:
-            corso.modalitaErogazione?.codice === "T"
-              ? "online"
-              : corso.modalitaErogazione?.codice === "M"
-                ? "hybrid"
-                : "inPerson",
           active: true,
           aliasesJson: JSON.stringify([titleIt, titleEn, externalId]),
         },
@@ -333,39 +292,6 @@ export async function upsertUniversitalyCandidates(
       academicYear,
       confidence: "HIGH",
     });
-
-    const progDesc = corso.programmazione?.descrizione ?? "";
-    const modalitaDesc = corso.modalitaAccesso?.descrizione ?? "";
-    if (progDesc || modalitaDesc) {
-      await upsertFact({
-        programId: program.id,
-        programAcademicYearId: pay.id,
-        field: "ACCESS_TYPE",
-        value: {
-          programmazione: progDesc || undefined,
-          modalitaAccesso: modalitaDesc || undefined,
-        },
-        sourceDocumentId: uniDoc.document.id,
-        sourceUrl: uniDoc.document.url,
-        academicYear,
-        confidence: "MEDIUM",
-      });
-      const prog = progDesc.toLowerCase();
-      const modalita = modalitaDesc.toLowerCase();
-      const accessMode = /programmato|numero\s+chiuso/.test(prog) ||
-        /programmato|numero\s+programmato/.test(modalita)
-        ? "CLOSED"
-        : /accesso\s*libero|\blibero\b/.test(prog) ||
-            /accesso\s+con\s+diploma|accesso\s*libero|\blibero\b/.test(modalita)
-          ? "OPEN"
-          : "UNKNOWN";
-      if (accessMode !== "UNKNOWN") {
-        await prisma.programAcademicYear.update({
-          where: { id: pay.id },
-          data: { accessMode },
-        });
-      }
-    }
 
     out.push({
       programId: program.id,

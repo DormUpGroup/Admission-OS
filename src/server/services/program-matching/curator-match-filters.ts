@@ -10,9 +10,7 @@ export type CuratorMatchFilters = {
   publicPrivate?: string;
   accessMode?: string;
   hasExam?: string;
-  tuitionMax?: string;
   callFreshness?: string;
-  deadlineBefore?: string;
 };
 
 export function applyCuratorMatchFilters(
@@ -72,28 +70,9 @@ export function applyCuratorMatchFilters(
       );
     }
   }
-  if (filters.tuitionMax) {
-    const max = Number(filters.tuitionMax);
-    if (Number.isFinite(max)) {
-      out = out.filter((m) => {
-        const t = m.tuitionFixed ?? m.tuitionMax ?? m.tuitionMin;
-        return t != null && t <= max;
-      });
-    }
-  }
   if (filters.callFreshness) {
     out = out.filter((m) => m.callFreshness === filters.callFreshness);
   }
-  if (filters.deadlineBefore) {
-    const before = new Date(filters.deadlineBefore);
-    if (!Number.isNaN(before.getTime())) {
-      out = out.filter((m) => {
-        if (!m.deadline) return false;
-        return new Date(m.deadline).getTime() <= before.getTime();
-      });
-    }
-  }
-
   return out;
 }
 
@@ -104,21 +83,23 @@ export function mergeDossierIntoCuratorView(
   if (!dossier) return base;
   return {
     ...base,
-    city: dossier.city ?? base.city,
-    region: dossier.region ?? base.region,
+    city: dossier.city,
+    region: dossier.region,
     universityName: dossier.universityName || base.universityName,
     publicPrivate: dossier.publicPrivate,
     programName: dossier.programName || base.programName,
     teachingLanguages: dossier.teachingLanguages,
     language: dossier.teachingLanguages[0] ?? base.language,
     languageRequirement: dossier.languageRequirement,
-    tuitionMin: dossier.tuitionMin ?? base.tuitionMin,
-    tuitionMax: dossier.tuitionMax ?? base.tuitionMax,
+    tuitionMin: dossier.tuitionMin,
+    tuitionMax: dossier.tuitionMax,
     tuitionFixed: dossier.tuitionFixed,
     accessMode: dossier.accessMode,
     selection: dossier.selection,
     euSeats: dossier.euSeats,
     nonEuSeats: dossier.nonEuSeats,
+    quotaSeats: dossier.quotaSeats,
+    quotaScope: dossier.quotaScope,
     seatsUnlimited: dossier.seatsUnlimited,
     exams: dossier.exams,
     examsDisplay: dossier.examsDisplay,
@@ -126,11 +107,12 @@ export function mergeDossierIntoCuratorView(
     callFreshness: dossier.callFreshness,
     indicativeFromYear: dossier.indicativeFromYear,
     deadline:
-      dossier.deadlines.find((d) => d.deadline)?.deadline ?? base.deadline,
+      dossier.deadlines.find((d) => d.deadline)?.deadline ?? null,
     admissionCallUrl: dossier.admissionCallUrl,
     extractQuality: dossier.extractQuality,
     sourceUrls:
       dossier.sourceUrls.length > 0 ? dossier.sourceUrls : base.sourceUrls,
     fieldStatuses: dossier.fieldStatuses ?? base.fieldStatuses,
+    criticalFacts: dossier.criticalFacts,
   };
 }

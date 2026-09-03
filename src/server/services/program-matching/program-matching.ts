@@ -16,6 +16,7 @@ import { buildMatchingProfileFromStudent } from "./matching-profile";
 import { isCandidateRelevant } from "./candidate-relevance";
 import { buildDiscoveryMeta, type DiscoveryMeta } from "./discovery-meta";
 import { compareProgramMatchOrder } from "./match-rank";
+import { getProgramDossier } from "./program-dossier";
 import {
   applyShortlistComposition,
   shareByInclusionKind,
@@ -42,6 +43,8 @@ export async function generateProgramMatches(
     includeShortlisted?: boolean;
     /** Skip shortlist composition filter (used for enrich pass). */
     skipComposition?: boolean;
+    /** Pass 1 is discovery-only; pass 2 resolves official decision facts. */
+    useDecisionFacts?: boolean;
   }
 ) {
   const limit = options?.limit ?? MATCH_LIMIT_DEFAULT;
@@ -87,9 +90,6 @@ export async function generateProgramMatches(
         },
     include: {
       program: { include: { university: true } },
-      requirements: true,
-      cycles: true,
-      tuition: true,
       facts: { where: { superseded: false }, take: 20 },
     },
   });
@@ -148,7 +148,12 @@ export async function generateProgramMatches(
           : [];
     const fieldTags = parseJsonArray(program.fieldTagsJson);
     const usingPreviousYear = pay.academicYear !== targetYear;
-    const callMissing = !pay.facts.some((f) => f.sourceType === "ADMISSION_CALL");
+    const dossier = options?.useDecisionFacts
+      ? await getProgramDossier(pay.id, {
+          applicantCategory: profile.applicantCategory,
+        })
+      : null;
+    const callMissing = !dossier?.admissionCallUrl;
     const isShortlisted = shortlistedPayIds.has(pay.id);
 
     const relevance = isCandidateRelevant({
@@ -175,21 +180,36 @@ export async function generateProgramMatches(
       profile,
       programDegreeLevel: program.degreeLevel,
       teachingLanguages,
-      campusCity: program.campusCity,
-      region: program.region,
-      requirements: pay.requirements.map((r) => ({
-        type: r.type,
-        required: r.required,
-        operator: r.operator,
-        valueJson: r.valueJson,
-        description: r.description,
-        hardExclusion: r.hardExclusion,
-      })),
-      cycles: pay.cycles.map((c) => ({
-        applicationDeadline: c.applicationDeadline,
-        applicantCategory: c.applicantCategory,
-      })),
-      dataConfidence: pay.dataConfidence,
+      campusCity: dossier?.city,
+      region: dossier?.region,
+      requirements: [
+        ...(dossier?.languageRequirement
+          ? [
+              {
+                type: "LANGUAGE",
+                required: true,
+                valueJson: JSON.stringify({
+                  language: dossier.teachingLanguages[0] || "English",
+                  level:
+                    dossier.languageRequirement.match(/\b[ABC][12]\b/i)?.[0] ||
+                    "",
+                }),
+                description: dossier.languageRequirement,
+                hardExclusion: false,
+              },
+            ]
+          : []),
+        ...(dossier?.exams.map((exam) => ({
+          type: exam.type,
+          required: true,
+          description: exam.label,
+          hardExclusion: false,
+        })) ?? []),
+      ],
+      // Deadlines are deferred until a programme is shortlisted; they must not
+      // affect the first 20–25 curator cards or their risk labels.
+      cycles: [],
+      dataConfidence: dossier?.dataConfidence ?? "LOW",
       usingPreviousYear,
     });
 
@@ -197,15 +217,8 @@ export async function generateProgramMatches(
       continue;
     }
 
-    const englishReq = pay.requirements.find((r) => r.type === "LANGUAGE");
-    let englishRequired: string | null = null;
-    if (englishReq?.valueJson) {
-      try {
-        englishRequired = String(JSON.parse(englishReq.valueJson).level ?? null);
-      } catch {
-        englishRequired = null;
-      }
-    }
+    const englishRequired =
+      dossier?.languageRequirement?.match(/\b[ABC][12]\b/i)?.[0] ?? null;
 
     const breakdown = calculateFitScore(
       profile,
@@ -213,13 +226,12 @@ export async function generateProgramMatches(
         name: program.name,
         field: program.field,
         fieldTags,
-        campusCity: program.campusCity,
-        region: program.region,
+        campusCity: dossier?.city,
+        region: dossier?.region,
         universityName: program.university.name,
         teachingLanguages,
         deliveryMode: program.deliveryMode,
-        minTuition: pay.tuition?.minTuition,
-        maxTuition: pay.tuition?.maxTuition,
+        // Tuition is deliberately not used during programme discovery/ranking.
         degreeClass: program.degreeClass,
         miurCodes: provenance.miurCodes,
         inclusionEvidence: relevance.evidence,
@@ -235,9 +247,13 @@ export async function generateProgramMatches(
       evaluations: eligibility.evaluations,
       risks: eligibility.risks,
       teachingLanguages,
-      city: program.campusCity,
-      region: program.region,
-      tuitionKnown: !!(pay.tuition?.minTuition || pay.tuition?.maxTuition || pay.tuition?.fixedTuition),
+      city: dossier?.city,
+      region: dossier?.region,
+      tuitionKnown: !!(
+        dossier?.tuitionMin ||
+        dossier?.tuitionMax ||
+        dossier?.tuitionFixed
+      ),
       usingPreviousYear,
       callMissing,
     });
@@ -261,8 +277,8 @@ export async function generateProgramMatches(
       field: program.field,
       universityId: program.universityId,
       universityName: program.university.name,
-      city: program.campusCity,
-      region: program.region,
+      city: dossier?.city ?? null,
+      region: dossier?.region ?? null,
       academicYear: pay.academicYear,
       eligibilityStatus: eligibility.status,
       fitScore: breakdown.total,
@@ -272,10 +288,10 @@ export async function generateProgramMatches(
       risks: explanation.risks,
       riskNotes: explanation.riskNotes,
       missingInformation: explanation.missingInformation,
-      dataConfidence: pay.dataConfidence,
-      deadline: pay.cycles[0]?.applicationDeadline ?? null,
-      tuitionMin: pay.tuition?.minTuition ?? null,
-      tuitionMax: pay.tuition?.maxTuition ?? null,
+      dataConfidence: dossier?.dataConfidence ?? "LOW",
+      deadline: dossier?.deadlines.find((row) => row.deadline)?.deadline ?? null,
+      tuitionMin: dossier?.tuitionMin ?? null,
+      tuitionMax: dossier?.tuitionMax ?? null,
       usingPreviousYear,
       alreadyApplied: applied.has(program.id),
       applicationId: applied.get(program.id),
@@ -284,7 +300,7 @@ export async function generateProgramMatches(
           [
             program.officialUrl,
             program.universitalyUrl,
-            ...pay.facts.map((f) => f.sourceUrl).filter(Boolean),
+            ...(dossier?.sourceUrls ?? []),
           ].filter(Boolean) as string[]
         ),
       ],
@@ -385,6 +401,7 @@ export async function persistProgramMatches(
     programAcademicYearIds: liveMeta?.programAcademicYearIds,
     includeShortlisted: true,
     skipComposition: true,
+    useDecisionFacts: false,
   });
 
   report("documents", "Официальные документы программ", 62);
@@ -515,6 +532,7 @@ export async function persistProgramMatches(
         ? enrichScopeIds
         : liveMeta?.programAcademicYearIds,
     includeShortlisted: true,
+    useDecisionFacts: true,
   });
 
   const profileForMeta = profile ?? (await buildMatchingProfile(studentId));
@@ -660,9 +678,6 @@ export async function listPersistedMatches(studentId: string) {
       programAcademicYear: {
         include: {
           program: { include: { university: true } },
-          cycles: true,
-          tuition: true,
-          requirements: true,
           facts: { where: { superseded: false }, take: 40 },
           enrichmentRuns: { orderBy: { startedAt: "desc" }, take: 1 },
           sourceDocuments: { orderBy: { retrievedAt: "desc" }, take: 8 },

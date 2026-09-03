@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isRejectedEnrichmentCandidateUrl } from "@/server/services/program-ingestion/bando-url-discover";
+import {
+  discoverBandoUrls,
+  isRejectedEnrichmentCandidateUrl,
+} from "@/server/services/program-ingestion/bando-url-discover";
 
 describe("isRejectedEnrichmentCandidateUrl", () => {
   it("rejects quality-policy and non-admission welfare URLs", () => {
@@ -26,5 +29,17 @@ describe("isRejectedEnrichmentCandidateUrl", () => {
         "https://www.unibo.it/en/services-and-opportunities/tuition-fees"
       )
     ).toBe(false);
+  });
+
+  it("leaves fee pages out of the initial-shortlist crawl", () => {
+    const html = `
+      <a href="/admission">How to enrol</a>
+      <a href="/tuition-fees">Tuition fees</a>
+    `;
+    const found = discoverBandoUrls(html, "https://example.edu/programme", {
+      includeTuition: false,
+    });
+
+    expect(found.map((candidate) => candidate.kind)).toEqual(["bando"]);
   });
 });

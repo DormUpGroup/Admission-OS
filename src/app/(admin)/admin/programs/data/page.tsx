@@ -68,34 +68,66 @@ export default async function ProgramDataPage() {
     prisma.programAcademicYear.count({ where: { dataConfidence: "HIGH" } }),
     prisma.programAcademicYear.count({
       where: {
-        facts: { none: { sourceType: "ADMISSION_CALL", superseded: false } },
+        facts: {
+          none: {
+            sourceType: "ADMISSION_CALL",
+            superseded: false,
+            decisionStatus: "ELIGIBLE",
+          },
+        },
       },
     }),
     prisma.programAcademicYear.count({
       where: {
-        facts: { some: { sourceType: "ADMISSION_CALL", superseded: false } },
-      },
-    }),
-    prisma.programAcademicYear.count({
-      where: { tuition: { isNot: null } },
-    }),
-    prisma.programAcademicYear.count({
-      where: {
-        cycles: { some: { applicationDeadline: { not: null } } },
-      },
-    }),
-    prisma.programAcademicYear.count({
-      where: { accessMode: { in: ["OPEN", "CLOSED"] } },
-    }),
-    prisma.programAcademicYear.count({
-      where: {
-        cycles: { some: { nonEuSeats: { not: null } } },
+        facts: {
+          some: {
+            sourceType: "ADMISSION_CALL",
+            superseded: false,
+            decisionStatus: "ELIGIBLE",
+          },
+        },
       },
     }),
     prisma.programAcademicYear.count({
       where: {
-        requirements: {
-          some: { type: { in: ["SAT", "TOLC", "ADMISSION_TEST"] } },
+        facts: {
+          some: { field: "TUITION", decisionStatus: "ELIGIBLE", superseded: false },
+        },
+      },
+    }),
+    prisma.programAcademicYear.count({
+      where: {
+        facts: {
+          some: {
+            field: "APPLICATION_DEADLINE",
+            decisionStatus: "ELIGIBLE",
+            superseded: false,
+          },
+        },
+      },
+    }),
+    prisma.programAcademicYear.count({
+      where: {
+        facts: {
+          some: { field: "ACCESS_TYPE", decisionStatus: "ELIGIBLE", superseded: false },
+        },
+      },
+    }),
+    prisma.programAcademicYear.count({
+      where: {
+        facts: {
+          some: { field: "SEATS", decisionStatus: "ELIGIBLE", superseded: false },
+        },
+      },
+    }),
+    prisma.programAcademicYear.count({
+      where: {
+        facts: {
+          some: {
+            field: "ADMISSION_EXAMS",
+            decisionStatus: "ELIGIBLE",
+            superseded: false,
+          },
         },
       },
     }),
@@ -109,7 +141,14 @@ export default async function ProgramDataPage() {
     prisma.programAcademicYear.count({
       where: {
         indicativeFromYear: null,
-        facts: { some: { sourceType: "ADMISSION_CALL", superseded: false } },
+        facts: {
+          some: {
+            sourceType: "ADMISSION_CALL",
+            decisionStatus: "ELIGIBLE",
+            freshness: "CURRENT",
+            superseded: false,
+          },
+        },
       },
     }),
     prisma.sourceDocument.count({

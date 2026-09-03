@@ -3,6 +3,7 @@ import { z } from "zod";
 export const ApplicantScopeSchema = z.enum([
   "ALL",
   "EU_CITIZEN",
+  "EU_EQUIVALENT",
   "NON_EU_RESIDENT_ABROAD",
   "NON_EU_RESIDENT_ITALY",
 ]);
@@ -63,6 +64,7 @@ export type EnrichmentOutput = z.infer<typeof EnrichmentOutputSchema>;
 
 export const CRITICAL_FIELDS = [
   "access",
+  "selection",
   "deadlines",
   "tuition",
   "seats",
@@ -76,6 +78,7 @@ export type CriticalField = (typeof CRITICAL_FIELDS)[number];
 
 export const FIELD_TO_PROGRAM_FACT: Record<CriticalField, string> = {
   access: "ACCESS_TYPE",
+  selection: "SELECTION",
   deadlines: "APPLICATION_DEADLINE",
   tuition: "TUITION",
   seats: "SEATS",

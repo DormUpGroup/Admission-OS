@@ -9,7 +9,6 @@ import {
 import type { CriticalProgramField } from "@/lib/program-matching/field-status";
 import {
   examinerLinkForExam,
-  formatExamAlternatives,
 } from "@/lib/program-matching/examiner-links";
 import {
   regionForCity,
@@ -17,7 +16,13 @@ import {
 import { prisma } from "@/lib/db";
 import { inferPublicPrivateFromUniversityName } from "@/server/services/program-ingestion/infer-public-private";
 import { sanitizeTuitionPair } from "@/server/services/program-ingestion/call-text-parse";
-import type { AdmissionRegime, SelectionRegime } from "@/server/services/program-ingestion/admission-regime";
+import type { SelectionRegime } from "@/server/services/program-ingestion/admission-regime";
+import type { ApplicantCategory } from "@/lib/program-matching/types";
+import {
+  resolveProgramFact,
+  resolveProgramFactCollection,
+  type FactCandidate,
+} from "./source-resolver";
 
 export type CallFreshness = "current" | "indicative" | "unknown";
 export type AccessMode = "OPEN" | "CLOSED" | "UNKNOWN";
@@ -46,6 +51,8 @@ export type ProgramDossier = {
   selection: SelectionRegime;
   euSeats: number | null;
   nonEuSeats: number | null;
+  quotaSeats: number | null;
+  quotaScope: string | null;
   seatsUnlimited: boolean;
   exams: ProgramDossierExam[];
   examsDisplay: string | null;
@@ -62,28 +69,49 @@ export type ProgramDossier = {
   sourceUrls: string[];
   isFresh: boolean;
   fieldStatuses: ProgramFieldStatusMap;
+  criticalFacts: Array<{
+    id?: string;
+    field: string;
+    value: string;
+    scope: string | null;
+    freshness: string | null;
+    confidence: string | null;
+    quote: string | null;
+    sourceUrl: string | null;
+    origin: string | null;
+  }>;
 };
 
-function parseFactValue(raw: string): Record<string, unknown> {
-  try {
-    const v = JSON.parse(raw);
-    return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function parseAdmissionRegime(raw: string | null | undefined): AdmissionRegime | null {
+function parseFactJson(raw: string | null | undefined): unknown {
   if (!raw) return null;
   try {
-    const value = JSON.parse(raw) as Partial<AdmissionRegime>;
-    if (!value.access?.value || !value.selection?.value || !value.seats?.value) {
-      return null;
-    }
-    return value as AdmissionRegime;
+    return JSON.parse(raw);
   } catch {
     return null;
   }
+}
+
+function numericValue(
+  value: unknown,
+  keys: string[]
+): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  for (const key of keys) {
+    const found = Number(record[key]);
+    if (Number.isFinite(found)) return found;
+  }
+  return null;
+}
+
+function factText(value: unknown): string | null {
+  if (typeof value === "string") return value.trim() || null;
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return String(
+    record.description || record.name || record.type || record.mode || ""
+  ).trim() || null;
 }
 
 export function isDossierTimestampFresh(
@@ -259,91 +287,6 @@ export async function isProgramDossierFresh(
   return !!(pay.tuition || pay.cycles.length > 0 || pay.facts.length > 0);
 }
 
-function languageRequirementFromRequirements(
-  requirements: Array<{ type: string; description: string | null; valueJson: string | null }>
-): string | null {
-  const lang = requirements.find((r) => r.type === "LANGUAGE");
-  if (!lang) return null;
-  if (lang.description) return lang.description;
-  if (!lang.valueJson) return null;
-  try {
-    const v = JSON.parse(lang.valueJson) as {
-      language?: string;
-      level?: string;
-      minLevel?: string;
-    };
-    const level = v.level || v.minLevel;
-    if (v.language && level) return `${v.language} ${level}`;
-    if (level) return String(level);
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
-function examsFromRequirements(
-  requirements: Array<{
-    type: string;
-    description: string | null;
-    valueJson: string | null;
-  }>
-): ProgramDossierExam[] {
-  const examTypes = new Set(["SAT", "TOLC", "ADMISSION_TEST", "IMAT"]);
-  const out: ProgramDossierExam[] = [];
-
-  for (const r of requirements) {
-    if (!examTypes.has(r.type)) continue;
-    let label = r.description || r.type;
-    let alternatives: string[] = [];
-    if (r.valueJson) {
-      try {
-        const v = JSON.parse(r.valueJson) as {
-          alternatives?: Array<{ name?: string; detail?: string }>;
-          test?: string;
-          name?: string;
-        };
-        if (Array.isArray(v.alternatives) && v.alternatives.length > 0) {
-          label = formatExamAlternatives(
-            v.alternatives.map((a) => ({
-              name: String(a.name || ""),
-              detail: a.detail,
-            }))
-          );
-          alternatives = v.alternatives.map((a) => String(a.name || ""));
-        } else if (v.test || v.name) {
-          label = r.description || String(v.test || v.name);
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    const names = alternatives.length > 0 ? alternatives : [label];
-    const primary = names[0] || r.type;
-    const link = examinerLinkForExam(primary);
-    out.push({
-      label,
-      type: r.type,
-      examinerUrl: link?.url ?? null,
-      examinerLabel: link?.label ?? null,
-    });
-
-    for (const alt of names.slice(1)) {
-      const altLink = examinerLinkForExam(alt);
-      if (altLink && !out.some((e) => e.examinerUrl === altLink.url)) {
-        out.push({
-          label: alt,
-          type: r.type,
-          examinerUrl: altLink.url,
-          examinerLabel: altLink.label,
-        });
-      }
-    }
-  }
-
-  return out;
-}
-
 function manualVerifiedFieldsFromFacts(
   facts: Array<{ field: string; sourceType: string; superseded: boolean }>
 ): CriticalProgramField[] {
@@ -359,15 +302,13 @@ function manualVerifiedFieldsFromFacts(
 }
 
 export async function getProgramDossier(
-  programAcademicYearId: string
+  programAcademicYearId: string,
+  options?: { applicantCategory?: ApplicantCategory }
 ): Promise<ProgramDossier | null> {
   const pay = await prisma.programAcademicYear.findUnique({
     where: { id: programAcademicYearId },
     include: {
       program: { include: { university: true } },
-      tuition: true,
-      cycles: true,
-      requirements: true,
       facts: { where: { superseded: false } },
       sourceDocuments: {
         orderBy: { retrievedAt: "desc" },
@@ -377,38 +318,99 @@ export async function getProgramDossier(
   });
   if (!pay) return null;
 
-  const accessFact = pay.facts.find((f) => f.field === "ACCESS_TYPE");
-  const manualAccessFact = pay.facts.find(
-    (f) => f.field === "ACCESS_TYPE" && f.sourceType === "MANUAL_VERIFIED"
-  );
-  const regimeFact = pay.facts.find((f) => f.field === "ADMISSION_REGIME");
-  const regime = parseAdmissionRegime(regimeFact?.normalizedValueJson);
-  const careerFact = pay.facts.find((f) => f.field === "CAREER_OUTCOMES");
-  const exams = examsFromRequirements(pay.requirements);
-  const publicPrivate =
-    regime?.ownership.value && regime.ownership.value !== "UNKNOWN"
-      ? regime.ownership.value
-      : resolvePublicPrivate(
-          pay.program.university.publicPrivate,
-          pay.program.university.name
-        );
-  const accessMode = resolveDossierAccessMode({
-    manualAccessFact: manualAccessFact
-      ? parseFactValue(manualAccessFact.normalizedValueJson)
-      : null,
-    regimeAccess: regime?.access.value,
-    accessMode: pay.accessMode,
-    accessFact: accessFact ? parseFactValue(accessFact.normalizedValueJson) : null,
-    hasAdmissionExam: exams.length > 0,
-    publicPrivate,
-  });
+  const applicantCategory = options?.applicantCategory ?? "UNKNOWN";
+  const factRows = pay.facts as Array<(typeof pay.facts)[number] & FactCandidate>;
+  const resolveOne = (field: string) =>
+    resolveProgramFact(
+      factRows.filter((fact) => fact.field === field),
+      pay.academicYear,
+      { applicantCategory }
+    );
+  const resolveMany = (field: string) =>
+    resolveProgramFactCollection(
+      factRows.filter((fact) => fact.field === field),
+      pay.academicYear,
+      applicantCategory
+    );
+  const accessFact = resolveOne("ACCESS_TYPE");
+  const selectionFact = resolveOne("SELECTION");
+  const tuitionFact = resolveOne("TUITION");
+  const languageFact = resolveOne("LANGUAGE_REQUIREMENT");
+  const deadlineFacts = resolveMany("APPLICATION_DEADLINE");
+  const quotaFacts = resolveMany("SEATS");
+  const campusFacts = resolveMany("CAMPUS");
+  const examFacts = resolveMany("ADMISSION_EXAMS");
+  const requiredDocumentFacts = resolveMany("REQUIRED_DOCUMENTS");
+  const resolvedFacts = [
+    accessFact,
+    selectionFact,
+    tuitionFact,
+    languageFact,
+    ...deadlineFacts,
+    ...quotaFacts,
+    ...campusFacts,
+    ...examFacts,
+    ...requiredDocumentFacts,
+  ].filter((fact): fact is (typeof factRows)[number] => !!fact);
 
-  const nonEuSeats = regime?.seats.value.nonEu ??
-    pay.cycles.map((c) => c.nonEuSeats ?? c.nonEuResidentAbroadSeats).find(
-      (n) => typeof n === "number"
-    ) ?? null;
-  const euSeats = regime?.seats.value.eu ??
-    pay.cycles.map((c) => c.euSeats).find((n) => typeof n === "number") ?? null;
+  const accessValue = parseFactJson(accessFact?.normalizedValueJson);
+  const accessRecord =
+    accessValue && typeof accessValue === "object"
+      ? (accessValue as Record<string, unknown>)
+      : {};
+  const accessRaw =
+    typeof accessValue === "string"
+      ? accessValue
+      : String(accessRecord.mode || accessRecord.access || "");
+  const accessMode: AccessMode =
+    accessRaw === "OPEN" || accessRaw === "CLOSED" ? accessRaw : "UNKNOWN";
+  const selectionValue = parseFactJson(selectionFact?.normalizedValueJson);
+  const selectionRaw =
+    typeof selectionValue === "string"
+      ? selectionValue
+      : selectionValue && typeof selectionValue === "object"
+        ? String(
+            (selectionValue as Record<string, unknown>).selection ||
+              (selectionValue as Record<string, unknown>).mode ||
+              (selectionValue as Record<string, unknown>).type ||
+              ""
+          )
+        : "";
+  const selection: SelectionRegime = [
+    "NONE",
+    "EVALUATION",
+    "ENTRANCE_EXAM",
+  ].includes(selectionRaw)
+    ? (selectionRaw as SelectionRegime)
+    : "UNKNOWN";
+  const publicPrivate = resolvePublicPrivate(
+    pay.program.university.publicPrivate,
+    pay.program.university.name
+  );
+
+  const quotaValues = quotaFacts
+    .map((fact) =>
+      numericValue(parseFactJson(fact.normalizedValueJson), [
+        "places",
+        "seats",
+        "count",
+      ])
+    )
+    .filter((value): value is number => value != null);
+  const distinctQuotaValues = [...new Set(quotaValues)];
+  const quotaSeats =
+    distinctQuotaValues.length === 1 ? distinctQuotaValues[0] : null;
+  const quotaScope = quotaSeats != null ? applicantCategory : null;
+  const euSeats =
+    applicantCategory === "EU_CITIZEN" ||
+    applicantCategory === "EU_EQUIVALENT"
+      ? quotaSeats
+      : null;
+  const nonEuSeats =
+    applicantCategory === "NON_EU_RESIDENT_ABROAD" ||
+    applicantCategory === "NON_EU_RESIDENT_ITALY"
+      ? quotaSeats
+      : null;
 
   const teachingLanguages =
     parseJsonArray(pay.program.teachingLanguagesJson).length > 0
@@ -417,12 +419,14 @@ export async function getProgramDossier(
         ? [pay.program.language]
         : [];
 
-  const callFacts = pay.facts.filter((f) => f.sourceType === "ADMISSION_CALL");
-  const hasCall = callFacts.length > 0;
-
-  const callDoc = pay.sourceDocuments.find((d) => d.sourceType === "ADMISSION_CALL");
+  const hasCall = resolvedFacts.some((f) => f.sourceType === "ADMISSION_CALL");
+  const callDoc = pay.sourceDocuments.find(
+    (d) =>
+      d.sourceType === "ADMISSION_CALL" &&
+      resolvedFacts.some((fact) => fact.sourceDocumentId === d.id)
+  );
   const admissionCallUrl =
-    callFacts.find((f) => f.sourceUrl)?.sourceUrl ||
+    resolvedFacts.find((f) => f.sourceType === "ADMISSION_CALL")?.sourceUrl ||
     callDoc?.url ||
     null;
   const extractQuality =
@@ -435,34 +439,90 @@ export async function getProgramDossier(
       [
         admissionCallUrl,
         pay.program.officialUrl,
-        pay.program.universitalyUrl,
-        ...pay.facts.map((f) => f.sourceUrl).filter(Boolean),
+        ...resolvedFacts.map((f) => f.sourceUrl).filter(Boolean),
       ].filter(Boolean) as string[]
     ),
   ];
 
-  const career =
-    careerFact != null
+  const campusCities = campusFacts
+    .map((fact) => {
+      const value = parseFactJson(fact.normalizedValueJson);
+      if (typeof value === "string") return value.trim();
+      return value && typeof value === "object"
+        ? String((value as Record<string, unknown>).city || "").trim()
+        : "";
+    })
+    .filter(Boolean);
+  const uniqueCampusCities = [...new Set(campusCities)];
+  const city = uniqueCampusCities.length === 1 ? uniqueCampusCities[0] : null;
+  const region = city ? regionForCity(city) : null;
+
+  const tuitionValue = parseFactJson(tuitionFact?.normalizedValueJson);
+  const tuitionRecord =
+    tuitionValue && typeof tuitionValue === "object"
+      ? (tuitionValue as Record<string, unknown>)
+      : {};
+  const tuition = sanitizeTuitionPair(
+    numericValue(tuitionRecord, ["min", "minTuition"]),
+    numericValue(tuitionRecord, ["max", "maxTuition"])
+  );
+  const tuitionFixed = numericValue(tuitionRecord, ["fixed", "fixedTuition"]);
+  const languageValue = parseFactJson(languageFact?.normalizedValueJson);
+  const languageRequirement =
+    factText(languageValue) ||
+    (languageValue && typeof languageValue === "object"
       ? String(
-          parseFactValue(careerFact.normalizedValueJson).text ??
-            careerFact.rawValue ??
+          (languageValue as Record<string, unknown>).level ||
+            (languageValue as Record<string, unknown>).minLevel ||
             ""
         ).trim() || null
-      : null;
-
-  // Confirmed programme campus only — never invent from university HQ/name.
-  const city = pay.program.campusCity;
-  const region =
-    pay.program.region || (city ? regionForCity(city) : null);
-  const tuition = sanitizeTuitionPair(
-    pay.tuition?.minTuition ?? null,
-    pay.tuition?.maxTuition ?? null
-  );
-  const tuitionFixedRaw = pay.tuition?.fixedTuition ?? null;
-  const tuitionFixed =
-    tuitionFixedRaw != null && (tuitionFixedRaw === 0 || tuitionFixedRaw >= 100)
-      ? tuitionFixedRaw
-      : null;
+      : null);
+  const deadlines = deadlineFacts
+    .map((fact, index) => {
+      const value = parseFactJson(fact.normalizedValueJson);
+      const record =
+        value && typeof value === "object"
+          ? (value as Record<string, unknown>)
+          : {};
+      const raw =
+        typeof value === "string"
+          ? value
+          : String(record.date || record.deadline || "");
+      const deadline = raw ? new Date(raw) : null;
+      return {
+        roundName: String(record.roundName || `Round ${index + 1}`),
+        deadline:
+          deadline && !Number.isNaN(deadline.getTime()) ? deadline : null,
+      };
+    })
+    .filter((row) => row.deadline);
+  const exams: ProgramDossierExam[] = examFacts.flatMap((fact) => {
+    const value = parseFactJson(fact.normalizedValueJson);
+    const record =
+      value && typeof value === "object"
+        ? (value as Record<string, unknown>)
+        : {};
+    const alternatives = Array.isArray(record.alternatives)
+      ? record.alternatives
+      : [];
+    const labels =
+      alternatives.length > 0
+        ? alternatives.map((item) =>
+            typeof item === "string"
+              ? item
+              : String((item as Record<string, unknown>).name || "")
+          )
+        : [factText(value)].filter((label): label is string => !!label);
+    return labels.filter(Boolean).map((label) => {
+      const link = examinerLinkForExam(label);
+      return {
+        label,
+        type: String(record.type || "ADMISSION_TEST"),
+        examinerUrl: link?.url ?? null,
+        examinerLabel: link?.label ?? null,
+      };
+    });
+  });
 
   const traceFact = pay.facts.find((f) => f.field === "ENRICHMENT_TRACE");
   const fieldStatusFact = pay.facts.find((f) => f.field === "FIELD_STATUS");
@@ -484,32 +544,17 @@ export async function getProgramDossier(
 
   const dossierSnapshot = {
     teachingLanguages,
-    languageRequirement: languageRequirementFromRequirements(pay.requirements),
+    languageRequirement,
     accessMode,
-    selection: resolveDossierSelection({
-      regimeSelection: regime?.selection.value,
-      accessMode,
-      hasAdmissionExam: exams.length > 0,
-    }),
+    selection,
     examsDisplay: examsDisplayLabel(exams),
     tuitionMin: tuition.min,
     tuitionMax: tuition.max,
     tuitionFixed,
-    deadlines: pay.cycles.map((c) => ({
-      roundName: c.roundName,
-      deadline: c.applicationDeadline,
-    })),
+    deadlines,
     euSeats,
     nonEuSeats,
-    seatsUnlimited: deriveSeatsUnlimited({
-      accessMode,
-      regimeUnlimited: regime?.seats.value.unlimited,
-      euSeats,
-      nonEuSeats,
-      totalSeats: regime?.seats.value.total ??
-        pay.cycles.map((c) => c.totalSeats).find((n) => typeof n === "number") ??
-        null,
-    }),
+    seatsUnlimited: accessRecord.unlimitedSeats === true,
     callFreshness: deriveCallFreshness({
       academicYear: pay.academicYear,
       indicativeFromYear: pay.indicativeFromYear,
@@ -550,34 +595,21 @@ export async function getProgramDossier(
     publicPrivate,
     programName: pay.program.name,
     teachingLanguages,
-    languageRequirement: languageRequirementFromRequirements(pay.requirements),
+    languageRequirement,
     tuitionMin: tuition.min,
     tuitionMax: tuition.max,
     tuitionFixed,
     accessMode,
-    selection: resolveDossierSelection({
-      regimeSelection: regime?.selection.value,
-      accessMode,
-      hasAdmissionExam: exams.length > 0,
-    }),
+    selection,
     euSeats,
     nonEuSeats,
-    seatsUnlimited: deriveSeatsUnlimited({
-      accessMode,
-      regimeUnlimited: regime?.seats.value.unlimited,
-      euSeats,
-      nonEuSeats,
-      totalSeats: regime?.seats.value.total ??
-        pay.cycles.map((c) => c.totalSeats).find((n) => typeof n === "number") ??
-        null,
-    }),
+    quotaSeats,
+    quotaScope,
+    seatsUnlimited: accessRecord.unlimitedSeats === true,
     exams,
     examsDisplay: examsDisplayLabel(exams),
-    deadlines: pay.cycles.map((c) => ({
-      roundName: c.roundName,
-      deadline: c.applicationDeadline,
-    })),
-    careerOutcomes: career,
+    deadlines,
+    careerOutcomes: null,
     callFreshness: deriveCallFreshness({
       academicYear: pay.academicYear,
       indicativeFromYear: pay.indicativeFromYear,
@@ -585,14 +617,30 @@ export async function getProgramDossier(
     }),
     indicativeFromYear: pay.indicativeFromYear,
     academicYear: pay.academicYear,
-    dataConfidence: pay.dataConfidence,
+    dataConfidence:
+      resolvedFacts.length >= 4
+        ? "HIGH"
+        : resolvedFacts.length > 0
+          ? "MEDIUM"
+          : "LOW",
     dossierEnrichedAt: pay.dossierEnrichedAt,
     officialUrl: pay.program.officialUrl,
     admissionCallUrl,
     extractQuality,
     sourceUrls,
-    isFresh: isDossierTimestampFresh(pay.dossierEnrichedAt),
+    isFresh: resolvedFacts.length > 0,
     fieldStatuses,
+    criticalFacts: resolvedFacts.map((fact) => ({
+      id: fact.id,
+      field: fact.field,
+      value: fact.rawValue || fact.normalizedValueJson,
+      scope: fact.applicantCategoryScope,
+      freshness: fact.freshness,
+      confidence: fact.confidence,
+      quote: fact.evidenceQuote,
+      sourceUrl: fact.sourceUrl,
+      origin: fact.origin,
+    })),
   };
 }
 
@@ -612,6 +660,13 @@ export type EnsureDossiersOptions = {
   >;
   onProgress?: (done: number, total: number, label: string) => void;
 };
+
+export function canReuseLegacyDossier(
+  aiEnabled: boolean,
+  legacyDossierFresh: boolean
+): boolean {
+  return !aiEnabled && legacyDossierFresh;
+}
 
 /**
  * For each PAY: reuse shared dossier if fresh, otherwise AI-enrich (when enabled)
@@ -634,7 +689,8 @@ export async function ensureProgramDossiers(
   let done = 0;
 
   for (const id of unique) {
-    if (await isProgramDossierFresh(id)) {
+    const legacyDossierFresh = await isProgramDossierFresh(id);
+    if (canReuseLegacyDossier(aiOn, legacyDossierFresh)) {
       results.push({
         programAcademicYearId: id,
         reused: true,
@@ -668,26 +724,63 @@ export async function ensureProgramDossiers(
         continue;
       }
       // Fall through to regex/PDF parser
-      const enriched = await deepEnrichProgram(id);
+      const enriched = await deepEnrichProgram(id, {
+        deferAdministrativeFields: true,
+      });
+      const { createEnrichmentRun } = await import(
+        "@/server/services/program-enrichment/enrichment-cache"
+      );
+      const { getEnrichmentConfig } = await import(
+        "@/server/services/program-enrichment/config"
+      );
+      await createEnrichmentRun({
+        programAcademicYearId: id,
+        applicantCategory: options.applicantCategory,
+        status: "FALLBACK_REGEX",
+        origin: "FALLBACK_REGEX",
+        promptVersion: getEnrichmentConfig().promptVersion,
+        sourceFingerprint: `fallback:${ai.runId || "failed"}`,
+        error: ai.error || ai.status,
+        finishedAt: new Date(),
+      });
       results.push({
         programAcademicYearId: id,
         reused: false,
         enriched: enriched.ok,
-        aiStatus: `${ai.status}+FALLBACK_REGEX`,
-        reason: enriched.reason ?? ai.error,
+        aiStatus: "FALLBACK_REGEX",
+        reason: enriched.reason ?? ai.error ?? ai.status,
       });
       done += 1;
       options?.onProgress?.(done, unique.length, `Fallback ${done}/${unique.length}`);
       continue;
     }
 
-    const enriched = await deepEnrichProgram(id);
+    const enriched = await deepEnrichProgram(id, {
+      deferAdministrativeFields: true,
+    });
+    if (aiOn) {
+      const [{ createEnrichmentRun }, { getEnrichmentConfig }] =
+        await Promise.all([
+          import("@/server/services/program-enrichment/enrichment-cache"),
+          import("@/server/services/program-enrichment/config"),
+        ]);
+      await createEnrichmentRun({
+        programAcademicYearId: id,
+        applicantCategory: options?.applicantCategory ?? "UNKNOWN",
+        status: "FALLBACK_REGEX",
+        origin: "FALLBACK_REGEX",
+        promptVersion: getEnrichmentConfig().promptVersion,
+        sourceFingerprint: "fallback:no_context",
+        error: "missing_matching_context",
+        finishedAt: new Date(),
+      });
+    }
     results.push({
       programAcademicYearId: id,
       reused: false,
       enriched: enriched.ok,
       reason: enriched.reason,
-      aiStatus: aiOn ? "NO_CONTEXT" : "DISABLED",
+      aiStatus: aiOn ? "FALLBACK_REGEX" : "DISABLED",
     });
     done += 1;
     options?.onProgress?.(done, unique.length, `Обогащение ${done}/${unique.length}`);

@@ -87,7 +87,7 @@ export function PortalUniversityCard({
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
             <span>
-              Дедлайн:{" "}
+              Дедлайн заявки:{" "}
               <span className="font-medium text-[var(--foreground)]">
                 {formatDate(deadline)}
               </span>

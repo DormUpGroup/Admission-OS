@@ -14,6 +14,20 @@ export type CallField<T> = {
   snippet?: string;
 };
 
+export type ScopedQuotaRow = {
+  category:
+    | "EU_CITIZEN"
+    | "EU_EQUIVALENT"
+    | "NON_EU_RESIDENT_ITALY"
+    | "NON_EU_RESIDENT_ABROAD"
+    | "UNMAPPED";
+  originalGroup: string;
+  places: number;
+  categoryCode?: string;
+  confidence: FieldConfidence;
+  snippet: string;
+};
+
 export type CallTextParseQuality = "OK" | "LOW" | "EMPTY";
 
 export type CallTextParse = {
@@ -32,6 +46,7 @@ export type CallTextParse = {
   euSeats: CallField<number> | null;
   nonEuSeats: CallField<number> | null;
   totalSeats: CallField<number> | null;
+  quotaRows: ScopedQuotaRow[];
   exams: CallExam[];
   examAlternatives: CallExam[];
   examsConfidence: FieldConfidence;
@@ -410,6 +425,115 @@ function extractExams(text: string): {
     alternatives.length >= 2 ? "HIGH" : exams.length > 0 ? "MEDIUM" : "LOW";
 
   return { exams, alternatives, confidence, admissionGate, evaluationOnly };
+}
+
+function quotaCategories(group: string): ScopedQuotaRow["category"][] {
+  const normalized = group.toLowerCase();
+  if (/marco\s+polo/.test(normalized)) return ["UNMAPPED"];
+
+  const categories: Array<ScopedQuotaRow["category"]> = [];
+  if (
+    /non[\s-]?(?:eu|ue)[^.;]{0,100}(?:resid(?:ing|enti)|living)[^.;]{0,30}(?:abroad|outside\s+(?:of\s+)?italy|all['’]estero)|(?:abroad|outside\s+(?:of\s+)?italy|all['’]estero)[^.;]{0,100}non[\s-]?(?:eu|ue)/i.test(
+      group
+    )
+  ) {
+    categories.push("NON_EU_RESIDENT_ABROAD");
+  }
+  if (
+    /non[\s-]?(?:eu|ue)[^.;]{0,120}(?:legally\s+residing|residenti|soggiornanti)[^.;]{0,30}(?:in\s+italy|in\s+italia)|(?:in\s+italy|in\s+italia)[^.;]{0,100}non[\s-]?(?:eu|ue)/i.test(
+      group
+    )
+  ) {
+    categories.push("NON_EU_RESIDENT_ITALY");
+  }
+  if (/\b(?:equivalents?|equivalent|equiparati|assimilati|assimilated)\b/i.test(group)) {
+    categories.push("EU_EQUIVALENT");
+  }
+  if (
+    /\b(?:italians?|italiani|(?<!non-)eu\s+citizens?|(?<!non-)eu\s+and|cittadini\s+(?:ue|comunitari)|comunitari)\b/i.test(
+      group
+    )
+  ) {
+    categories.push("EU_CITIZEN");
+  }
+  if (categories.length === 0) return ["UNMAPPED"];
+  return [...new Set<ScopedQuotaRow["category"]>(categories)];
+}
+
+function quotaRowsFromChunks(chunks: string[]): ScopedQuotaRow[] {
+  const rows: ScopedQuotaRow[] = [];
+  for (const chunk of chunks) {
+    if (!/\b(?:places|posti|seats|category|categoria|marco\s+polo)\b/i.test(chunk)) {
+      continue;
+    }
+    const numbers = [...chunk.matchAll(/\b(\d{1,4})\b/g)].map((match) => ({
+      value: Number(match[1]),
+      raw: match[1],
+    }));
+    if (numbers.length === 0) continue;
+    const code = chunk.match(/\b(?:category|categoria)\s*(\d{3,4})\b/i)?.[1];
+    const placeMentions = chunk.match(/\b(?:places|posti|seats)\b/gi) || [];
+    if (!code && placeMentions.length > 1) continue;
+    const candidates = code
+      ? numbers.filter((number) => number.raw !== code)
+      : numbers;
+    const places = candidates.at(-1)?.value;
+    if (places == null || places > 5000) continue;
+    const originalGroup = chunk
+      .replace(/\b(?:category|categoria)\s*\d{3,4}\b/i, "")
+      .replace(/\b\d{1,4}\s*(?:places|posti|seats)\b/i, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 500);
+    for (const category of quotaCategories(originalGroup || chunk)) {
+      rows.push({
+        category,
+        originalGroup: originalGroup || chunk.slice(0, 500),
+        places,
+        categoryCode: code,
+        confidence: category === "UNMAPPED" ? "LOW" : "HIGH",
+        snippet: chunk.slice(0, 500),
+      });
+    }
+  }
+  return rows.filter(
+    (row, index, all) =>
+      all.findIndex(
+        (candidate) =>
+          candidate.category === row.category &&
+          candidate.categoryCode === row.categoryCode &&
+          candidate.places === row.places
+      ) === index
+  );
+}
+
+export function extractScopedQuotaRows(body: string): ScopedQuotaRow[] {
+  const htmlRows = (body.match(/<tr[\s\S]*?<\/tr>/gi) || []).map((row) =>
+    row.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim()
+  );
+  const text = stripHtml(body);
+  const categoryChunks = text
+    .split(/(?=\b(?:Category|Categoria)\s+\d{3,4}\b)/i)
+    .filter(Boolean)
+    .map((chunk) => chunk.slice(0, 700));
+  const inlineChunks: string[] = [];
+  if (htmlRows.length === 0) {
+    for (const match of text.matchAll(
+      /\b(\d{1,4})\s*(?:places|posti|seats)\s*(?:for|per|:)?\s*([^+;.\n]{3,220})/gi
+    )) {
+      inlineChunks.push(match[0]);
+    }
+    for (const match of text.matchAll(
+      /([^+;.\n]{3,180}?)\s*[:–—-]\s*(\d{1,4})\s*(?:places|posti|seats)\b/gi
+    )) {
+      inlineChunks.push(match[0]);
+    }
+  }
+  return quotaRowsFromChunks([
+    ...htmlRows,
+    ...categoryChunks,
+    ...inlineChunks,
+  ]);
 }
 
 function extractAccess(
@@ -793,7 +917,7 @@ export function fieldCoverageScore(parsed: CallTextParse): number {
   if (parsed.tuitionMin || parsed.tuitionMax || parsed.tuitionFixed) s += 3;
   if (parsed.deadlines.length > 0) s += 2;
   if (parsed.accessMode.value !== "UNKNOWN") s += 2;
-  if (parsed.nonEuSeats) s += 2;
+  if (parsed.quotaRows.length > 0 || parsed.nonEuSeats) s += 2;
   if (parsed.exams.length > 0) s += 2;
   if (parsed.languageLevel) s += 1;
   if (parsed.careerOutcomes) s += 1;
@@ -846,6 +970,25 @@ export function parseCallText(
   const tuition = extractSectionTuition(text, windows);
   const deadlines = extractSectionDeadlines(text, windows);
   const access = extractAccess(text, windows);
+  const quotaRows = extractScopedQuotaRows(raw);
+  const abroadQuota = quotaRows.find(
+    (row) => row.category === "NON_EU_RESIDENT_ABROAD"
+  );
+  const euQuota = quotaRows.find((row) => row.category === "EU_CITIZEN");
+  if (abroadQuota) {
+    access.nonEuSeats = {
+      value: abroadQuota.places,
+      confidence: abroadQuota.confidence,
+      snippet: abroadQuota.snippet,
+    };
+  }
+  if (euQuota) {
+    access.euSeats = {
+      value: euQuota.places,
+      confidence: euQuota.confidence,
+      snippet: euQuota.snippet,
+    };
+  }
   if (looksHtml) {
     const tableSeats = extractTableSeatsFromHtml(raw);
     if (!access.euSeats && tableSeats.euSeats) access.euSeats = tableSeats.euSeats;
@@ -938,6 +1081,7 @@ export function parseCallText(
     euSeats: access.euSeats,
     nonEuSeats: access.nonEuSeats,
     totalSeats: access.totalSeats,
+    quotaRows,
     exams,
     examAlternatives: alternatives,
     examsConfidence,
@@ -972,6 +1116,7 @@ function emptyParse(
     euSeats: null,
     nonEuSeats: null,
     totalSeats: null,
+    quotaRows: [],
     exams: [],
     examAlternatives: [],
     examsConfidence: "LOW",

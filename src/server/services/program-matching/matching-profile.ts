@@ -58,15 +58,28 @@ export function inferApplicantCategory(input: {
     .filter(Boolean)
     .join(" ");
   if (!blob.trim()) return "UNKNOWN";
-  const lower = blob.toLowerCase();
-  if (/resident in italy|residente in italia|permesso/i.test(blob)) {
-    return "NON_EU_RESIDENT_ITALY";
+  if (
+    /\b(?:eu\s+equivalent|equivalent\s+to\s+eu|equiparat[oaie]|assimilated\s+to\s+eu)\b/i.test(
+      blob
+    )
+  ) {
+    return "EU_EQUIVALENT";
   }
-  if (EU_COUNTRIES.has(lower) || [...EU_COUNTRIES].some((c) => lower.includes(c))) {
-    if (/italy|italia/.test(lower) && /non-?eu|не.?ес/.test(lower)) {
-      return "UNKNOWN";
-    }
-    return "EU_CITIZEN";
+  const citizenship = [input.nationality, input.citizenship]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const residence = (input.country || "").toLowerCase();
+  const hasEuCitizenship =
+    EU_COUNTRIES.has(citizenship) ||
+    [...EU_COUNTRIES].some((country) => citizenship.includes(country));
+  if (hasEuCitizenship) return "EU_CITIZEN";
+  if (!citizenship.trim()) return "UNKNOWN";
+  if (
+    /resident in italy|residente in italia|permesso/i.test(blob) ||
+    /\b(?:italy|italia)\b/.test(residence)
+  ) {
+    return "NON_EU_RESIDENT_ITALY";
   }
   return "NON_EU_RESIDENT_ABROAD";
 }

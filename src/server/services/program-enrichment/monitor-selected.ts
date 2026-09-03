@@ -8,6 +8,8 @@ import {
 } from "@/server/services/program-enrichment";
 import { createInAppNotification } from "@/server/services/notifications";
 import type { ApplicantCategory } from "@/lib/program-matching/types";
+import { buildMatchingProfileFromStudent } from "@/server/services/program-matching/matching-profile";
+import { getProgramDossier } from "@/server/services/program-matching/program-dossier";
 
 const CRITICAL_MONITOR_FIELDS = [
   "ACCESS_TYPE",
@@ -19,6 +21,14 @@ const CRITICAL_MONITOR_FIELDS = [
   "REQUIRED_DOCUMENTS",
   "CAMPUS",
 ] as const;
+
+function monitoredFactKey(fact: {
+  field: string;
+  dimensionKey?: string | null;
+  applicantCategoryScope?: string | null;
+}) {
+  return `${fact.field}|${fact.dimensionKey || ""}|${fact.applicantCategoryScope || ""}`;
+}
 
 export async function setMonitoringSelected(input: {
   matchId: string;
@@ -129,7 +139,6 @@ export async function monitorSelectedPrograms(options?: {
       programAcademicYear: {
         include: {
           program: { include: { university: true } },
-          cycles: true,
           sourceDocuments: { orderBy: { retrievedAt: "desc" }, take: 10 },
           facts: { where: { superseded: false } },
         },
@@ -150,23 +159,19 @@ export async function monitorSelectedPrograms(options?: {
 
   for (const match of selected) {
     const pay = match.programAcademicYear;
-    const category = "UNKNOWN" as ApplicantCategory;
-    // Prefer category from latest enrichment run
-    const lastRun = await prisma.programEnrichmentRun.findFirst({
-      where: { programAcademicYearId: pay.id, status: { in: ["SUCCEEDED", "REUSED"] } },
-      orderBy: { finishedAt: "desc" },
-    });
-    const applicantCategory = (lastRun?.applicantCategory ??
-      category) as ApplicantCategory;
+    const applicantCategory = buildMatchingProfileFromStudent(
+      match.student
+    ).applicantCategory as ApplicantCategory;
 
     const key = `${pay.programId}|${pay.academicYear}|${applicantCategory}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
+    const dossier = await getProgramDossier(pay.id, { applicantCategory });
     const nearestDeadline =
-      pay.cycles
-        .map((c) => c.applicationDeadline)
-        .filter((d): d is Date => !!d)
+      dossier?.deadlines
+        .map((entry) => entry.deadline)
+        .filter((date): date is Date => !!date)
         .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
     const hasCurrentBando = pay.sourceDocuments.some(
       (d) =>
@@ -264,7 +269,7 @@ export async function monitorSelectedPrograms(options?: {
               f.field as (typeof CRITICAL_MONITOR_FIELDS)[number]
             )
           )
-          .map((f) => [f.field, f.normalizedValueJson])
+          .map((f) => [monitoredFactKey(f), f.normalizedValueJson])
       );
 
       const ai = await enrichProgramWithAi({
@@ -286,8 +291,8 @@ export async function monitorSelectedPrograms(options?: {
             universityName: pay.program.university.name,
             degreeClass: pay.program.degreeClass,
             language: pay.program.language,
-            durationYears: pay.program.durationYears,
-            campusCity: pay.program.campusCity,
+            durationYears: null,
+            campusCity: null,
             officialUrl,
           },
         }),
@@ -305,7 +310,7 @@ export async function monitorSelectedPrograms(options?: {
 
       let material = false;
       for (const f of afterFacts) {
-        const prevVal = beforeFacts.get(f.field);
+        const prevVal = beforeFacts.get(monitoredFactKey(f));
         if (prevVal != null && prevVal !== f.normalizedValueJson) {
           material = true;
           await prisma.programChangeEvent.create({
@@ -355,7 +360,7 @@ export async function monitorSelectedPrograms(options?: {
           const deadlineChanged = afterFacts.some(
             (f) =>
               f.field === "APPLICATION_DEADLINE" &&
-              beforeFacts.get(f.field) !== f.normalizedValueJson &&
+              beforeFacts.get(monitoredFactKey(f)) !== f.normalizedValueJson &&
               f.confidence === "HIGH"
           );
           if (deadlineChanged && m.student.userId) {

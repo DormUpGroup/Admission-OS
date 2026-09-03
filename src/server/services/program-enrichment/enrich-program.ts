@@ -21,6 +21,7 @@ import {
   type OfficialSiteNavigator,
 } from "./official-site-navigator";
 import { persistEnrichmentOutput } from "./persist-enrichment";
+import { PROGRAMME_FACT_RESOLVER_VERSION } from "@/server/services/program-matching/programme-fact-contract";
 
 export type AiEnrichResult = {
   status:
@@ -91,11 +92,31 @@ export async function enrichProgramWithAi(input: {
     };
   }
 
-  // Preliminary fingerprint from existing docs; final fingerprint after navigation
-  const existingHashes = pay.sourceDocuments.map((d) => d.contentHash);
-  const prelimFingerprint = buildSourceFingerprint(existingHashes);
+  const navigator =
+      input.navigatorFactory?.({
+        programId: pay.programId,
+        universityId: pay.program.universityId,
+        programAcademicYearId: pay.id,
+        academicYear: pay.academicYear,
+      }) ??
+      createOfficialSiteNavigator({
+        programId: pay.programId,
+        universityId: pay.program.universityId,
+        programAcademicYearId: pay.id,
+        academicYear: pay.academicYear,
+      });
 
-  if (!input.force) {
+  // Refresh the official root before deciding whether old AI output is
+  // reusable. A legacy dossier or stale local SourceDocument is never a hit.
+  await navigator.inspect_programme_site(officialUrl);
+  const preflightDocs = navigator.getDocuments();
+  const preflightHashes = [...preflightDocs.values()].map((d) => d.contentHash);
+  const prelimFingerprint =
+    preflightHashes.length > 0
+      ? buildSourceFingerprint(preflightHashes)
+      : `unavailable:${Date.now()}`;
+
+  if (!input.force && preflightHashes.length > 0) {
     const reusable = await findReusableEnrichmentRun({
       programAcademicYearId: pay.id,
       applicantCategory: input.applicantCategory,
@@ -111,7 +132,11 @@ export async function enrichProgramWithAi(input: {
         promptVersion: cfg.promptVersion,
         sourceFingerprint: prelimFingerprint,
         sourceDocumentIdsJson: reusable.sourceDocumentIdsJson,
+        resolvedFactIdsJson: reusable.resolvedFactIdsJson,
         reusedFromRunId: reusable.id,
+        origin: "AI",
+        academicYear: pay.academicYear,
+        resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
         finishedAt: new Date(),
       });
       return {
@@ -131,23 +156,12 @@ export async function enrichProgramWithAi(input: {
     model: cfg.model,
     promptVersion: cfg.promptVersion,
     sourceFingerprint: prelimFingerprint,
+    origin: "AI",
+    academicYear: pay.academicYear,
+    resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
   });
 
   try {
-    const navigator =
-      input.navigatorFactory?.({
-        programId: pay.programId,
-        universityId: pay.program.universityId,
-        programAcademicYearId: pay.id,
-        academicYear: pay.academicYear,
-      }) ??
-      createOfficialSiteNavigator({
-        programId: pay.programId,
-        universityId: pay.program.universityId,
-        programAcademicYearId: pay.id,
-        academicYear: pay.academicYear,
-      });
-
     const client = input.client ?? createOpenAiEnrichmentClient();
     const ctx: MinimalMatchingContext = {
       ...input.matchingContext,
@@ -167,7 +181,7 @@ export async function enrichProgramWithAi(input: {
     const docs = navigator.getDocuments();
     const hashes = [...docs.values()].map((d) => d.contentHash);
     const fingerprint = buildSourceFingerprint(
-      hashes.length ? hashes : existingHashes
+      hashes.length ? hashes : preflightHashes
     );
 
     // Cache hit after navigation (shared bando hash)
@@ -176,12 +190,14 @@ export async function enrichProgramWithAi(input: {
         programAcademicYearId: pay.id,
         applicantCategory: input.applicantCategory,
         sourceFingerprint: fingerprint,
+        promptVersion: cfg.promptVersion,
       });
       if (reusable && reusable.id !== run.id) {
         await finishEnrichmentRun(run.id, {
           status: "REUSED",
           model: reusable.model,
           sourceDocumentIdsJson: JSON.stringify([...docs.keys()]),
+          resolvedFactIdsJson: reusable.resolvedFactIdsJson,
           toolCallCount: result.toolCallCount,
           reusedFromRunId: reusable.id,
           sourceFingerprint: fingerprint,
@@ -234,6 +250,7 @@ export async function enrichProgramWithAi(input: {
       output: result.output,
       documentTexts: docTexts,
       extractionMethod: `OPENAI_${result.model}`,
+      deferAdministrativeFields: input.forShortlist,
     });
 
     await finishEnrichmentRun(run.id, {
@@ -245,6 +262,8 @@ export async function enrichProgramWithAi(input: {
       quoteRejectCount:
         result.quoteRejectCount + persisted.quoteRejectCount,
       sourceDocumentIdsJson: JSON.stringify([...docs.keys()]),
+      resolvedFactIdsJson: JSON.stringify(persisted.savedFactIds),
+      resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
     });
     await prisma.programEnrichmentRun.update({
       where: { id: run.id },

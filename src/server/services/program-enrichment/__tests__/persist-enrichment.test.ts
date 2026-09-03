@@ -12,6 +12,20 @@ const mockProgramUpdate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    $transaction: (fn: (db: unknown) => unknown) =>
+      fn({
+        programFact: {
+          findMany: (...args: unknown[]) => mockFactFindMany(...args),
+          create: (...args: unknown[]) => mockFactCreate(...args),
+          update: (...args: unknown[]) => mockFactUpdate(...args),
+        },
+        programChangeEvent: {
+          create: (...args: unknown[]) => mockChangeCreate(...args),
+        },
+        program: {
+          update: (...args: unknown[]) => mockProgramUpdate(...args),
+        },
+      }),
     programFact: {
       findMany: (...args: unknown[]) => mockFactFindMany(...args),
       create: (...args: unknown[]) => mockFactCreate(...args),
@@ -285,6 +299,56 @@ describe("persistEnrichmentOutput", () => {
     expect(mockFactUpdate).toHaveBeenCalled();
     expect(mockFactCreate).toHaveBeenCalled();
     expect(mockChangeCreate).toHaveBeenCalled();
+  });
+
+  it("persists quoted selection as its own decision fact", async () => {
+    const quote = "Selection is based on an entrance examination.";
+    const output: EnrichmentOutput = {
+      campuses: [],
+      access: [],
+      selection: [
+        {
+          value: { type: "ENTRANCE_EXAM" },
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://example.edu/programme",
+          quote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      admissionExams: [],
+      languageRequirements: [],
+      deadlines: [],
+      tuition: [],
+      seats: [],
+      requiredDocuments: [],
+      importantNotes: [],
+      sourceConflicts: [],
+      unresolvedFields: [],
+      siteNavigationSummary: { hops: [], documentsUsed: [] },
+    };
+
+    await persistEnrichmentOutput({
+      programId: "p1",
+      programAcademicYearId: "pay1",
+      academicYear: "2026/2027",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      output,
+      documentTexts: new Map([["doc1", quote]]),
+      extractionMethod: "OPENAI_test",
+    });
+
+    expect(mockFactCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          field: "SELECTION",
+          origin: "AI",
+          decisionStatus: "ELIGIBLE",
+        }),
+      })
+    );
   });
 });
 

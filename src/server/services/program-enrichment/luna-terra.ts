@@ -74,11 +74,12 @@ export const NAVIGATOR_TOOLS: ToolDefinition[] = [
   },
 ];
 
-function userPrompt(ctx: MinimalMatchingContext): string {
+function userPrompt(ctx: MinimalMatchingContext, forShortlist: boolean): string {
   return JSON.stringify(
     {
-      instruction:
-        "Extract proven programme card fields for this applicant category using tools only. Return final JSON when done.",
+      instruction: forShortlist
+        ? "Extract only the decision fields needed for an initial curator shortlist: campus, access, selection, admission exams, language requirements, seats, and required documents. Do not navigate to fee/tuition pages and do not look for application deadlines. Return empty arrays for deadlines and tuition."
+        : "Extract proven programme card fields for this applicant category using tools only. Return final JSON when done.",
       matchingContext: ctx,
     },
     null,
@@ -204,10 +205,16 @@ export function shouldEscalateToTerra(input: {
   if (!cfg.escalationEnabled) return false;
   if (!input.output) return true;
   if (input.quoteRejects > 0) return true;
-  if (input.invalidCritical.length > 0) return true;
+  const relevantInvalidCritical = input.forShortlist
+    ? input.invalidCritical.filter((field) => field !== "deadlines" && field !== "tuition")
+    : input.invalidCritical;
+  if (relevantInvalidCritical.length > 0) return true;
   if (input.output.sourceConflicts.length > 0) return true;
+  const relevantCritical: readonly string[] = input.forShortlist
+    ? CRITICAL_FIELDS.filter((field) => field !== "deadlines" && field !== "tuition")
+    : CRITICAL_FIELDS;
   const unresolvedCritical = input.output.unresolvedFields.filter((f) =>
-    CRITICAL_FIELDS.includes(f as (typeof CRITICAL_FIELDS)[number])
+    relevantCritical.includes(f as (typeof CRITICAL_FIELDS)[number])
   );
   if (unresolvedCritical.length > 0 && input.forShortlist) return true;
   if (input.categorySpecificRules && unresolvedCritical.length > 0) return true;
@@ -254,7 +261,7 @@ export async function runLunaTerraEnrichment(input: {
         role: "system",
         content: enrichmentSystemPrompt(cfg.promptVersion),
       },
-      { role: "user", content: userPrompt(input.ctx) },
+      { role: "user", content: userPrompt(input.ctx, input.forShortlist ?? false) },
     ];
 
     let inputTokens = 0;

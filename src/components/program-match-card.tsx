@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { labelOf } from "@/lib/labels";
 import type { ProgramMatch } from "@/server/services/program-match";
 import { MapPin } from "lucide-react";
@@ -21,6 +21,16 @@ export function ProgramMatchCard({
   className?: string;
 }) {
   const initials = universityInitials(match.universityName);
+  const tuition =
+    match.tuitionFixed != null
+      ? `€${match.tuitionFixed}`
+      : match.tuitionMin != null && match.tuitionMax != null
+        ? `€${match.tuitionMin}–${match.tuitionMax}`
+        : match.tuitionMin != null
+          ? `от €${match.tuitionMin}`
+          : match.tuitionMax != null
+            ? `до €${match.tuitionMax}`
+            : "Стоимость уточняется";
 
   return (
     <article
@@ -76,6 +86,27 @@ export function ProgramMatchCard({
             ))}
           </ul>
         ) : null}
+
+        <dl className="grid gap-1.5 text-xs">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Дедлайн</dt>
+            <dd className="text-right font-medium">
+              {match.deadline ? formatDate(match.deadline) : "Дедлайн уточняется"}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Стоимость</dt>
+            <dd className="text-right font-medium">{tuition}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Квота</dt>
+            <dd className="text-right font-medium">
+              {match.quotaSeats != null
+                ? `${match.quotaSeats} мест`
+                : "Квота уточняется"}
+            </dd>
+          </div>
+        </dl>
 
         {action ? <div className="mt-auto pt-1">{action}</div> : null}
       </div>

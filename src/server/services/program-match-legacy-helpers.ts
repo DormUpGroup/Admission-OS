@@ -137,13 +137,6 @@ export function scoreProgram(
     );
   }
 
-  const cities = criteria.preferredCities ?? [];
-  const city = program.university.city;
-  if (city && cities.some((c) => normalize(c) === normalize(city))) {
-    score += 10;
-    reasons.push(`город ${city}`);
-  }
-
   return { score, reasons };
 }
 
@@ -193,7 +186,7 @@ export async function legacyMatchProgramsForStudent(
       field: p.field,
       universityId: p.university.id,
       universityName: p.university.name,
-      city: p.university.city,
+      city: null,
       score,
       reasons,
       alreadyApplied: !!applicationId,

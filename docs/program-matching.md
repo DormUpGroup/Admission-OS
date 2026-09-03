@@ -1,6 +1,6 @@
 # Program Matching Engine
 
-> **Current state:** matching **v1.9** adds an optional OpenAI second filter (official-site navigator + Luna/Terra) after Universitaly discovery. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false** (regex/PDF dossier remains fallback).
+> **Current state:** matching uses evidence-aware programme facts. Universitaly is discovery-only; admission decisions are resolved from quoted, year-specific and applicant-scoped official facts. Feature flag `OPENAI_PROGRAM_ENRICHMENT_ENABLED` defaults to **false** (regex/PDF remains a non-authoritative fallback where evidence is incomplete).
 
 Italy-specific program matching for IMMIGROME OS. Matches use the **existing questionnaires** as source of truth, a local **Program Database** with fact-level provenance, deterministic **eligibility**, configurable **fit score**, and **curator verification** before student shortlist.
 
@@ -16,7 +16,9 @@ Questionnaire → MatchingProfile → Universitaly (lingua × MIUR classe)
 
 **Hybrid rule:** no full Universitaly catalog mirror. Generate searches online with questionnaire filters, caches candidates locally for 24h (same fingerprint), then runs eligibility/fit only on those programmes (+ shortlisted).
 
-Matching does **not** scrape the whole of Italy on each click. Caps: max **10 pages** total budget shared across classe×lingua queries (extended thin-pool retry prefers deferred primary MIUR classes). Curator receives **up to 25** matches without artificial padding. Program dossier enrich is reused across students for **30 days** (`PROGRAM_DOSSIER_TTL_DAYS`). AI facts are keyed by program + academic year + applicant category + source hashes + prompt version (not by student PII).
+Matching does **not** scrape the whole of Italy on each click. Caps: max **10 pages** total budget shared across classe×lingua queries (extended thin-pool retry prefers deferred primary MIUR classes). Curator receives **up to 25** matches without artificial padding. The legacy 30-day dossier cache is used only when AI is disabled. AI reuse requires the exact programme academic year, applicant category, refreshed official-source fingerprint, prompt version, and still-materialized eligible facts; student PII is never sent.
+
+**Initial curator cards:** tuition and application deadlines are deliberately deferred. They are neither crawled from fee pages nor used in fit/risk calculation for the first 20–25 options; the initial decision focuses on profile fit, teaching language, access/selection, exams, seats and official sources.
 
 ### OpenAI second filter (optional)
 
@@ -75,7 +77,7 @@ officialUrl → fetch page
   → discover bando / tasse / requisiti links (same domain)
   → pick by field coverage (not first-OK)
   → section-aware parse (heading windows)
-  → ProgramFact ADMISSION_CALL (+ TuitionInfo / AdmissionCycle)
+  → quoted ProgramFact OFFICIAL_FALLBACK (legacy tables are compatibility only)
   → curator Confirm dossier → MANUAL_VERIFIED
 ```
 
@@ -91,20 +93,19 @@ officialUrl → fetch page
 
 Fingerprint = hash of all direction×lingua queries + excluded cities. Same student + fingerprint within **24h** reuses local `programAcademicYearIds`.
 
-Program dossier (tuition, deadlines, exams, career text) is shared across students via `ProgramAcademicYear.dossierEnrichedAt` + TTL.
+When AI is enabled, `ProgramAcademicYear.dossierEnrichedAt` never short-circuits AI. Failed AI attempts may run regex/PDF and are recorded as `FALLBACK_REGEX`, not as successful AI enrichment.
 
-## Source hierarchy
+## Decision fact resolution
 
-1. Manual verified curator facts
-2. Official admission call / bando
-3. Official programme page
-4. University generic page
-5. Universitaly (discovery/catalog only)
-6. CISIA (general TOLC info; programme-specific TOLC must be from university call)
-7. Regional scholarship authorities (ER.GO, EDISU, …)
-8. MAECI / Study in Italy (secondary context)
+`resolveProgramFact()` first rejects superseded, conflicting, stale, wrong-year, wrong-scope, unquoted, unvalidated and legacy-candidate facts. It then applies the fixed priority:
 
-Conflict resolution: `resolveProgramFact()` in `src/server/services/program-matching/source-resolver.ts`.
+1. `MANUAL_VERIFIED` for the requested year/category
+2. current quoted scoped `AI`
+3. current quoted scoped `OFFICIAL_FALLBACK`
+4. current quoted `ALL`
+5. `UNKNOWN`
+
+`EU_CITIZEN`, `EU_EQUIVALENT`, `NON_EU_RESIDENT_ITALY` and `NON_EU_RESIDENT_ABROAD` are distinct. Collection facts use `dimensionKey`; quota rows preserve the official group text and category code. `AdmissionCycle`, `TuitionInfo`, `Program.campusCity` and `ADMISSION_REGIME` are legacy compatibility/candidate storage and are not decision read sources.
 
 ## Key models
 
@@ -135,7 +136,7 @@ Uses анкета №1 + №2 JSON on `Student`. Missing fields become `UNKNOWN`
 - **Prep-track gaps** (language certificate, SAT/TOLC, interview, portfolio, curricular) do not block
 - Fit prioritises **teaching language first**, then field/sphere; several directions are **OR**. Primary MIUR classe → full field weight; secondary/shared without strong title/tag → ~45–55% of field weight. All selected directions are queried (page-budget may defer some). Test questionnaires intentionally mix cross-sphere pairs (e.g. Economics+CS, Biology+CS, Medicine+Chemistry).
 - Per-match `discoveryMetaJson` stores directions, MIUR roles, inclusion evidence (`exact_classe` / `secondary_classe` / `strong_tag` / `synonym`), and curator `whyIncluded`. The match tab shows queried vs deferred classes and synonym fallback.
-- Curator list size: **15–20** (`MATCH_LIMIT_DEFAULT=20`)
+- Curator list size: up to **25** (`MATCH_LIMIT_DEFAULT=25`)
 - Program dossier card fields come from shared `ProgramAcademicYear` (reuse if enriched within TTL)
 - Curator can **Confirm dossier** on the match card → `MANUAL_VERIFIED` facts
 
@@ -160,6 +161,7 @@ Student portal shows **shortlist only**.
 ## CLI
 
 ```bash
+npx prisma db push
 npm run programs:discover
 npm run programs:ingest
 npm run programs:refresh
@@ -169,6 +171,8 @@ npm run bando:miss-report -- --limit=50
 npm run programs:match -- --email=alina.sokolova@student.local
 npm run programs:match-batch2
 npm run programs:audit-directions
+npm run programs:migrate-facts-v2
+npm run programs:migrate-facts-v2 -- --apply --reenrich --limit=50
 ```
 
 Config: `TARGET_ACADEMIC_YEARS` in `src/lib/program-matching/config.ts` (no hardcoded single year in logic).

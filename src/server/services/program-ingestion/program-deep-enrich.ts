@@ -9,6 +9,7 @@ import {
   admissionSiblingUrls,
 } from "@/server/services/program-ingestion/bando-url-discover";
 import {
+  extractHtmlMainText,
   fieldCoverageScore,
   parseCallText,
   type CallTextParse,
@@ -30,6 +31,12 @@ import {
   mergeAdmissionRegime,
   type AdmissionRegime,
 } from "@/server/services/program-ingestion/admission-regime";
+import {
+  factDimensionKey,
+  PROGRAMME_FACT_RESOLVER_VERSION,
+} from "@/server/services/program-matching/programme-fact-contract";
+import { isProgramEnrichmentEnabled } from "@/server/services/program-enrichment/config";
+import { validateEvidenceQuote } from "@/server/services/program-enrichment/quote-validator";
 
 const ENRICH_TIMEOUT_MS = 18_000;
 const FETCH_RETRY_DELAY_MS = 800;
@@ -158,6 +165,10 @@ async function upsertFact(input: {
   extractionMethod: string;
   confidence?: string;
   rawValue?: string;
+  evidenceQuote?: string;
+  applicantCategoryScope?: string;
+  dimensionKey?: string;
+  evidenceValidated?: boolean;
 }) {
   const existing = await prisma.programFact.findFirst({
     where: {
@@ -165,6 +176,8 @@ async function upsertFact(input: {
       programAcademicYearId: input.programAcademicYearId,
       field: input.field,
       superseded: false,
+      applicantCategoryScope: input.applicantCategoryScope ?? null,
+      dimensionKey: input.dimensionKey ?? null,
     },
   });
   const data = {
@@ -176,6 +189,17 @@ async function upsertFact(input: {
     confidence: input.confidence ?? "MEDIUM",
     retrievedAt: new Date(),
     extractionMethod: input.extractionMethod,
+    academicYear: input.academicYear,
+    evidenceQuote: input.evidenceQuote ?? null,
+    applicantCategoryScope: input.applicantCategoryScope ?? null,
+    freshness: input.evidenceValidated ? "CURRENT" : "UNKNOWN",
+    origin: "OFFICIAL_FALLBACK",
+    dimensionKey: input.dimensionKey ?? null,
+    decisionStatus: input.evidenceValidated
+      ? "ELIGIBLE"
+      : "LEGACY_CANDIDATE",
+    evidenceValidatedAt: input.evidenceValidated ? new Date() : null,
+    resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
   };
   if (existing) {
     if (existing.sourceType === "MANUAL_VERIFIED") {
@@ -194,7 +218,6 @@ async function upsertFact(input: {
       programId: input.programId,
       programAcademicYearId: input.programAcademicYearId,
       field: input.field,
-      academicYear: input.academicYear,
       verificationStatus: "UNVERIFIED",
       ...data,
     },
@@ -214,6 +237,168 @@ type ParsedDocument = {
   sourceType: "ADMISSION_CALL" | "PROGRAMME_PAGE";
   method: string;
 };
+
+async function persistScopedQuotaFacts(
+  pay: {
+    id: string;
+    programId: string;
+    academicYear: string;
+    program: { universityId: string; name: string };
+  },
+  documents: ParsedDocument[]
+) {
+  for (const document of documents) {
+    const plainText = /html/i.test(document.method)
+      ? extractHtmlMainText(document.body)
+      : document.body;
+    const snapshot = await upsertSourceDocument({
+      sourceType: document.sourceType,
+      sourceAuthority: pay.program.name,
+      url: document.url,
+      academicYear: pay.academicYear,
+      universityId: pay.program.universityId,
+      programId: pay.programId,
+      programAcademicYearId: pay.id,
+      contentType: /pdf/i.test(document.method) ? "pdf" : "html",
+      body: plainText.slice(0, 100_000),
+      status: "FETCHED",
+      extractionQuality: extractionQualityLabel(document.parsed.quality),
+    });
+    for (const row of document.parsed.quotaRows) {
+      const mapped = row.category !== "UNMAPPED";
+      const scope = mapped ? row.category : undefined;
+      await upsertFact({
+        programId: pay.programId,
+        programAcademicYearId: pay.id,
+        field: "SEATS",
+        value: {
+          places: row.places,
+          category: row.category,
+          originalGroup: row.originalGroup,
+          categoryCode: row.categoryCode ?? null,
+        },
+        sourceDocumentId: snapshot.document.id,
+        sourceUrl: document.url,
+        academicYear: pay.academicYear,
+        sourceType: document.sourceType,
+        extractionMethod: `FALLBACK_${document.method}`,
+        confidence: row.confidence,
+        rawValue: row.originalGroup,
+        evidenceQuote: row.snippet,
+        applicantCategoryScope: scope,
+        dimensionKey: factDimensionKey({
+          field: "SEATS",
+          scope: scope || "UNMAPPED",
+          categoryCode: row.categoryCode,
+          discriminator: row.originalGroup,
+        }),
+        evidenceValidated:
+          mapped &&
+          validateEvidenceQuote(row.snippet, plainText).accepted,
+      });
+    }
+
+    const fallbackFacts: Array<{
+      field: string;
+      value: unknown;
+      quote?: string;
+      discriminator: string;
+      confidence?: string;
+    }> = [];
+    const tuitionQuote =
+      document.parsed.tuitionFixed?.snippet ||
+      document.parsed.tuitionMax?.snippet ||
+      document.parsed.tuitionMin?.snippet;
+    if (tuitionQuote) {
+      fallbackFacts.push({
+        field: "TUITION",
+        value: {
+          min: document.parsed.tuitionMin?.value ?? null,
+          max: document.parsed.tuitionMax?.value ?? null,
+          fixed: document.parsed.tuitionFixed?.value ?? null,
+          incomeBased: document.parsed.incomeBased,
+        },
+        quote: tuitionQuote,
+        discriminator: "annual",
+        confidence:
+          document.parsed.tuitionFixed?.confidence ||
+          document.parsed.tuitionMax?.confidence ||
+          document.parsed.tuitionMin?.confidence,
+      });
+    }
+    document.parsed.deadlines.forEach((deadline, index) => {
+      fallbackFacts.push({
+        field: "APPLICATION_DEADLINE",
+        value: { date: deadline.value, roundName: `Round ${index + 1}` },
+        quote: deadline.snippet,
+        discriminator: `round-${index + 1}`,
+        confidence: deadline.confidence,
+      });
+    });
+    if (
+      document.parsed.accessMode.value !== "UNKNOWN" &&
+      document.parsed.accessMode.snippet
+    ) {
+      fallbackFacts.push({
+        field: "ACCESS_TYPE",
+        value: { mode: document.parsed.accessMode.value },
+        quote: document.parsed.accessMode.snippet,
+        discriminator: "access",
+        confidence: document.parsed.accessMode.confidence,
+      });
+    }
+    if (document.parsed.languageLevel?.snippet) {
+      fallbackFacts.push({
+        field: "LANGUAGE_REQUIREMENT",
+        value: {
+          language: document.parsed.languages[0] || "English",
+          level: document.parsed.languageLevel.value,
+        },
+        quote: document.parsed.languageLevel.snippet,
+        discriminator: document.parsed.languages[0] || "English",
+        confidence: document.parsed.languageLevel.confidence,
+      });
+    }
+
+    for (const fact of fallbackFacts) {
+      if (!fact.quote) continue;
+      const evidenceValidated = validateEvidenceQuote(
+        fact.quote,
+        plainText
+      ).accepted;
+      const mentionsApplicantGroup =
+        /\b(?:non[\s-]?(?:eu|ue)|extra[\s-]?ue|eu\s+citizens?|international\s+students?|residenti|residing)\b/i.test(
+          fact.quote
+        );
+      const scope =
+        mentionsApplicantGroup &&
+        (fact.field === "APPLICATION_DEADLINE" || fact.field === "TUITION")
+          ? undefined
+          : "ALL";
+      await upsertFact({
+        programId: pay.programId,
+        programAcademicYearId: pay.id,
+        field: fact.field,
+        value: fact.value,
+        sourceDocumentId: snapshot.document.id,
+        sourceUrl: document.url,
+        academicYear: pay.academicYear,
+        sourceType: document.sourceType,
+        extractionMethod: `FALLBACK_${document.method}`,
+        confidence: fact.confidence,
+        rawValue: fact.quote,
+        evidenceQuote: fact.quote,
+        applicantCategoryScope: scope,
+        dimensionKey: factDimensionKey({
+          field: fact.field,
+          scope: scope || "UNMAPPED",
+          discriminator: fact.discriminator,
+        }),
+        evidenceValidated: evidenceValidated && !!scope,
+      });
+    }
+  }
+}
 
 /**
  * A call is usually authoritative for access, seats and deadlines; a linked
@@ -253,6 +438,7 @@ function mergeParsedDocuments(documents: ParsedDocument[]): CallTextParse | null
     euSeats: first((p) => p.euSeats, (v) => v != null),
     nonEuSeats: first((p) => p.nonEuSeats, (v) => v != null),
     totalSeats: first((p) => p.totalSeats, (v) => v != null),
+    quotaRows: ordered.flatMap((document) => document.parsed.quotaRows),
     exams: bestExams.exams,
     examAlternatives: bestExams.alternatives,
     examsConfidence: bestExams.confidence,
@@ -308,10 +494,13 @@ async function applyParsedFacts(input: {
   sourceType: "ADMISSION_CALL" | "PROGRAMME_PAGE";
   extractionMethod: string;
   regime?: AdmissionRegime;
+  /** Fee and deadline work is deferred until a programme is shortlisted. */
+  deferAdministrativeFields?: boolean;
 }): Promise<{ accessMode: string; hadSignal: boolean }> {
   const { pay, parsed, sourceDocumentId, sourceUrl, sourceType, extractionMethod } =
     input;
   let hadSignal = false;
+  const writeLegacyProjection = !isProgramEnrichmentEnabled();
   const ownership = inferPublicPrivateFromUniversityName(pay.program.university.name);
 
   let catalogueAccess: "OPEN" | "CLOSED" | "UNKNOWN" =
@@ -493,9 +682,12 @@ async function applyParsedFacts(input: {
     }
   }
 
-  if (parsed.tuitionMin || parsed.tuitionMax || parsed.tuitionFixed) {
+  if (
+    !input.deferAdministrativeFields &&
+    (parsed.tuitionMin || parsed.tuitionMax || parsed.tuitionFixed)
+  ) {
     hadSignal = true;
-    await prisma.tuitionInfo.upsert({
+    if (writeLegacyProjection) await prisma.tuitionInfo.upsert({
       where: { programAcademicYearId: pay.id },
       create: {
         programAcademicYearId: pay.id,
@@ -540,11 +732,19 @@ async function applyParsedFacts(input: {
     .map((d) => ({ field: d, date: parseLooseDate(d.value) }))
     .filter((x): x is { field: (typeof parsed.deadlines)[0]; date: Date } => !!x.date);
 
-  if (deadlineDates.length > 0 || parsed.nonEuSeats || parsed.euSeats || parsed.totalSeats) {
+  const relevantDeadlineDates = input.deferAdministrativeFields
+    ? []
+    : deadlineDates;
+  if (
+    relevantDeadlineDates.length > 0 ||
+    parsed.nonEuSeats ||
+    parsed.euSeats ||
+    parsed.totalSeats
+  ) {
     hadSignal = true;
-    const primary = deadlineDates[0]?.date ?? null;
-    const existingCycle = pay.cycles[0];
-    if (existingCycle) {
+    const primary = relevantDeadlineDates[0]?.date ?? null;
+    const existingCycle = pay.cycles.find(() => true);
+    if (writeLegacyProjection && existingCycle) {
       await prisma.admissionCycle.update({
         where: { id: existingCycle.id },
         data: {
@@ -559,7 +759,10 @@ async function applyParsedFacts(input: {
           totalSeats: parsed.totalSeats?.value ?? existingCycle.totalSeats,
         },
       });
-    } else if (primary || parsed.nonEuSeats || parsed.euSeats || parsed.totalSeats) {
+    } else if (
+      writeLegacyProjection &&
+      (primary || parsed.nonEuSeats || parsed.euSeats || parsed.totalSeats)
+    ) {
       await prisma.admissionCycle.create({
         data: {
           programAcademicYearId: pay.id,
@@ -577,14 +780,17 @@ async function applyParsedFacts(input: {
         programId: pay.programId,
         programAcademicYearId: pay.id,
         field: "APPLICATION_DEADLINE",
-        value: { date: primary.toISOString(), raw: deadlineDates[0].field.value },
+        value: {
+          date: primary.toISOString(),
+          raw: relevantDeadlineDates[0].field.value,
+        },
         sourceDocumentId,
         sourceUrl,
         academicYear: pay.academicYear,
         sourceType,
         extractionMethod,
-        confidence: deadlineDates[0].field.confidence,
-        rawValue: deadlineDates[0].field.snippet,
+        confidence: relevantDeadlineDates[0].field.confidence,
+        rawValue: relevantDeadlineDates[0].field.snippet,
       });
     }
   }
@@ -790,7 +996,8 @@ export type DeepEnrichResult = { ok: boolean; reason?: string };
  * Scanned PDFs: OCR only when BANDO_OCR=1 (see admission-call adapter).
  */
 export async function deepEnrichProgram(
-  programAcademicYearId: string
+  programAcademicYearId: string,
+  options?: { deferAdministrativeFields?: boolean }
 ): Promise<DeepEnrichResult> {
   const pay = await prisma.programAcademicYear.findUnique({
     where: { id: programAcademicYearId },
@@ -948,16 +1155,21 @@ export async function deepEnrichProgram(
     );
   } else {
     const discovered = [
-      ...admissionSiblingUrls(officialUrl),
+      ...admissionSiblingUrls(officialUrl, {
+        includeTuition: !options?.deferAdministrativeFields,
+      }),
       ...discoverBandoUrls(fetched.body, officialUrl, {
         academicYear: pay.academicYear,
         limit: 8,
+        includeTuition: !options?.deferAdministrativeFields,
       }),
     ].filter(
       (c, i, arr) => arr.findIndex((x) => x.url === c.url) === i
     );
     // Prefer Unibo how-to-enrol / admission siblings and real bandi first.
-    const follow = pickFollowLinks(discovered, 4, officialUrl);
+    const follow = pickFollowLinks(discovered, 4, officialUrl, {
+      includeTuition: !options?.deferAdministrativeFields,
+    });
     const uniboFirst = discovered.filter((c) =>
       /how-to-enrol|\/admission|iscriversi|\/ammissione|bando.*clef|call-for-application/i.test(
         c.url
@@ -1086,6 +1298,8 @@ export async function deepEnrichProgram(
     }),
   };
 
+  await persistScopedQuotaFacts(pay, parsedDocuments);
+
   const { accessMode, hadSignal } = await applyParsedFacts({
     pay: payFresh,
     parsed: mergedParsed,
@@ -1094,6 +1308,7 @@ export async function deepEnrichProgram(
     sourceType: bestSourceType,
     extractionMethod: bestMethod,
     regime: mergedRegime,
+    deferAdministrativeFields: options?.deferAdministrativeFields,
   });
 
   await prisma.programAcademicYear.update({

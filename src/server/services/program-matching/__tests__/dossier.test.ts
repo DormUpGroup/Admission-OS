@@ -5,6 +5,7 @@ import {
   deriveCallFreshness,
   examsDisplayLabel,
   isDossierTimestampFresh,
+  canReuseLegacyDossier,
   resolveDossierAccessMode,
   resolveDossierSelection,
   resolvePublicPrivate,
@@ -17,6 +18,13 @@ import { applyCuratorMatchFilters } from "@/server/services/program-matching/cur
 import type { CuratorMatchView } from "@/components/curator-program-match-card";
 import { parseProgrammePageHtml } from "@/server/services/program-ingestion/adapters/university-website";
 import { PROGRAM_DOSSIER_TTL_DAYS } from "@/lib/program-matching/config";
+
+describe("dossier cache boundary", () => {
+  it("never lets a fresh legacy dossier block enabled AI", () => {
+    expect(canReuseLegacyDossier(true, true)).toBe(false);
+    expect(canReuseLegacyDossier(false, true)).toBe(true);
+  });
+});
 
 describe("dossier freshness", () => {
   it("treats missing timestamp as stale", () => {

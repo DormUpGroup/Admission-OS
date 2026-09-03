@@ -50,34 +50,133 @@ describe("compare helpers", () => {
   });
 });
 
+describe("initial-shortlist scoring", () => {
+  it("keeps fit independent of tuition until a programme is shortlisted", () => {
+    const base = {
+      name: "Economics",
+      field: "Economics",
+      fieldTags: ["economics"],
+      teachingLanguages: ["English"],
+      campusCity: "Bologna",
+    };
+    const lowFee = calculateFitScore(profileA, { ...base, minTuition: 100 }, []);
+    const highFee = calculateFitScore(profileA, { ...base, minTuition: 50_000 }, []);
+
+    expect(lowFee.budget).toBe(highFee.budget);
+    expect(lowFee.total).toBe(highFee.total);
+  });
+});
+
 describe("EU / non-EU category", () => {
   it("does not collapse categories", () => {
     expect(inferApplicantCategory({ nationality: "Italy" })).toBe("EU_CITIZEN");
     expect(inferApplicantCategory({ nationality: "Kazakhstan" })).toBe(
       "NON_EU_RESIDENT_ABROAD"
     );
+    expect(
+      inferApplicantCategory({
+        nationality: "Kazakhstan",
+        country: "Italy",
+      })
+    ).toBe("NON_EU_RESIDENT_ITALY");
+    expect(
+      inferApplicantCategory({ citizenship: "EU equivalent" })
+    ).toBe("EU_EQUIVALENT");
     expect(inferApplicantCategory({})).toBe("UNKNOWN");
   });
 });
 
 describe("source priority resolver", () => {
-  it("prefers admission call over universitaly", () => {
+  const quoted = (over: Record<string, unknown>) => ({
+    sourceType: "PROGRAMME_PAGE",
+    academicYear: "2026/2027",
+    freshness: "CURRENT",
+    applicantCategoryScope: "NON_EU_RESIDENT_ABROAD",
+    evidenceQuote: "Non-EU candidates residing abroad: 40 places",
+    sourceDocumentId: "doc-1",
+    sourceUrl: "https://example.edu/programme",
+    evidenceValidatedAt: new Date("2026-01-01"),
+    decisionStatus: "ELIGIBLE",
+    normalizedValueJson: "40",
+    ...over,
+  });
+
+  it("rejects Universitaly and unquoted legacy decision facts", () => {
     const winner = resolveProgramFact(
       [
         { sourceType: "UNIVERSITALY", academicYear: "2026/2027", confidence: "HIGH" },
         { sourceType: "ADMISSION_CALL", academicYear: "2026/2027", confidence: "MEDIUM" },
       ],
-      "2026/2027"
+      "2026/2027",
+      { applicantCategory: "NON_EU_RESIDENT_ABROAD" }
     );
-    expect(winner?.sourceType).toBe("ADMISSION_CALL");
+    expect(winner).toBeNull();
   });
 
   it("prefers verified manual values", () => {
     const winner = resolveProgramFact([
-      { sourceType: "ADMISSION_CALL", verificationStatus: "UNVERIFIED" },
-      { sourceType: "MANUAL_VERIFIED", verificationStatus: "VERIFIED" },
+      quoted({ origin: "AI" }),
+      {
+        sourceType: "MANUAL_VERIFIED",
+        verificationStatus: "VERIFIED",
+        extractionMethod: "MANUAL",
+      },
     ]);
     expect(winner?.sourceType).toBe("MANUAL_VERIFIED");
+  });
+
+  it("orders scoped AI, scoped fallback, ALL, then unknown", () => {
+    const all = quoted({
+      origin: "AI",
+      applicantCategoryScope: "ALL",
+      normalizedValueJson: "10",
+    });
+    const fallback = quoted({
+      origin: "OFFICIAL_FALLBACK",
+      normalizedValueJson: "20",
+    });
+    const ai = quoted({ origin: "AI", normalizedValueJson: "40" });
+    expect(
+      resolveProgramFact([all, fallback, ai], "2026/2027", {
+        applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      })?.normalizedValueJson
+    ).toBe("40");
+    expect(
+      resolveProgramFact([all, fallback], "2026/2027", {
+        applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      })?.normalizedValueJson
+    ).toBe("20");
+    expect(
+      resolveProgramFact([all], "2026/2027", {
+        applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      })?.normalizedValueJson
+    ).toBe("10");
+  });
+
+  it("never uses another applicant scope or academic year", () => {
+    const wrongScope = quoted({
+      origin: "AI",
+      applicantCategoryScope: "EU_CITIZEN",
+    });
+    const wrongYear = quoted({ origin: "AI", academicYear: "2025/2026" });
+    expect(
+      resolveProgramFact([wrongScope, wrongYear], "2026/2027", {
+        applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      })
+    ).toBeNull();
+  });
+
+  it("returns unknown for equal-priority conflicting facts", () => {
+    expect(
+      resolveProgramFact(
+        [
+          quoted({ origin: "AI", normalizedValueJson: "40" }),
+          quoted({ origin: "AI", normalizedValueJson: "200" }),
+        ],
+        "2026/2027",
+        { applicantCategory: "NON_EU_RESIDENT_ABROAD" }
+      )
+    ).toBeNull();
   });
 });
 

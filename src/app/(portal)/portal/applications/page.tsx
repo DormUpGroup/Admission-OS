@@ -36,7 +36,7 @@ export default async function PortalApplicationsPage() {
               href={`/portal/applications/${app.id}`}
               universityName={app.program.university.name}
               programName={app.program.name}
-              city={app.program.university.city}
+              city={null}
               intake={app.intake}
               status={app.status}
               readinessPercent={app.readinessPercent}

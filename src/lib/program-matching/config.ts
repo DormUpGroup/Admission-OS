@@ -1,4 +1,4 @@
-export const MATCHING_ENGINE_VERSION = "v1.9";
+export const MATCHING_ENGINE_VERSION = "v2.0";
 
 /** Min programmes per questionnaire direction in top-N when 2+ directions selected. */
 export const MULTI_DIRECTION_MIN_SLOTS = 2;
