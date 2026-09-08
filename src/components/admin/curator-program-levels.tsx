@@ -42,15 +42,16 @@ function accessText(match: CuratorMatchView): string | null {
     access = match.seatsUnlimited ? "Свободный доступ, без лимита мест" : "Свободный доступ";
   }
   if (match.accessMode === "CLOSED") {
-    access = "Конкурсный набор";
+    access = "Конкурс";
   }
   const selection =
     match.selection === "ENTRANCE_EXAM"
-      ? "вступительный экзамен"
+      ? "Вступительный экзамен"
       : match.selection === "EVALUATION"
-        ? "оценка / тест"
+        ? "Оценка / тест"
         : null;
-  return [access, selection].filter(Boolean).join(" · ") || null;
+  if (access && selection) return `${access} · ${selection}`;
+  return access || selection;
 }
 
 function examsText(match: CuratorMatchView): string | null {
@@ -159,11 +160,39 @@ function fieldReason(
   return "Нужна ручная проверка куратора";
 }
 
+type ConditionEvidence = {
+  field: string;
+  quote?: string | null;
+  sourceUrl?: string | null;
+};
+
+function evidenceForCondition(
+  match: CuratorMatchView,
+  fields: string[]
+): ConditionEvidence[] {
+  const seen = new Set<string>();
+  return (match.criticalFacts ?? [])
+    .filter((fact) => fields.includes(fact.field))
+    .filter((fact) => {
+      const key = `${fact.field}|${fact.sourceUrl ?? ""}|${fact.quote ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((fact) => ({
+      field: fact.field,
+      quote: fact.quote,
+      sourceUrl: fact.sourceUrl,
+    }));
+}
+
 function DecisionRow({
   label,
   value,
   reason,
   note,
+  evidence = [],
+  highlightOpenAccess = false,
   confirmField,
   studentId,
   programAcademicYearId,
@@ -173,28 +202,80 @@ function DecisionRow({
   value: string | null;
   reason: string;
   note?: string | null;
+  evidence?: ConditionEvidence[];
+  highlightOpenAccess?: boolean;
   confirmField?: string;
   studentId: string;
   programAcademicYearId: string;
   applicantCategory?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-border/70 py-2 last:border-0">
-      <div className="min-w-0">
-        <p className="text-[11px] text-muted-foreground">{label}</p>
-        {value ? (
-          <>
-            <p className="text-sm font-medium">{value}</p>
-            {note ? (
-              <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{reason}</p>
-        )}
-      </div>
-      {!value && confirmField ? (
-        <details className="w-full">
+    <div className="inline-flex max-w-full self-start justify-self-start flex-col items-start gap-1">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <div
+        className={
+          highlightOpenAccess
+            ? "w-fit max-w-full rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/60 transition-colors hover:border-emerald-400"
+            : "w-fit max-w-full rounded-2xl border border-border bg-card/60 transition-colors hover:border-[var(--brand)]/40"
+        }
+      >
+        <details className="group">
+          <summary className="cursor-pointer list-none px-2.5 py-2 [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0">
+            <div className="min-w-0">
+              {value ? (
+                <>
+                  <p className="whitespace-pre-line text-sm font-medium">{value}</p>
+                  {note ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">{reason}</p>
+              )}
+            </div>
+          </div>
+          </summary>
+          <div className="border-t border-border/70 bg-muted/30 px-2.5 py-2 text-xs">
+          {evidence.length > 0 ? (
+            <ul className="space-y-2">
+              {evidence.map((item, index) => (
+                <li key={`${item.field}-${index}-${item.sourceUrl ?? "no-url"}`}>
+                  {evidence.length > 1 ? (
+                    <p className="font-medium">{labelFactField(item.field)}</p>
+                  ) : null}
+                  {item.quote ? (
+                    <p className="text-muted-foreground italic">
+                      «{item.quote}»
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Цитата не сохранена — проверьте первоисточник.
+                    </p>
+                  )}
+                  {item.sourceUrl ? (
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 text-[var(--brand)] hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Открыть официальный источник
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">
+              Источник для этого условия пока не подтверждён.
+            </p>
+          )}
+          </div>
+        </details>
+        {!value && confirmField ? (
+          <details className="border-t border-border/70 px-3 py-2">
           <summary className="cursor-pointer text-xs text-[var(--brand)]">
             Подтвердить вручную
           </summary>
@@ -272,8 +353,9 @@ function DecisionRow({
               Сохранить
             </Button>
           </form>
-        </details>
-      ) : null}
+          </details>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -307,7 +389,9 @@ export function CuratorProgramLevelsCard({
   return (
     <article
       id={`program-${match.programAcademicYearId}`}
-      className="overflow-hidden surface-card"
+      className={`overflow-hidden surface-card${
+        match.accessMode === "OPEN" ? " surface-card--open-admission" : ""
+      }`}
     >
       <div className="space-y-3 border-b border-border px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -346,12 +430,14 @@ export function CuratorProgramLevelsCard({
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Проверить перед коротким списком
         </p>
-        <div className="grid gap-x-5 sm:grid-cols-2">
+        <div className="grid items-start justify-items-start gap-x-4 gap-y-3 sm:grid-cols-2">
           <DecisionRow
             label="Доступ и отбор"
             value={access}
             reason={fieldReason(match, "access")}
             note={access ? orientir : null}
+            evidence={evidenceForCondition(match, ["ACCESS_TYPE", "SELECTION"])}
+            highlightOpenAccess={match.accessMode === "OPEN"}
             confirmField="accessMode"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
@@ -361,6 +447,7 @@ export function CuratorProgramLevelsCard({
             label="Язык"
             value={language || null}
             reason="Язык и требование не опубликованы"
+            evidence={evidenceForCondition(match, ["LANGUAGE_REQUIREMENT"])}
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
             applicantCategory={match.applicantCategory}
@@ -370,6 +457,7 @@ export function CuratorProgramLevelsCard({
             value={exams}
             reason={fieldReason(match, "exams")}
             note={exams ? orientir : null}
+            evidence={evidenceForCondition(match, ["ADMISSION_EXAMS", "SELECTION"])}
             confirmField="examsDisplay"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
@@ -380,6 +468,7 @@ export function CuratorProgramLevelsCard({
             value={seats}
             reason={fieldReason(match, "seats")}
             note={seats ? orientir : null}
+            evidence={evidenceForCondition(match, ["SEATS"])}
             confirmField="nonEuSeats"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
@@ -516,15 +605,17 @@ export function CuratorProgramLevelsCard({
           ) : null}
           {match.aiEnrichment ? (
             <div className="rounded-xl bg-muted/40 px-2 py-1.5 text-muted-foreground">
-              Обогащение:{" "}
+              Проверка данных:{" "}
               {match.aiEnrichment.disabled
                 ? "выключено (fallback regex/PDF)"
                 : match.aiEnrichment.reused
                   ? "повторно использовано"
                   : "новое"}
-              {match.aiEnrichment.model
-                ? ` · ${match.aiEnrichment.model}`
-                : ""}
+              {match.aiEnrichment.model === "FALLBACK_REGEX"
+                ? " · резервная проверка официального источника"
+                : match.aiEnrichment.model
+                  ? ` · ИИ-проверка (${match.aiEnrichment.model})`
+                  : ""}
               {match.aiEnrichment.date
                 ? ` · ${match.aiEnrichment.date}`
                 : ""}

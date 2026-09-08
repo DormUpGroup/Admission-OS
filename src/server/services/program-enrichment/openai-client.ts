@@ -44,6 +44,44 @@ export type EnrichmentLlmClient = {
   complete: (req: ChatCompletionRequest) => Promise<ChatCompletionResponse>;
 };
 
+export function isRetryableOpenAiError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /connection error|network|econnreset|etimedout|fetch failed|\b429\b|\b5\d\d\b/i.test(
+    message
+  );
+}
+
+function retryDelay(attempt: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+}
+
+/**
+ * `tool_choice` is only valid when function tools are included in the request.
+ * The final, retrieval-only pass deliberately has no tools, so forwarding
+ * `tool_choice: "none"` there makes the API reject the entire enrichment run.
+ */
+export function buildOpenAiCompletionRequest(req: ChatCompletionRequest) {
+  const toolOptions =
+    req.tools && req.tools.length > 0
+      ? {
+          tools: req.tools as OpenAI.Chat.ChatCompletionTool[],
+          tool_choice: req.tool_choice ?? "auto",
+        }
+      : {};
+
+  return {
+    model: req.model,
+    messages: req.messages as OpenAI.Chat.ChatCompletionMessageParam[],
+    ...toolOptions,
+    response_format: req.response_format,
+    max_tokens: req.max_tokens,
+    // gpt-5.6-luna accepts function tools in Chat Completions only when
+    // reasoning is explicitly disabled. Without this, enrichment fails
+    // before the model can inspect any official admissions pages.
+    reasoning_effort: "none" as const,
+  };
+}
+
 export function createOpenAiEnrichmentClient(
   apiKey?: string
 ): EnrichmentLlmClient {
@@ -51,18 +89,19 @@ export function createOpenAiEnrichmentClient(
   const client = new OpenAI({ apiKey: key });
   return {
     async complete(req) {
-      const res = await client.chat.completions.create({
-        model: req.model,
-        messages: req.messages as OpenAI.Chat.ChatCompletionMessageParam[],
-        tools: req.tools as OpenAI.Chat.ChatCompletionTool[] | undefined,
-        tool_choice: req.tool_choice,
-        response_format: req.response_format,
-        max_tokens: req.max_tokens,
-        // gpt-5.6-luna accepts function tools in Chat Completions only when
-        // reasoning is explicitly disabled. Without this, enrichment fails
-        // before the model can inspect any official admissions pages.
-        reasoning_effort: "none",
-      });
+      let res: OpenAI.Chat.Completions.ChatCompletion | null = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          res = await client.chat.completions.create(
+            buildOpenAiCompletionRequest(req)
+          );
+          break;
+        } catch (error) {
+          if (attempt === 2 || !isRetryableOpenAiError(error)) throw error;
+          await retryDelay(attempt);
+        }
+      }
+      if (!res) throw new Error("openai_completion_unavailable");
       const choice = res.choices[0]?.message;
       const tool_calls = (choice?.tool_calls ?? [])
         .filter((t) => t.type === "function")

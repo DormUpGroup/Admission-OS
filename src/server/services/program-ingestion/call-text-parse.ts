@@ -407,8 +407,15 @@ function sentenceAround(text: string, index: number): string | undefined {
   return sentence.length >= 8 ? sentence.slice(0, 500) : undefined;
 }
 
-function namedExamContextScore(text: string, name: "SAT" | "TOLC"): number {
-  const token = name === "SAT" ? "SAT" : "TOLC(?:-[A-Z]+)?";
+type NamedAdmissionExam = "SAT" | "TOLC" | "ACT" | "IMAT" | "BOCCONI_TEST";
+
+function namedExamContextScore(text: string, name: NamedAdmissionExam): number {
+  const token =
+    name === "TOLC"
+      ? "TOLC(?:-[A-Z]+)?"
+      : name === "BOCCONI_TEST"
+        ? "(?:bocconi(?:\\s+online)?\\s+test|test\\s+bocconi)"
+        : name;
   const re = new RegExp(`\\b${token}\\b`, "gi");
   let best = Number.NEGATIVE_INFINITY;
   let match: RegExpExecArray | null;
@@ -416,6 +423,10 @@ function namedExamContextScore(text: string, name: "SAT" | "TOLC"): number {
     const sentence = sentenceAround(text, match.index)?.toLowerCase() ?? "";
     let score = 0;
     if (/admission|ammissione|entrance|selection|selezione|enrol|iscriz/.test(sentence)) score += 2;
+    // English-taught programmes often state the diagnostic/admission test as
+    // “Initial preparation is assessed through the TOLC-I”, without using the
+    // word “admission”.  This is still programme-specific test evidence.
+    if (/initial preparation|preparation is assessed|assessed through|entry preparation/.test(sentence)) score += 2;
     if (/all candidates?|applicants?|must take|take the|required|accepted|ammess/.test(sentence)) score += 2;
     if (/limited number|numero programmato|ranked|graduatoria|intake round/.test(sentence)) score += 2;
     // Global navigation and portal cross-links often list several tests but
@@ -426,7 +437,10 @@ function namedExamContextScore(text: string, name: "SAT" | "TOLC"): number {
   return best;
 }
 
-function isNamedExamInAdmissionContext(text: string, name: "SAT" | "TOLC"): boolean {
+function isNamedExamInAdmissionContext(
+  text: string,
+  name: NamedAdmissionExam
+): boolean {
   return namedExamContextScore(text, name) > 0;
 }
 
@@ -475,11 +489,18 @@ function extractExams(text: string): {
       detail: satScore ? `≥ ${satScore[1]}` : undefined,
     });
   }
-  if (/\bIMAT\b/i.test(text)) exams.push({ name: "IMAT" });
-  if (/\bbocconi(?:\s+online)?\s+test\b|\btest\s+bocconi\b/i.test(text)) {
+  // IMAT is a dedicated Italian medical-admission exam, unlike the ordinary
+  // English verb "act" that appears in cookie notices.
+  if (/\bIMAT\b/.test(text)) exams.push({ name: "IMAT" });
+  if (
+    /\bbocconi(?:\s+online)?\s+test\b|\btest\s+bocconi\b/i.test(text) &&
+    isNamedExamInAdmissionContext(text, "BOCCONI_TEST")
+  ) {
     exams.push({ name: "BOCCONI_TEST" });
   }
-  if (/\bACT\b/i.test(text)) exams.push({ name: "ACT" });
+  if (/\bACT\b/.test(text) && isNamedExamInAdmissionContext(text, "ACT")) {
+    exams.push({ name: "ACT" });
+  }
   // IELTS / TOEFL / CILS are language evidence, never admission exams.
   const mentionsAdmissionTest =
     /prova\s+di\s+ammissione|admission\s+test|entrance\s+test|test\s+d['’]ingresso|test\s+di\s+ammissione/i.test(
@@ -489,7 +510,7 @@ function extractExams(text: string): {
       text
     );
   if (mentionsAdmissionTest) {
-    if (!exams.some((e) => e.name === "ADMISSION_TEST" || e.name === "BOCCONI_TEST")) {
+    if (!exams.some((e) => /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST)$/i.test(e.name))) {
       exams.push({ name: "ADMISSION_TEST" });
     }
   }
@@ -514,8 +535,12 @@ function extractExams(text: string): {
   }
 
   // mentionsAdmissionTest already excludes negated "non è previsto un test"
+  // A bare “Test di verifica delle conoscenze” is frequently a navigation
+  // label on a faculty site.  It is not evidence that this programme has an
+  // assessment.  Require a programme-level entry/knowledge-verification
+  // phrase before turning an open programme into “evaluation / test”.
   const knowledgeVerificationOnly =
-    /prova\s+in\s+ingresso[^.\n]{0,120}verifica\s+delle\s+conoscenze|verifica\s+delle\s+conoscenze|knowledge\s+(?:assessment|verification)|assessment\s+of\s+(?:entry\s+)?knowledge|test\s+di\s+valutazione/i.test(
+    /prova\s+in\s+ingresso[^.\n]{0,120}verifica\s+delle\s+conoscenze|verifica\s+delle\s+conoscenze[^.\n]{0,120}prova\s+in\s+ingresso|(?:richiesta|prevista|obbligatori[oa])[^.\n]{0,80}verifica\s+delle\s+conoscenze|knowledge\s+(?:assessment|verification)|assessment\s+of\s+(?:entry\s+)?knowledge|test\s+di\s+valutazione/i.test(
       text
     );
   // Named admission exams (SAT/TOLC/IMAT/…) are always a real gate unless
@@ -529,11 +554,12 @@ function extractExams(text: string): {
     (/selezione|selection/i.test(text) &&
       !/senza\s+selezione|no\s+selection/i.test(text) &&
       !/prova\s+in\s+ingresso[^.\n]{0,120}verifica\s+delle\s+conoscenze/i.test(text));
-  const evaluationOnly =
-    (/(?:verifica|orientamento|assessment)[^.\n]{0,80}\b(?:TOLC|test)\b|\b(?:TOLC|test)\b[^.\n]{0,80}(?:verifica|orientamento|assessment)/i.test(
+  const assessmentHasProgrammeContext =
+    /(?:prova\s+in\s+ingresso|mandatory|required|obbligatori[oa]|per\s+l[’']?(?:accesso|ammissione))[^.\n]{0,100}\b(?:TOLC|test|assessment)\b|\b(?:TOLC|test|assessment)\b[^.\n]{0,100}(?:prova\s+in\s+ingresso|mandatory|required|obbligatori[oa]|per\s+l[’']?(?:accesso|ammissione))/i.test(
       text
-    ) ||
-      knowledgeVerificationOnly) &&
+    );
+  const evaluationOnly =
+    (assessmentHasProgrammeContext || knowledgeVerificationOnly) &&
     !admissionGate;
   const confidence: FieldConfidence =
     alternatives.length >= 2 ? "HIGH" : exams.length > 0 ? "MEDIUM" : "LOW";

@@ -150,13 +150,19 @@ export function deriveAccessMode(input: {
     }
   }
 
-  // SAT / TOLC / admission test = selection, not open enrolment.
-  if (input.hasAdmissionExam) return "CLOSED";
-
-  // Private unis are listed as "accesso libero" on Universitaly because they
-  // are outside ministerial numerus clausus — that is not open admission.
+  // Private universities are often catalogued as "accesso libero" even when
+  // their own admission process is selective, so retain the conservative
+  // unknown state for that catalogue-only signal.
   const ownership = (input.publicPrivate || "").toUpperCase();
   if (mode === "OPEN" && ownership === "PRIVATE") return "UNKNOWN";
+
+  // A documented public open admission wins over a stale or unrelated exam
+  // fact.
+  if (mode === "OPEN") return "OPEN";
+
+  // SAT / TOLC / admission test = closed selection when no open admission is
+  // documented.
+  if (input.hasAdmissionExam) return "CLOSED";
 
   return mode;
 }
@@ -214,11 +220,13 @@ export function resolveDossierSelection(input: {
   accessMode: AccessMode;
   hasAdmissionExam: boolean;
 }): SelectionRegime {
+  if (input.accessMode === "OPEN") {
+    return input.regimeSelection === "EVALUATION" ? "EVALUATION" : "NONE";
+  }
   if (input.regimeSelection && input.regimeSelection !== "UNKNOWN") {
     return input.regimeSelection;
   }
   if (input.hasAdmissionExam) return "ENTRANCE_EXAM";
-  if (input.accessMode === "OPEN") return "NONE";
   return "UNKNOWN";
 }
 
@@ -238,13 +246,20 @@ export function examsDisplayLabel(
 ): string | null {
   if (exams.length === 0) return null;
   const labels = [...new Set(exams.map((e) => e.label))];
-  const filtered = labels.filter(
+  const withoutGeneric = labels.some(
+    (label) => !/^(?:вступительный экзамен|admission test|entrance test)$/i.test(label)
+  )
+    ? labels.filter(
+        (label) => !/^(?:вступительный экзамен|admission test|entrance test)$/i.test(label)
+      )
+    : labels;
+  const filtered = withoutGeneric.filter(
     (label) =>
-      !labels.some(
+      !withoutGeneric.some(
         (other) => other !== label && other.toLowerCase().includes(label.toLowerCase())
       )
   );
-  return (filtered.length ? filtered : labels).join(" · ");
+  return (filtered.length ? filtered : withoutGeneric).join(" · ");
 }
 
 export function deriveCallFreshness(input: {
@@ -363,7 +378,7 @@ export async function getProgramDossier(
     typeof accessValue === "string"
       ? accessValue
       : String(accessRecord.mode || accessRecord.access || "");
-  const accessMode: AccessMode =
+  const sourcedAccessMode: AccessMode =
     accessRaw === "OPEN" || accessRaw === "CLOSED" ? accessRaw : "UNKNOWN";
   const selectionValue = parseFactJson(selectionFact?.normalizedValueJson);
   const selectionRaw =
@@ -377,13 +392,29 @@ export async function getProgramDossier(
               ""
           )
         : "";
-  const selection: SelectionRegime = [
+  const sourcedSelection: SelectionRegime = [
     "NONE",
     "EVALUATION",
     "ENTRANCE_EXAM",
   ].includes(selectionRaw)
     ? (selectionRaw as SelectionRegime)
     : "UNKNOWN";
+  // The same invariant also protects old cards: a named exam implies a
+  // closed selection only when the programme has not documented open access.
+  const accessMode: AccessMode =
+    sourcedAccessMode === "OPEN"
+      ? "OPEN"
+      : examFacts.length > 0
+        ? "CLOSED"
+        : sourcedAccessMode;
+  const selection: SelectionRegime =
+    accessMode === "OPEN"
+      ? sourcedSelection === "EVALUATION"
+        ? "EVALUATION"
+        : "NONE"
+      : examFacts.length > 0
+        ? "ENTRANCE_EXAM"
+        : sourcedSelection;
   const publicPrivate = resolvePublicPrivate(
     pay.program.university.publicPrivate,
     pay.program.university.name
@@ -497,7 +528,10 @@ export async function getProgramDossier(
       };
     })
     .filter((row) => row.deadline);
-  const exams: ProgramDossierExam[] = examFacts.flatMap((fact) => {
+  const parsedExams: ProgramDossierExam[] =
+    accessMode === "OPEN"
+      ? []
+      : examFacts.flatMap((fact) => {
     const value = parseFactJson(fact.normalizedValueJson);
     const record =
       value && typeof value === "object"
@@ -531,7 +565,16 @@ export async function getProgramDossier(
         examinerLabel: link?.label ?? null,
       };
     });
-  });
+        });
+  // A named official test already explains the generic "admission test".
+  // Showing both makes the card look like two separate requirements.
+  const exams = parsedExams.some(
+    (exam) => !/^(?:вступительный экзамен|admission test|entrance test)$/i.test(exam.label)
+  )
+    ? parsedExams.filter(
+        (exam) => /^(?:вступительный экзамен|admission test|entrance test)$/i.test(exam.label) === false
+      )
+    : parsedExams;
 
   const traceFact = pay.facts.find((f) => f.field === "ENRICHMENT_TRACE");
   const fieldStatusFact = pay.facts.find((f) => f.field === "FIELD_STATUS");

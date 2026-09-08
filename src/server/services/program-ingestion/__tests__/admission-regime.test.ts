@@ -28,20 +28,17 @@ describe("AdmissionRegime", () => {
     expect(parsed.totalSeats?.value).toBe(100);
   });
 
-  it("keeps SAT or TOLC as one alternative list and identifies a real gate", () => {
+  it("makes documented open admission conclusive over a test mention", () => {
     const parsed = parseCallText(
       "Admission test: SAT or TOLC-E. Accesso libero.",
       "https://state.example.it/call"
     );
-    expect(parsed.admissionRegime.access.value).toBe("CLOSED");
-    expect(parsed.admissionRegime.selection.value).toBe("ENTRANCE_EXAM");
-    expect(parsed.admissionRegime.admissionExams.value.map((e) => e.name)).toEqual([
-      "SAT",
-      "TOLC-E",
-    ]);
+    expect(parsed.admissionRegime.access.value).toBe("OPEN");
+    expect(parsed.admissionRegime.selection.value).toBe("NONE");
+    expect(parsed.admissionRegime.admissionExams.value).toEqual([]);
   });
 
-  it("vetoes catalogue-style open access for a private selective programme", () => {
+  it("does not retain an exam when the source documents open admission", () => {
     const regime = inferAdmissionRegime({
       sourceUrl: "https://private.example.it/call",
       sourceType: "ADMISSION_CALL",
@@ -50,8 +47,29 @@ describe("AdmissionRegime", () => {
       admissionGate: true,
       exams: [{ name: "BOCCONI_TEST" }, { name: "SAT" }],
     });
+    expect(regime.access.value).toBe("OPEN");
+    expect(regime.selection.value).toBe("NONE");
+    expect(regime.admissionExams.value).toEqual([]);
+  });
+
+  it("infers a closed competitive selection from an exam without access wording", () => {
+    const regime = inferAdmissionRegime({
+      sourceType: "PROGRAMME_PAGE",
+      exams: [{ name: "TOLC-E" }],
+    });
     expect(regime.access.value).toBe("CLOSED");
     expect(regime.selection.value).toBe("ENTRANCE_EXAM");
+  });
+
+  it("keeps a documented competition closed while its exact exam is unresolved", () => {
+    const regime = inferAdmissionRegime({
+      sourceType: "ADMISSION_CALL",
+      admissionGate: true,
+      exams: [],
+    });
+    expect(regime.access.value).toBe("CLOSED");
+    expect(regime.selection.value).toBe("ENTRANCE_EXAM");
+    expect(regime.admissionExams.value).toEqual([]);
   });
 
   it("merges fields independently by source priority", () => {
@@ -95,12 +113,12 @@ describe("AdmissionRegime", () => {
     expect(merged.access.value).toBe("OPEN");
   });
 
-  it("does not force OPEN from catalogue libero for private universities", () => {
+  it("keeps explicitly documented open admission even for private universities", () => {
     const regime = inferAdmissionRegime({
       sourceType: "UNIVERSITALY",
       access: "OPEN",
       ownership: "PRIVATE",
     });
-    expect(regime.access.value).toBe("UNKNOWN");
+    expect(regime.access.value).toBe("OPEN");
   });
 });

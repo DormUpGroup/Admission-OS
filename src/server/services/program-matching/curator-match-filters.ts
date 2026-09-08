@@ -83,6 +83,9 @@ export function mergeDossierIntoCuratorView(
   if (!dossier) return base;
   return {
     ...base,
+    // Facts in the dossier may be refreshed independently from a saved match.
+    // At minimum, never show the old confidence beside fresh dossier facts.
+    dataConfidence: dossier.dataConfidence,
     city: dossier.city,
     region: dossier.region,
     universityName: dossier.universityName || base.universityName,

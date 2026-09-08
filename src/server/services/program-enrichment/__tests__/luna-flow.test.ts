@@ -134,7 +134,7 @@ describe("shared cache / fake client call counting", () => {
           {
             id: "2",
             name: "follow_official_link",
-            arguments: JSON.stringify({ linkId: "L1" }),
+            arguments: JSON.stringify({ linkId: "P1:L1" }),
           },
         ],
       },

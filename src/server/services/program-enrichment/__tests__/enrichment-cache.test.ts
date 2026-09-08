@@ -48,6 +48,7 @@ describe("AI enrichment cache", () => {
           applicantCategory: "NON_EU_RESIDENT_ABROAD",
           sourceFingerprint: "source-hash",
           promptVersion: "v2",
+          NOT: { model: "FALLBACK_REGEX" },
         }),
       })
     );

@@ -13,6 +13,11 @@ describe("isRejectedEnrichmentCandidateUrl", () => {
     ).toBe(true);
     expect(
       isRejectedEnrichmentCandidateUrl(
+        "https://uni.example.it/DEB-regolamento-didattico-2026-2027.pdf"
+      )
+    ).toBe(true);
+    expect(
+      isRejectedEnrichmentCandidateUrl(
         "https://www.unito.it/agevolazioni-trasporto-2025.pdf"
       )
     ).toBe(true);

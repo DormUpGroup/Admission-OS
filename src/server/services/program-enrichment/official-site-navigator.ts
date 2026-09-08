@@ -157,12 +157,19 @@ export function createOfficialSiteNavigator(input: {
     });
     docCount += 1;
     const pageId = `P${++pageSeq}`;
+    // `extractFromHtml` starts link IDs at L1 for every page. Scope them by
+    // page so following a link from page one can never accidentally follow an
+    // unrelated L1 discovered later on page two.
+    const pageLinks = extracted.links.map((link) => ({
+      ...link,
+      linkId: `${pageId}:${link.linkId}`,
+    }));
     const page: NavigatorPage = {
       pageId,
       url,
       title: extracted.title,
       cleanText: extracted.cleanText,
-      links: extracted.links,
+      links: pageLinks,
       sections: extracted.sections,
       sourceDocumentId: snap.document.id,
       contentHash: snap.document.contentHash,
@@ -183,7 +190,7 @@ export function createOfficialSiteNavigator(input: {
       sourceType: "PROGRAMME_PAGE",
       academicYear: input.academicYear,
     });
-    for (const link of extracted.links) {
+    for (const link of pageLinks) {
       // Only register same-domain candidates; safety checked on follow.
       links.set(link.linkId, { ...link, pageId });
     }
@@ -428,12 +435,16 @@ export function createFakeOfficialSiteNavigator(fixture: {
       .update(extracted.cleanText)
       .digest("hex");
     const pageId = `P${++pageSeq}`;
+    const pageLinks = extracted.links.map((link) => ({
+      ...link,
+      linkId: `${pageId}:${link.linkId}`,
+    }));
     const page: NavigatorPage = {
       pageId,
       url: p.url,
       title: extracted.title,
       cleanText: extracted.cleanText,
-      links: extracted.links,
+      links: pageLinks,
       sections: extracted.sections,
       sourceDocumentId,
       contentHash,
@@ -452,7 +463,7 @@ export function createFakeOfficialSiteNavigator(fixture: {
       }),
       sourceType: "PROGRAMME_PAGE",
     });
-    for (const link of extracted.links) {
+    for (const link of pageLinks) {
       links.set(link.linkId, { ...link, pageId });
     }
     return page;

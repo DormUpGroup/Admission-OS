@@ -161,6 +161,11 @@ h4 {
   overflow: hidden;
 }
 
+/* A confirmed open-admission programme is easier to scan in a shortlist. */
+.surface-card--open-admission {
+  border-color: #86d9a2;
+}
+
 .surface-card-hover {
   transition: transform 160ms ease, box-shadow 160ms ease;
 }

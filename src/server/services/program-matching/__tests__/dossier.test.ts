@@ -67,13 +67,13 @@ describe("access / call helpers", () => {
     ).toBe("UNKNOWN");
   });
 
-  it("treats admission exams as closed access", () => {
+  it("treats exams as closed access unless open admission is documented", () => {
     expect(
       deriveAccessMode({
         accessMode: "OPEN",
         hasAdmissionExam: true,
       })
-    ).toBe("CLOSED");
+    ).toBe("OPEN");
     expect(
       deriveAccessMode({
         accessMode: "UNKNOWN",
@@ -139,6 +139,15 @@ describe("exam formatting", () => {
         { label: "SAT" },
       ])
     ).toBe("TOLC-E или SAT");
+  });
+
+  it("hides a generic admission test when a named test is available", () => {
+    expect(
+      examsDisplayLabel([
+        { label: "TOLC-E" },
+        { label: "вступительный экзамен" },
+      ])
+    ).toBe("TOLC-E");
   });
 
   it("resolves examiner links", () => {

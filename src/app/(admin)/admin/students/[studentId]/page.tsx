@@ -322,6 +322,7 @@ export default async function StudentProfilePage({
               finishedAt: Date | null;
               model: string | null;
               status: string;
+              error: string | null;
               sourceDocumentIdsJson: string | null;
               promptVersion: string;
             }>;
@@ -334,6 +335,7 @@ export default async function StudentProfilePage({
             reused: false,
             documentCount: 0,
             disabled: true,
+            failed: false,
           };
         }
         let docCount = 0;
@@ -351,6 +353,7 @@ export default async function StudentProfilePage({
           documentCount: docCount,
           promptVersion: run.promptVersion,
           disabled: false,
+          failed: run.status === "FAILED",
         };
       })(),
     };

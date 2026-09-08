@@ -351,6 +351,53 @@ describe("persistEnrichmentOutput", () => {
     );
   });
 
+  it("keeps the real programme-page source type for an AI-found deadline", async () => {
+    const quote = "Application deadline: 15 May 2026";
+    const output: EnrichmentOutput = {
+      campuses: [],
+      access: [],
+      selection: [],
+      admissionExams: [],
+      languageRequirements: [],
+      deadlines: [
+        {
+          value: "2026-05-15",
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://example.edu/programme",
+          quote,
+          academicYear: "2026/2027",
+          scope: "ALL",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      tuition: [],
+      seats: [],
+      requiredDocuments: [],
+      importantNotes: [],
+      sourceConflicts: [],
+      unresolvedFields: [],
+      siteNavigationSummary: { hops: [], documentsUsed: [] },
+    };
+
+    await persistEnrichmentOutput({
+      programId: "p1",
+      programAcademicYearId: "pay1",
+      academicYear: "2026/2027",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      output,
+      documentTexts: new Map([["doc1", quote]]),
+      documentSourceTypes: new Map([["doc1", "PROGRAMME_PAGE"]]),
+      extractionMethod: "OPENAI_test",
+    });
+
+    expect(mockFactCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ sourceType: "PROGRAMME_PAGE" }),
+      })
+    );
+  });
+
   it("defers deadlines and tuition on shortlist while saving selection", async () => {
     const selectionQuote = "The programme has no admission test.";
     const deadlineQuote = "Application deadline: 15 May 2026";

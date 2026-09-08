@@ -21,9 +21,24 @@ export function quoteExistsInDocument(
   return nd.includes(nq);
 }
 
+/**
+ * CMS chrome is often retained in fetched HTML.  It is an official string,
+ * but never evidence for an admission decision.  In particular, the word
+ * "act" in a cookie/privacy sentence must not become the ACT exam.
+ */
+export function isBoilerplateEvidenceQuote(quote: string): boolean {
+  return /\b(?:cookies? (?:are|is|were)|cookie policy|privacy policy|joint controllers?|all rights reserved|we use cookies|manage cookies)\b/i.test(
+    quote
+  );
+}
+
 export type QuoteValidationResult = {
   accepted: boolean;
-  reason?: "missing_quote" | "missing_document" | "quote_not_found";
+  reason?:
+    | "missing_quote"
+    | "missing_document"
+    | "quote_not_found"
+    | "boilerplate_quote";
 };
 
 export function validateEvidenceQuote(
@@ -33,6 +48,9 @@ export function validateEvidenceQuote(
   if (!quote?.trim()) return { accepted: false, reason: "missing_quote" };
   if (!documentText?.trim()) {
     return { accepted: false, reason: "missing_document" };
+  }
+  if (isBoilerplateEvidenceQuote(quote)) {
+    return { accepted: false, reason: "boilerplate_quote" };
   }
   if (!quoteExistsInDocument(quote, documentText)) {
     return { accepted: false, reason: "quote_not_found" };

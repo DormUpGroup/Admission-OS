@@ -11,6 +11,7 @@ import {
 import { MapPin, ExternalLink } from "lucide-react";
 import { UniversityMonogram } from "@/components/university-monogram";
 import type { ProgramFieldStatusMap } from "@/lib/program-matching/field-status";
+import { explainLanguageRequirement } from "@/lib/language-requirement";
 
 export type CuratorMatchView = {
   matchId: string;
@@ -102,6 +103,7 @@ export type CuratorMatchView = {
     documentCount: number;
     promptVersion?: string | null;
     disabled?: boolean;
+    failed?: boolean;
   } | null;
   deferredCoverage?: string | null;
 };
@@ -189,7 +191,7 @@ function accessLabel(match: CuratorMatchView) {
       : "Свободный доступ";
   }
   if (match.accessMode === "CLOSED") {
-    return "Конкурсный набор";
+    return "Конкурс";
   }
   return "Не указано";
 }
@@ -223,12 +225,13 @@ function deadlineLabel(match: CuratorMatchView) {
 }
 
 export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) {
-  const langLine =
-    match.languageRequirement ||
+  const teachingLanguage =
     (match.teachingLanguages.length
       ? match.teachingLanguages.join(", ")
-      : match.language) ||
-    "Не указано";
+      : match.language) || "Не указано";
+  const languageRequirement =
+    explainLanguageRequirement(match.languageRequirement) ||
+    "Не подтверждено источником";
 
   return (
     <article className="flex flex-col overflow-hidden surface-card">
@@ -287,6 +290,12 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
       </div>
 
       <div className="flex flex-1 flex-col gap-3 px-4 py-3.5 text-sm">
+        {match.aiEnrichment?.failed ? (
+          <p className="surface-well rounded-xl px-3 py-2 text-[13px] text-muted-foreground">
+            Автоматическая проверка не завершена. Данные ниже требуют повторного
+            обогащения или ручного подтверждения.
+          </p>
+        ) : null}
         {match.whyIncluded ? (
           <p className="surface-well rounded-xl px-3 py-2 text-[13px] text-muted-foreground">
             {match.inclusionKind ? (
@@ -299,8 +308,12 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         ) : null}
         <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">Язык — требование</dt>
-            <dd className="font-medium">{langLine}</dd>
+            <dt className="text-muted-foreground">Язык преподавания</dt>
+            <dd className="font-medium">{teachingLanguage}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Требование по языку</dt>
+            <dd className="font-medium">{languageRequirement}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Стоимость</dt>
@@ -596,6 +609,13 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               value={match.programAcademicYearId}
             />
             <input type="hidden" name="intake" value={match.intake} />
+            {match.deadline ? (
+              <input
+                type="hidden"
+                name="hardDeadline"
+                value={new Date(match.deadline).toISOString().slice(0, 10)}
+              />
+            ) : null}
             <Button type="submit" size="sm" variant="secondary" className="w-full">
               Создать заявку
             </Button>

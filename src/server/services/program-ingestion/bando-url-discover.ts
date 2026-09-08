@@ -28,6 +28,14 @@ const STUDY_PLAN_OR_TIMETABLE_RE =
 const QUALITY_POLICY_DOC_RE =
   /visione[\s_%+-]*della[\s_%+-]*qualit|politiche[\s_%+-]*per[\s_%+-]*la[\s_%+-]*qualit|assurance[\s_%+-]*qualit|sistema[\s_%+-]*qualit|ava[\s_%+-]*anvur|suo?\s*rapporto[\s_%+-]*di[\s_%+-]*riesame/i;
 
+/**
+ * A teaching regulation describes the curriculum, not the current admission
+ * procedure.  It can mention a numerus clausus or a test from another cohort,
+ * so it must never override the programme's own enrolment page.
+ */
+const ACADEMIC_REGULATION_RE =
+  /regolamento[\s_%+-]*(?:didattico|del[\s_%+-]*corso[\s_%+-]*di[\s_%+-]*studio)|ordinamento[\s_%+-]*didattico/i;
+
 export function isStudyPlanOrTimetable(hay: string): boolean {
   try {
     const decoded = decodeURIComponent(hay.replace(/\+/g, " "));
@@ -46,6 +54,15 @@ export function isQualityPolicyDocument(hay: string): boolean {
   }
 }
 
+export function isAcademicRegulationDocument(hay: string): boolean {
+  try {
+    const decoded = decodeURIComponent(hay.replace(/\+/g, " "));
+    return ACADEMIC_REGULATION_RE.test(decoded);
+  } catch {
+    return ACADEMIC_REGULATION_RE.test(hay);
+  }
+}
+
 function yearTokensFromAcademicYear(academicYear?: string): string[] {
   if (!academicYear) return [];
   const parts = academicYear.match(/20\d{2}/g) || [];
@@ -58,7 +75,11 @@ function yearTokensFromAcademicYear(academicYear?: string): string[] {
 
 function resolveUrl(href: string, baseUrl: string): string | null {
   try {
-    const u = new URL(href, baseUrl);
+    const decodedHref = href
+      .replace(/&amp;/gi, "&")
+      .replace(/&#x26;/gi, "&")
+      .replace(/&#38;/gi, "&");
+    const u = new URL(decodedHref, baseUrl);
     if (!/^https?:$/i.test(u.protocol)) return null;
     return u.toString();
   } catch {
@@ -92,7 +113,11 @@ export function isClearlyNonAdmissionNotice(hay: string): boolean {
 
 /** Skip during deep-enrich URL fetch (quality policy + welfare notices). */
 export function isRejectedEnrichmentCandidateUrl(url: string): boolean {
-  return isQualityPolicyDocument(url) || isClearlyNonAdmissionNotice(url);
+  return (
+    isAcademicRegulationDocument(url) ||
+    isQualityPolicyDocument(url) ||
+    isClearlyNonAdmissionNotice(url)
+  );
 }
 
 function scoreCandidate(
@@ -104,6 +129,7 @@ function scoreCandidate(
   const hay = `${url} ${anchorText}`.toLowerCase();
   let score = 0;
   if (isStudyPlanOrTimetable(hay)) return -100;
+  if (isAcademicRegulationDocument(hay)) return -100;
   if (isQualityPolicyDocument(hay)) return -100;
   const isPdf = /\.pdf(\?|#|$)/i.test(url);
   if (isPdf) score += 40;
@@ -191,6 +217,7 @@ export function discoverBandoUrls(
     if (!isPdf && !keywordHit) continue;
     if (isClearlyNonAdmissionNotice(hay)) continue;
     if (isStudyPlanOrTimetable(hay) || isStudyPlanOrTimetable(resolved)) continue;
+    if (isAcademicRegulationDocument(hay) || isAcademicRegulationDocument(resolved)) continue;
     if (isQualityPolicyDocument(hay) || isQualityPolicyDocument(resolved)) continue;
 
     const score = scoreCandidate(resolved, label, academicYear, pageUrl);
@@ -215,6 +242,7 @@ export function discoverBandoUrls(
     if (!sameRegistrableDomain(resolved, pageUrl)) continue;
     if (isClearlyNonAdmissionNotice(resolved)) continue;
     if (isStudyPlanOrTimetable(resolved)) continue;
+    if (isAcademicRegulationDocument(resolved)) continue;
     if (isQualityPolicyDocument(resolved)) continue;
     const score = scoreCandidate(resolved, "", academicYear, pageUrl);
     const existing = byUrl.get(resolved);

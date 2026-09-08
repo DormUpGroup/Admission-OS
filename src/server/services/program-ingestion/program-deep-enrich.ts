@@ -3,6 +3,7 @@ import { admissionCallAdapter } from "@/server/services/program-ingestion/adapte
 import { universityWebsiteAdapter } from "@/server/services/program-ingestion/adapters/university-website";
 import {
   discoverBandoUrls,
+  isAcademicRegulationDocument,
   isClearlyNonAdmissionNotice,
   isRejectedEnrichmentCandidateUrl,
   pickFollowLinks,
@@ -1112,10 +1113,16 @@ export async function deepEnrichProgram(
   // every later refresh because ADMISSION_CALL has higher source priority.
   const priorCallDocuments = await prisma.sourceDocument.findMany({
     where: { programAcademicYearId: pay.id, sourceType: "ADMISSION_CALL" },
-    select: { id: true, url: true },
+    select: { id: true, url: true, rawText: true },
   });
   const unrelatedDocumentIds = priorCallDocuments
-    .filter((document) => isClearlyNonAdmissionNotice(document.url))
+    .filter(
+      (document) =>
+        isClearlyNonAdmissionNotice(document.url) ||
+        isAcademicRegulationDocument(
+          `${document.url} ${(document.rawText || "").slice(0, 2_000)}`
+        )
+    )
     .map((document) => document.id);
   if (unrelatedDocumentIds.length > 0) {
     await prisma.programFact.updateMany({

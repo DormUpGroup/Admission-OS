@@ -104,6 +104,8 @@ export async function persistEnrichmentOutput(input: {
   applicantCategory: ApplicantCategory;
   output: EnrichmentOutput;
   documentTexts: Map<string, string>;
+  /** Actual type of the document read by the navigator, keyed by document id. */
+  documentSourceTypes?: Map<string, string | undefined>;
   extractionMethod: string;
   /** Initial matching intentionally defers time-sensitive administrative fields. */
   deferAdministrativeFields?: boolean;
@@ -217,8 +219,12 @@ export async function persistEnrichmentOutput(input: {
           resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
           sourceDocumentId: fact.sourceDocumentId,
           sourceUrl: fact.sourceUrl,
+          // The source is a property of the document, not of the fact. A
+          // deadline mentioned on a programme page must not be presented as
+          // an official admission call just because it is a deadline.
           sourceType:
-            group === "deadlines" || group === "tuition" || group === "seats"
+            input.documentSourceTypes?.get(fact.sourceDocumentId) ===
+            "ADMISSION_CALL"
               ? "ADMISSION_CALL"
               : "PROGRAMME_PAGE",
           academicYear: fact.academicYear || input.academicYear,

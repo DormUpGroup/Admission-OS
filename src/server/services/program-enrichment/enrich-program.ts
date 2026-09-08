@@ -26,6 +26,7 @@ import {
 } from "./official-site-navigator";
 import { persistEnrichmentOutput } from "./persist-enrichment";
 import { PROGRAMME_FACT_RESOLVER_VERSION } from "@/server/services/program-matching/programme-fact-contract";
+import { reconcileAdmissionExamsFromStoredSources } from "@/server/services/program-ingestion/exam-evidence-reconciliation";
 
 export type AiEnrichResult = {
   status:
@@ -42,6 +43,43 @@ export type AiEnrichResult = {
   error?: string;
   aiEnabled: boolean;
 };
+
+/**
+ * Fetch the two strongest official admission links before handing control to
+ * the model. This is deterministic evidence collection, not a model choice:
+ * a card may never conclude "source needs checking" while its programme page
+ * already exposes an Admission requirements / Enrolment route.
+ */
+async function prefetchAdmissionLinks(navigator: OfficialSiteNavigator) {
+  const priority = (link: { classification: string; label: string; url: string }) => {
+    const hay = `${link.label} ${link.url}`.toLowerCase();
+    let score =
+      link.classification === "requirements"
+        ? 80
+        : link.classification === "enrol"
+          ? 70
+          : link.classification === "bando"
+            ? 60
+            : link.classification === "pdf"
+              ? 40
+            : 0;
+    if (/exam|test|tolc|imat|sat|act|concorso|selezione|call.?for.?application/.test(hay)) score += 40;
+    if (/admission requirements?|enrol(?:ment)?|immatricol|iscriv/.test(hay)) score += 30;
+    return score;
+  };
+  const candidates = [...navigator.getAllowedLinks().values()]
+    .filter((link) => priority(link) > 0)
+    .sort((a, b) => priority(b) - priority(a))
+    .slice(0, 2);
+
+  for (const link of candidates) {
+    if (link.classification === "pdf") {
+      await navigator.read_official_pdf(link.linkId);
+    } else {
+      await navigator.follow_official_link(link.linkId);
+    }
+  }
+}
 
 export async function enrichProgramWithAi(input: {
   programAcademicYearId: string;
@@ -112,6 +150,12 @@ export async function enrichProgramWithAi(input: {
   // Refresh the official root before deciding whether old AI output is
   // reusable. A legacy dossier or stale local SourceDocument is never a hit.
   await navigator.inspect_programme_site(officialUrl);
+  await prefetchAdmissionLinks(navigator);
+  // Close the source-to-card gap before checking the cache. Older successful
+  // runs may have fetched a page with a named exam but never materialized that
+  // fact; the deterministic reconciliation can safely recover it from the
+  // exact official quote without another model call.
+  await reconcileAdmissionExamsFromStoredSources(pay.id);
   const preflightDocs = navigator.getDocuments();
   const preflightHashes = [...preflightDocs.values()].map((d) => d.contentHash);
   const prelimFingerprint =
@@ -265,6 +309,9 @@ export async function enrichProgramWithAi(input: {
       const fallback = await deepEnrichProgram(pay.id, {
         deferAdministrativeFields: input.forShortlist,
       });
+      if (fallback.ok) {
+        await reconcileAdmissionExamsFromStoredSources(pay.id);
+      }
       const fallbackDocuments = await prisma.sourceDocument.findMany({
         where: { programAcademicYearId: pay.id },
         select: { id: true, contentHash: true },
@@ -314,6 +361,9 @@ export async function enrichProgramWithAi(input: {
     const docTexts = new Map(
       [...docsAfter.entries()].map(([id, d]) => [id, d.text])
     );
+    const documentSourceTypes = new Map(
+      [...docsAfter.entries()].map(([id, d]) => [id, d.sourceType])
+    );
     const persisted = await persistEnrichmentOutput({
       programId: pay.programId,
       programAcademicYearId: pay.id,
@@ -321,9 +371,11 @@ export async function enrichProgramWithAi(input: {
       applicantCategory: input.applicantCategory,
       output: result.output,
       documentTexts: docTexts,
+      documentSourceTypes,
       extractionMethod: `OPENAI_${result.model}`,
       deferAdministrativeFields: input.forShortlist,
     });
+    await reconcileAdmissionExamsFromStoredSources(pay.id);
 
     await finishEnrichmentRun(run.id, {
       status: "SUCCEEDED",
@@ -386,6 +438,55 @@ export async function enrichProgramWithAi(input: {
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : "enrichment_failed";
+    // Transport failures must not leave a half-built card. Run the same
+    // quote-validated deterministic path used for an empty AI response.
+    try {
+      const { deepEnrichProgram } = await import(
+        "@/server/services/program-ingestion/program-deep-enrich"
+      );
+      const fallback = await deepEnrichProgram(pay.id, {
+        deferAdministrativeFields: input.forShortlist,
+      });
+      if (fallback.ok) {
+        await reconcileAdmissionExamsFromStoredSources(pay.id);
+        const [documents, facts] = await Promise.all([
+          prisma.sourceDocument.findMany({
+            where: { programAcademicYearId: pay.id },
+            select: { id: true, contentHash: true },
+          }),
+          prisma.programFact.findMany({
+            where: {
+              programAcademicYearId: pay.id,
+              superseded: false,
+              decisionStatus: "ELIGIBLE",
+              origin: "OFFICIAL_FALLBACK",
+            },
+            select: { id: true },
+          }),
+        ]);
+        await finishEnrichmentRun(run.id, {
+          status: "SUCCEEDED",
+          model: "FALLBACK_REGEX",
+          sourceDocumentIdsJson: JSON.stringify(documents.map((d) => d.id)),
+          resolvedFactIdsJson: JSON.stringify(facts.map((fact) => fact.id)),
+          sourceFingerprint: buildSourceFingerprint(
+            documents.map((document) => document.contentHash)
+          ),
+          origin: "OFFICIAL_FALLBACK",
+          error: message,
+        });
+        return {
+          status: "SUCCEEDED",
+          aiEnabled: true,
+          runId: run.id,
+          model: "FALLBACK_REGEX",
+          error: message,
+        };
+      }
+    } catch {
+      // Preserve the original model error below; fallback diagnostics are
+      // already stored by deep enrichment when available.
+    }
     await finishEnrichmentRun(run.id, {
       status: "FAILED",
       error: message,

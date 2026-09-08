@@ -80,30 +80,28 @@ const ADMISSION_EXAM = /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST|ADMISSION_T
  * guessed OPEN state.
  */
 export function inferAdmissionRegime(input: AdmissionRegimeInput): AdmissionRegime {
-  const exams = (input.exams ?? []).filter((exam) => ADMISSION_EXAM.test(exam.name));
-  const hasGate = input.admissionGate === true && exams.length > 0;
+  let exams = (input.exams ?? []).filter((exam) => ADMISSION_EXAM.test(exam.name));
+  const hasNamedExam = exams.length > 0;
   let access = input.access ?? "UNKNOWN";
   let selection: SelectionRegime = "UNKNOWN";
 
-  if (hasGate) {
+  // Decision invariant, in priority order:
+  // 1. A documented open admission is conclusive: no admission exam.
+  // 2. A named admission exam is a competitive/closed selection even when
+  //    the source omitted an explicit access label.
+  // 3. A documented competitive gate remains closed while its exact exam is
+  //    investigated; never silently turn it into open admission.
+  if (access === "OPEN") {
+    exams = [];
+    selection = input.evaluationOnly ? "EVALUATION" : "NONE";
+  } else if (hasNamedExam) {
+    access = "CLOSED";
+    selection = "ENTRANCE_EXAM";
+  } else if (input.admissionGate) {
     access = "CLOSED";
     selection = "ENTRANCE_EXAM";
   } else if (input.evaluationOnly) {
     selection = "EVALUATION";
-  } else if (access === "OPEN") {
-    selection = "NONE";
-  } else if (access === "CLOSED" && exams.length > 0) {
-    selection = "ENTRANCE_EXAM";
-  }
-
-  // "Libero" in the catalogue describes ministerial access, not necessarily
-  // private-university selection. Require an explicit no-selection source.
-  if (input.ownership === "PRIVATE" && access === "OPEN" && exams.length > 0) {
-    access = "CLOSED";
-    selection = hasGate ? "ENTRANCE_EXAM" : "UNKNOWN";
-  } else if (input.ownership === "PRIVATE" && access === "OPEN") {
-    access = "UNKNOWN";
-    selection = "UNKNOWN";
   }
 
   const unlimited = access === "OPEN" && input.totalSeats == null;
@@ -114,7 +112,10 @@ export function inferAdmissionRegime(input: AdmissionRegimeInput): AdmissionRegi
     }),
     selection: value(selection, input, {
       snippet: input.examsSnippet ?? input.accessSnippet,
-      confidence: hasGate || input.evaluationOnly ? input.examsConfidence ?? "MEDIUM" : input.accessConfidence,
+      confidence:
+        hasNamedExam || input.admissionGate || input.evaluationOnly
+          ? input.examsConfidence ?? "MEDIUM"
+          : input.accessConfidence,
     }),
     admissionExams: value(exams, input, {
       snippet: input.examsSnippet,
@@ -165,10 +166,48 @@ function chooseKnown<T>(
 
 /** Merge field-by-field: a bando can supply seats while a tasse page supplies fees. */
 export function mergeAdmissionRegime(parts: AdmissionRegime[]): AdmissionRegime {
+  const access = chooseKnown(
+    parts.map((p) => p.access),
+    "UNKNOWN",
+    (v) => v !== "UNKNOWN"
+  );
+  const selection = chooseKnown(
+    parts.map((p) => p.selection),
+    "UNKNOWN",
+    (v) => v !== "UNKNOWN"
+  );
+  const admissionExams = chooseKnown(
+    parts.map((p) => p.admissionExams),
+    [],
+    (v) => v.length > 0
+  );
+  const forced = <T>(field: Provenanced<unknown>, value: T): Provenanced<T> => ({
+    value,
+    sourceUrl: field.sourceUrl,
+    snippet: field.snippet,
+    confidence: field.confidence,
+    sourceType: field.sourceType,
+  });
+  const openAdmission = access.value === "OPEN";
+  const hasNamedExam = admissionExams.value.length > 0;
+  const competitiveSelection = selection.value === "ENTRANCE_EXAM";
+
   return {
-    access: chooseKnown(parts.map((p) => p.access), "UNKNOWN", (v) => v !== "UNKNOWN"),
-    selection: chooseKnown(parts.map((p) => p.selection), "UNKNOWN", (v) => v !== "UNKNOWN"),
-    admissionExams: chooseKnown(parts.map((p) => p.admissionExams), [], (v) => v.length > 0),
+    access: openAdmission
+      ? access
+      : hasNamedExam || competitiveSelection
+        ? access.value === "UNKNOWN"
+          ? forced(admissionExams.value.length > 0 ? admissionExams : selection, "CLOSED")
+          : access
+        : access,
+    selection: openAdmission
+      ? selection.value === "EVALUATION"
+        ? selection
+        : forced(access, "NONE")
+      : hasNamedExam
+        ? forced(admissionExams, "ENTRANCE_EXAM")
+        : selection,
+    admissionExams: openAdmission ? forced(access, []) : admissionExams,
     languageRequirement: chooseKnown(parts.map((p) => p.languageRequirement), null, (v) => v != null),
     seats: chooseKnown(parts.map((p) => p.seats), {
       eu: null,

@@ -44,6 +44,15 @@ describe("call-text-parse", () => {
     expect(parsed.nonEuSeats?.value).toBe(18);
   });
 
+  it("recognises a TOLC-I stated as an initial-preparation assessment", () => {
+    const parsed = parseCallText(
+      "Initial preparation is assessed through the TOLC-I (Engineering) test, organized by CISIA.",
+      "https://uni.example.it/computer-engineering"
+    );
+    expect(parsed.exams).toEqual([{ name: "TOLC-I" }]);
+    expect(parsed.admissionRegime.selection.value).toBe("ENTRANCE_EXAM");
+  });
+
   it("detects Italian bando cues for seats and open access", () => {
     const text = `
       Avviso di ammissione. Accesso libero.
@@ -121,13 +130,23 @@ describe("call-text-parse", () => {
     const html = `<html><body>
       Modalità di accesso: Accesso libero
       Requisito linguistico: certificazione di inglese livello B2
-      verifica delle conoscenze
+      Prova in ingresso per la verifica delle conoscenze
     </body></html>`;
     const parsed = parseCallText(html, "https://uni.example.it/requisiti");
     expect(parsed.accessMode.value).toBe("OPEN");
     expect(parsed.languageLevel?.value).toBe("B2");
     expect(parsed.admissionRegime.selection.value).toBe("EVALUATION");
     expect(parsed.exams.some((e) => e.name === "ADMISSION_TEST")).toBe(false);
+  });
+
+  it("does not turn a navigation label into a programme test", () => {
+    const html = `<html><body>
+      <nav>Test di verifica delle conoscenze</nav>
+      <main>Modalità di accesso: Accesso libero</main>
+    </body></html>`;
+    const parsed = parseCallText(html, "https://uni.example.it/programme");
+    expect(parsed.accessMode.value).toBe("OPEN");
+    expect(parsed.admissionRegime.selection.value).toBe("NONE");
   });
 
   it("maps IELTS 6.5 requirement to B2 without treating IELTS as entrance exam", () => {
@@ -163,6 +182,17 @@ describe("bando-url-discover", () => {
       limit: 2,
     });
     expect(found[0]?.url).toBe("https://uni.example.it/en/bando/ammissione.pdf");
+  });
+
+  it("decodes HTML ampersands in admission query links", () => {
+    const found = discoverBandoUrls(
+      '<a href="/PublicData?uid=course-1&amp;mode=Admission">Admission requirements</a>',
+      "https://unicas-public.gomp.it/PublicData?uid=course-1",
+      { academicYear: "2026/2027" }
+    );
+    expect(found[0]?.url).toBe(
+      "https://unicas-public.gomp.it/PublicData?uid=course-1&mode=Admission"
+    );
   });
 
   it("does not mistake a scholarship or transport notice for an admission call", () => {
@@ -285,6 +315,14 @@ describe("bando-url-discover", () => {
     const body = `ersitaly": 1 }, "modalitaAccesso": { "id": 1, "descrizione": "Accesso con diploma", "descrizioneEn": "EN accesso con diploma" }, "nomeCorso": "Business"`;
     const parsed = parseCallText(body, "https://unive.it/web/it/8764/ammissione");
     expect(parsed.accessMode.value).toBe("OPEN");
+  });
+
+  it("does not turn the word act in cookie text into the ACT exam", () => {
+    const parsed = parseCallText(
+      "These cookies are managed by Google, who act as joint controllers.",
+      "https://unive.it/programme"
+    );
+    expect(parsed.exams).toEqual([]);
   });
 
   it("treats Unibo CLEF-style SAT entrance exam as CLOSED gate", () => {

@@ -28,6 +28,10 @@ export async function findReusableEnrichmentRun(input: {
       sourceFingerprint: input.sourceFingerprint,
       promptVersion,
       status: { in: ["SUCCEEDED", "REUSED"] },
+      // A deterministic fallback is deliberately refreshed on the next
+      // operator run. It is a safe interim result, not a cacheable final AI
+      // decision, and this lets new parser rules enrich older dossiers.
+      NOT: { model: "FALLBACK_REGEX" },
     },
     orderBy: { finishedAt: "desc" },
   });

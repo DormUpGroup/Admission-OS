@@ -72,6 +72,15 @@ describe("quote-validator", () => {
     expect(r.accepted).toBe(false);
     expect(r.reason).toBe("quote_not_found");
   });
+
+  it("rejects cookie and privacy boilerplate as evidence", () => {
+    const quote =
+      "These cookies are managed by Google and the University only processes anonymous information.";
+    expect(validateEvidenceQuote(quote, quote)).toEqual({
+      accepted: false,
+      reason: "boilerplate_quote",
+    });
+  });
 });
 
 describe("applicant category scope", () => {
@@ -97,6 +106,19 @@ describe("applicant category scope", () => {
 });
 
 describe("Bologna navigator fixture", () => {
+  it("decodes CMS query links before an admission page is followed", () => {
+    const page = extractFromHtml(
+      '<a href="/PublicData?uid=course-1&amp;mode=Admission">Admission requirements</a>',
+      "https://unicas-public.gomp.it/PublicData?uid=course-1"
+    );
+    expect(page.links).toEqual([
+      expect.objectContaining({
+        url: "https://unicas-public.gomp.it/PublicData?uid=course-1&mode=Admission",
+        classification: "requirements",
+      }),
+    ]);
+  });
+
   it("navigates root → how-to-enrol and exposes Non-EU Entrance exam / SAT text", async () => {
     const nav = createFakeOfficialSiteNavigator({
       pages: {
@@ -115,6 +137,7 @@ describe("Bologna navigator fixture", () => {
       l.url.includes("how-to-enrol")
     );
     expect(enrolLink).toBeTruthy();
+    expect(enrolLink?.linkId).toMatch(/^P1:L/);
 
     const enrol = await nav.follow_official_link(enrolLink!.linkId);
     expect("error" in enrol).toBe(false);

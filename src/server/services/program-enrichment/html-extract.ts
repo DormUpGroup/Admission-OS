@@ -42,6 +42,14 @@ function stripTags(html: string): string {
     .trim();
 }
 
+/** URLs in CMS markup frequently contain `&amp;`; fetch must receive `&`. */
+function decodeHref(href: string): string {
+  return href
+    .replace(/&amp;/gi, "&")
+    .replace(/&#x26;/gi, "&")
+    .replace(/&#38;/gi, "&");
+}
+
 function classifyLink(label: string, href: string): ClassifiedLink["classification"] {
   const hay = `${label} ${href}`.toLowerCase();
   if (/\.pdf(\?|#|$)/i.test(href) || hay.includes("pdf")) return "pdf";
@@ -50,13 +58,13 @@ function classifyLink(label: string, href: string): ClassifiedLink["classificati
   ) {
     return "bando";
   }
+  if (/requisiti|requirement|qualification.?required/i.test(hay)) {
+    return "requirements";
+  }
   if (
     /enrol|enroll|ammission|admission|how.?to.?enrol|iscriv/i.test(hay)
   ) {
     return "enrol";
-  }
-  if (/requisiti|requirement|qualification.?required/i.test(hay)) {
-    return "requirements";
   }
   if (/tasse|tuition|fees|contribuzione|amounts/i.test(hay)) {
     return "tuition";
@@ -101,7 +109,7 @@ export function extractFromHtml(
   let m: RegExpExecArray | null;
   let linkIdx = 0;
   while ((m = linkRe.exec(html)) !== null) {
-    const hrefRaw = m[1].trim();
+    const hrefRaw = decodeHref(m[1].trim());
     if (!hrefRaw || hrefRaw.startsWith("#") || hrefRaw.startsWith("javascript:")) {
       continue;
     }
