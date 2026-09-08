@@ -106,6 +106,7 @@ export default async function AdminProgramPage({
         studentId: "",
         intake: pay.academicYear,
         fieldStatuses: dossier?.fieldStatuses,
+        indicativeSeatOptions: dossier?.indicativeSeatOptions ?? [],
         criticalFacts: dossier?.criticalFacts ?? [],
         changeEvents,
         verifiedFacts,

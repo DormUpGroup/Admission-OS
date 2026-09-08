@@ -187,7 +187,7 @@ export function GenerateProgramMatchesButton({
       : null;
 
   return (
-    <div className="max-w-lg space-y-3">
+    <div className="w-full max-w-4xl space-y-3">
       <Button
         type="button"
         onClick={handleGenerate}
@@ -198,7 +198,7 @@ export function GenerateProgramMatchesButton({
 
       {showProgress ? (
         <div
-          className="rounded-2xl border bg-muted/30 p-4 space-y-3"
+          className="space-y-4 rounded-2xl border bg-muted/30 p-4 sm:p-5"
           aria-live="polite"
           aria-busy={loading}
         >
@@ -245,43 +245,63 @@ export function GenerateProgramMatchesButton({
             ) : null}
           </div>
 
-          <ol className="grid gap-1 sm:grid-cols-2">
-            {STEPS.map((step, index) => {
-              const done = index < activeIndex;
-              const active = index === activeIndex && loading;
-              return (
-                <li
-                  key={step.id}
-                  className={cn(
-                    "flex items-center gap-2 text-xs",
-                    done && "text-primary",
-                    active && "font-medium text-foreground",
-                    !done && !active && "text-muted-foreground"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px]",
-                      done &&
-                        "border-primary bg-primary text-primary-foreground",
-                      active && "border-primary animate-pulse",
-                      !done && !active && "border-muted-foreground/30"
-                    )}
-                    aria-hidden
+          <div className="-mx-1 overflow-x-auto px-1 pb-1">
+            <ol className="flex min-w-[760px] items-start">
+              {STEPS.map((step, index) => {
+                const done = index < activeIndex;
+                const active = index === activeIndex && loading;
+                const connectorDone = index < activeIndex;
+
+                return (
+                  <li
+                    key={step.id}
+                    className="flex min-w-[104px] flex-1 items-start"
+                    aria-current={active ? "step" : undefined}
                   >
-                    {done ? (
-                      "✓"
-                    ) : active ? (
-                      <span className="block h-2.5 w-2.5 rounded-full border border-primary border-t-transparent match-step-spin" />
-                    ) : (
-                      index + 1
-                    )}
-                  </span>
-                  {step.label}
-                </li>
-              );
-            })}
-          </ol>
+                    <div
+                      className={cn(
+                        "flex min-w-0 flex-1 flex-col items-center text-center text-[11px] leading-4",
+                        done && "text-primary",
+                        active && "font-medium text-foreground",
+                        !done && !active && "text-muted-foreground"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-background text-xs transition-colors",
+                          done &&
+                            "border-primary bg-primary text-primary-foreground",
+                          active &&
+                            "border-primary bg-primary/10 text-primary animate-pulse",
+                          !done && !active && "border-muted-foreground/30"
+                        )}
+                        aria-hidden
+                      >
+                        {done ? (
+                          "✓"
+                        ) : active ? (
+                          <span className="block h-2.5 w-2.5 rounded-full border-2 border-primary border-t-transparent match-step-spin" />
+                        ) : (
+                          index + 1
+                        )}
+                      </span>
+                      <span className="mt-2 max-w-[112px]">{step.label}</span>
+                    </div>
+
+                    {index < STEPS.length - 1 ? (
+                      <span
+                        className={cn(
+                          "mt-3.5 h-px min-w-4 flex-1 bg-border transition-colors",
+                          connectorDone && "bg-primary"
+                        )}
+                        aria-hidden
+                      />
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       ) : null}
 

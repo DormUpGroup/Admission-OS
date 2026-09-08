@@ -407,7 +407,13 @@ function sentenceAround(text: string, index: number): string | undefined {
   return sentence.length >= 8 ? sentence.slice(0, 500) : undefined;
 }
 
-type NamedAdmissionExam = "SAT" | "TOLC" | "ACT" | "IMAT" | "BOCCONI_TEST";
+type NamedAdmissionExam =
+  | "SAT"
+  | "TOLC"
+  | "ACT"
+  | "IMAT"
+  | "BOCCONI_TEST"
+  | "CENT_S";
 
 function namedExamContextScore(text: string, name: NamedAdmissionExam): number {
   const token =
@@ -415,6 +421,8 @@ function namedExamContextScore(text: string, name: NamedAdmissionExam): number {
       ? "TOLC(?:-[A-Z]+)?"
       : name === "BOCCONI_TEST"
         ? "(?:bocconi(?:\\s+online)?\\s+test|test\\s+bocconi)"
+        : name === "CENT_S"
+          ? "CEnT[-–]?S"
         : name;
   const re = new RegExp(`\\b${token}\\b`, "gi");
   let best = Number.NEGATIVE_INFINITY;
@@ -489,6 +497,18 @@ function extractExams(text: string): {
       detail: satScore ? `≥ ${satScore[1]}` : undefined,
     });
   }
+  if (
+    /\bCEnT[-–]?S\b/i.test(text) &&
+    isNamedExamInAdmissionContext(text, "CENT_S")
+  ) {
+    const centScore = text.match(
+      /\bCEnT[-–]?S\b[^.!?\n]{0,100}?(?:score\s*(?:of)?|minimum|at\s+least|equal\s+or\s+higher\s+than|>=|≥)\s*(\d{1,3})\b/i
+    );
+    exams.push({
+      name: "CEnT-S",
+      detail: centScore ? `≥ ${centScore[1]}` : undefined,
+    });
+  }
   // IMAT is a dedicated Italian medical-admission exam, unlike the ordinary
   // English verb "act" that appears in cookie notices.
   if (/\bIMAT\b/.test(text)) exams.push({ name: "IMAT" });
@@ -546,7 +566,7 @@ function extractExams(text: string): {
   // Named admission exams (SAT/TOLC/IMAT/…) are always a real gate unless
   // the page is clearly a non-selective knowledge check.
   const namedAdmissionExam = exams.some((e) =>
-    /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST|ADMISSION_TEST)$/i.test(e.name)
+    /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST|CEnT-S|ADMISSION_TEST)$/i.test(e.name)
   );
   const admissionGate =
     mentionsAdmissionTest ||
@@ -635,7 +655,17 @@ function quotaRowsFromChunks(chunks: string[]): ScopedQuotaRow[] {
       ? numbers.filter((number) => number.raw !== code)
       : numbers;
     const directPlaces = chunk.match(/\b(\d{1,4})\s*(?:places|posti|seats)\b/i)?.[1];
-    const places = directPlaces ? Number(directPlaces) : candidates.at(-1)?.value;
+    // "150 places (of which 10 are reserved for non-EU ...)" is a
+    // frequent bando formulation.  The nested count is the quota for that
+    // category; using 150 would overstate non-EU availability.
+    const nestedReservedPlaces = chunk.match(
+      /\bof\s+which\s+(\d{1,4})\s+(?:are\s+)?(?:reserved|for)\b/i
+    )?.[1];
+    const places = nestedReservedPlaces
+      ? Number(nestedReservedPlaces)
+      : directPlaces
+        ? Number(directPlaces)
+        : candidates.at(-1)?.value;
     if (places == null || places > 5000) continue;
     const originalGroup = chunk
       .replace(/\b(?:category|categoria|cat\.?)\s*\d{3,4}\b/i, "")
@@ -834,11 +864,11 @@ function extractAccess(
     }
   }
   const total = seatsText.match(
-    /(?:posti\s+complessivi|total\s+seats|posti\s+totali|numero\s+complessivo)[^.\n]{0,40}?(\d{1,4})\b|\b(\d{1,4})\s*(?:posti|seats|places)\s*(?:complessivi|totali|total)/i
+    /(?:posti\s+complessivi|total\s+seats|posti\s+totali|numero\s+complessivo)[^.\n]{0,40}?(\d{1,4})\b|\b(\d{1,4})\s*(?:posti|seats|places)\s*(?:complessivi|totali|total)|(?:selection\s+(?:procedure|process)|admission)[^.\n]{0,80}?\b(?:for|of)\s+(\d{1,4})\s*(?:posti|seats|places)\b/i
   );
   if (total) {
     totalSeats = {
-      value: Number(total[1] || total[2]),
+      value: Number(total[1] || total[2] || total[3]),
       confidence: "HIGH",
       snippet: total[0].slice(0, 120),
     };

@@ -55,7 +55,10 @@ export function factScopeApplies(
   scope: string | null | undefined,
   category: ApplicantCategory
 ): boolean {
-  if (scope === "ALL") return category !== "UNKNOWN";
+  // A condition explicitly scoped to everyone (for example, an entrance
+  // exam) remains useful before a student's category is known. Only
+  // category-specific facts such as quotas must wait for that detail.
+  if (scope === "ALL") return true;
   if (!scope || category === "UNKNOWN") return false;
   return scope === category;
 }

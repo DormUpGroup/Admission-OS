@@ -1259,13 +1259,14 @@ export async function deepEnrichProgram(
       method
     );
   } else {
+    const pageDiscovered = discoverBandoUrls(fetched.body, officialUrl, {
+      academicYear: pay.academicYear,
+      limit: 8,
+      includeTuition: !options?.deferAdministrativeFields,
+    });
     const discovered = [
+      ...pageDiscovered,
       ...admissionSiblingUrls(officialUrl, {
-        includeTuition: !options?.deferAdministrativeFields,
-      }),
-      ...discoverBandoUrls(fetched.body, officialUrl, {
-        academicYear: pay.academicYear,
-        limit: 8,
         includeTuition: !options?.deferAdministrativeFields,
       }),
     ].filter(
@@ -1281,18 +1282,29 @@ export async function deepEnrichProgram(
       )
     );
     const bandoFirst = discovered.filter((c) => c.kind === "bando" || c.kind === "other");
-    const ordered = [...uniboFirst, ...follow, ...bandoFirst].filter(
+    // Prefer real links published on the programme page over guessed sibling
+    // URLs. A call page often links to the authoritative PDF that holds the
+    // quota table, while generated /admission siblings may be empty.
+    const ordered = [
+      ...pageDiscovered.filter((c) => c.kind === "bando" || c.kind === "other"),
+      ...uniboFirst,
+      ...follow,
+      ...bandoFirst,
+    ].filter(
       (c, i, arr) => arr.findIndex((x) => x.url === c.url) === i
     );
+    const fetchedUrls = new Set([officialUrl]);
 
     for (const c of ordered) {
       if (fetchCount >= 5) break;
+      if (fetchedUrls.has(c.url)) continue;
       if (isRejectedEnrichmentCandidateUrl(c.url)) {
         falseSourceRejections += 1;
         continue;
       }
       const callFetched = await fetchWithTimeout(c.url, true);
       fetchCount += 1;
+      fetchedUrls.add(c.url);
       if (!callFetched.ok && !callFetched.body.startsWith("PDF_EXTRACTION_")) {
         continue;
       }
@@ -1313,6 +1325,56 @@ export async function deepEnrichProgram(
         "ADMISSION_CALL",
         method
       );
+
+      // Calls frequently contain a short HTML summary plus a linked, signed
+      // PDF with the actual quota table. Follow one primary PDF while keeping
+      // the request budget bounded and avoiding round-specific leftovers.
+      if (!isPdf && fetchCount < 5) {
+        const nestedPdf = discoverBandoUrls(callFetched.body, c.url, {
+          academicYear: pay.academicYear,
+          limit: 4,
+          includeTuition: false,
+        })
+          .filter((candidate) => candidate.isPdf && candidate.kind === "bando")
+          .sort((a, b) => {
+            const aFullCall = /call\s+for\s+application/i.test(a.label) ? 0 : 1;
+            const bFullCall = /call\s+for\s+application/i.test(b.label) ? 0 : 1;
+            if (aFullCall !== bFullCall) return aFullCall - bFullCall;
+            const aUpdate = /(?:notice|update).*(?:deadline|test)|(?:deadline|test).*(?:notice|update)/i.test(
+              a.label
+            )
+              ? 1
+              : 0;
+            const bUpdate = /(?:notice|update).*(?:deadline|test)|(?:deadline|test).*(?:notice|update)/i.test(
+              b.label
+            )
+              ? 1
+              : 0;
+            if (aUpdate !== bUpdate) return aUpdate - bUpdate;
+            const aRound = /\b(?:first|second|third|extraordinary)\b/i.test(a.label) ? 1 : 0;
+            const bRound = /\b(?:first|second|third|extraordinary)\b/i.test(b.label) ? 1 : 0;
+            return aRound - bRound || b.score - a.score;
+          })[0];
+        if (nestedPdf && !fetchedUrls.has(nestedPdf.url)) {
+          const pdfFetched = await fetchWithTimeout(nestedPdf.url, true);
+          fetchCount += 1;
+          fetchedUrls.add(nestedPdf.url);
+          if (pdfFetched.ok || pdfFetched.body.startsWith("PDF_EXTRACTION_")) {
+            const pdfBody = pdfFetched.body.startsWith("PDF_OCR\n")
+              ? pdfFetched.body.slice("PDF_OCR\n".length)
+              : pdfFetched.body;
+            consider(
+              parseCallText(pdfBody, nestedPdf.url, {
+                academicYear: pay.academicYear,
+              }),
+              nestedPdf.url,
+              pdfBody,
+              "ADMISSION_CALL",
+              pdfFetched.body.startsWith("PDF_OCR\n") ? "PDF_OCR" : "PDF_TEXT"
+            );
+          }
+        }
+      }
     }
 
     // Always also score programme page itself

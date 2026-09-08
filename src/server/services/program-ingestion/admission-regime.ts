@@ -72,7 +72,7 @@ function value<T>(
   };
 }
 
-const ADMISSION_EXAM = /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST|ADMISSION_TEST)$/i;
+const ADMISSION_EXAM = /^(SAT|TOLC(?:-[A-Z]+)?|IMAT|ACT|BOCCONI_TEST|CEnT-S|ADMISSION_TEST)$/i;
 
 /**
  * Converts one parsed official source into a conservative admission regime.

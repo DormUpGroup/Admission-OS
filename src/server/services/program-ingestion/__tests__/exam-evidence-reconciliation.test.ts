@@ -18,6 +18,21 @@ describe("exam evidence reconciliation", () => {
     });
   });
 
+  it("turns a quoted CEnT-S threshold into a card fact", () => {
+    const text =
+      "Candidates will be suitable for the admission to the oral interview with a CEnT-S normalized score equal or higher than 15 points.";
+    expect(
+      verifiedExamEvidenceFromText(
+        text,
+        "https://economia.uniroma2.it/ba/business-administration-economics/call-for-application/",
+        "2026/2027"
+      )
+    ).toMatchObject({
+      description: "CEnT-S ≥ 15",
+      quote: text,
+    });
+  });
+
   it("does not create an exam fact without an exact source quote", () => {
     expect(
       verifiedExamEvidenceFromText(

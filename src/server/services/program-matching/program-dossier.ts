@@ -70,6 +70,14 @@ export type ProgramDossier = {
   sourceUrls: string[];
   isFresh: boolean;
   fieldStatuses: ProgramFieldStatusMap;
+  /** Official quotas; the card labels only a prior cycle as context. */
+  indicativeSeatOptions: Array<{
+    places: number;
+    scope: string | null;
+    academicYear: string | null;
+    quote: string | null;
+    sourceUrl: string | null;
+  }>;
   criticalFacts: Array<{
     id?: string;
     field: string;
@@ -444,6 +452,50 @@ export async function getProgramDossier(
       ? quotaSeats
       : null;
 
+  // Keep every proven quota available to the card. The card compares the
+  // source year with the student's intake and only labels a prior cycle as an
+  // orientation; matching still uses the strict resolver above.
+  const indicativeSeatOptions = factRows
+    .filter(
+      (fact) =>
+        fact.field === "SEATS" &&
+        !fact.superseded &&
+        fact.freshness === "CURRENT" &&
+        fact.decisionStatus === "ELIGIBLE" &&
+        !!fact.evidenceQuote &&
+        !!fact.sourceUrl
+    )
+    .map((fact) => ({
+      places: numericValue(parseFactJson(fact.normalizedValueJson), [
+        "places",
+        "seats",
+        "count",
+      ]),
+      scope: fact.applicantCategoryScope ?? null,
+      academicYear: fact.academicYear ?? null,
+      quote: fact.evidenceQuote ?? null,
+      sourceUrl: fact.sourceUrl ?? null,
+    }))
+    .filter(
+      (fact): fact is {
+        places: number;
+        scope: string | null;
+        academicYear: string | null;
+        quote: string | null;
+        sourceUrl: string | null;
+      } => fact.places != null
+    )
+    .filter(
+      (fact, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.places === fact.places &&
+            candidate.scope === fact.scope &&
+            candidate.academicYear === fact.academicYear &&
+            candidate.sourceUrl === fact.sourceUrl
+        ) === index
+    );
+
   const teachingLanguages =
     parseJsonArray(pay.program.teachingLanguagesJson).length > 0
       ? parseJsonArray(pay.program.teachingLanguagesJson)
@@ -472,6 +524,7 @@ export async function getProgramDossier(
         admissionCallUrl,
         pay.program.officialUrl,
         ...resolvedFacts.map((f) => f.sourceUrl).filter(Boolean),
+        ...indicativeSeatOptions.map((fact) => fact.sourceUrl).filter(Boolean),
       ].filter(Boolean) as string[]
     ),
   ];
@@ -682,6 +735,7 @@ export async function getProgramDossier(
     sourceUrls,
     isFresh: resolvedFacts.length > 0,
     fieldStatuses,
+    indicativeSeatOptions,
     criticalFacts: resolvedFacts.map((fact) => ({
       id: fact.id,
       field: fact.field,

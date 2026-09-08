@@ -8,6 +8,11 @@ export const EXAMINER_LINKS: Record<
     url: "https://www.cisiaonline.it/area-tematica-tolc-cisia/home-tolc-generale/",
     aliases: ["TOLC", "TOLC-E", "TOLC-I", "TOLC-SU", "TOLC-F", "TOLC-S"],
   },
+  CENT_S: {
+    label: "CISIA — CEnT-S",
+    url: "https://www.cisiaonline.it/",
+    aliases: ["CEnT-S", "CENT-S"],
+  },
   SAT: {
     label: "College Board — SAT",
     url: "https://satsuite.collegeboard.org/sat",

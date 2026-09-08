@@ -116,6 +116,7 @@ export function mergeDossierIntoCuratorView(
     sourceUrls:
       dossier.sourceUrls.length > 0 ? dossier.sourceUrls : base.sourceUrls,
     fieldStatuses: dossier.fieldStatuses ?? base.fieldStatuses,
+    indicativeSeatOptions: dossier.indicativeSeatOptions,
     criticalFacts: dossier.criticalFacts,
   };
 }

@@ -72,6 +72,13 @@ export type CuratorMatchView = {
   inclusionKind?: string | null;
   onShortlist?: boolean;
   fieldStatuses?: ProgramFieldStatusMap | null;
+  indicativeSeatOptions?: Array<{
+    places: number;
+    scope: string | null;
+    academicYear: string | null;
+    quote: string | null;
+    sourceUrl: string | null;
+  }>;
   changeEvents?: Array<{
     id: string;
     field: string;

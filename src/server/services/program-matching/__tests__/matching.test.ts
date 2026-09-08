@@ -153,6 +153,19 @@ describe("source priority resolver", () => {
     ).toBe("10");
   });
 
+  it("keeps all-applicant facts visible before the applicant category is known", () => {
+    const all = quoted({
+      origin: "OFFICIAL_FALLBACK",
+      applicantCategoryScope: "ALL",
+      normalizedValueJson: '{"alternatives":[{"name":"CEnT-S"}]}',
+    });
+    expect(
+      resolveProgramFact([all], "2026/2027", {
+        applicantCategory: "UNKNOWN",
+      })?.normalizedValueJson
+    ).toBe('{"alternatives":[{"name":"CEnT-S"}]}');
+  });
+
   it("never uses another applicant scope or academic year", () => {
     const wrongScope = quoted({
       origin: "AI",

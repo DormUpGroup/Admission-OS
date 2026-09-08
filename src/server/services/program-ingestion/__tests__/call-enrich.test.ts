@@ -53,6 +53,21 @@ describe("call-text-parse", () => {
     expect(parsed.admissionRegime.selection.value).toBe("ENTRANCE_EXAM");
   });
 
+  it("recognises CEnT-S as a competitive admission test", () => {
+    const parsed = parseCallText(
+      `Three mandatory steps. Candidates will be suitable for admission to the oral interview with a CEnT-S normalized score equal or higher than 15 points. To be included in the ranking, it is necessary to submit the application to participate in the selection.`,
+      "https://economia.uniroma2.it/ba/business-administration-economics/call-for-application/"
+    );
+
+    expect(parsed.exams).toContainEqual({ name: "CEnT-S", detail: "≥ 15" });
+    expect(parsed.accessMode.value).toBe("CLOSED");
+    expect(parsed.admissionRegime.selection.value).toBe("ENTRANCE_EXAM");
+    expect(parsed.admissionRegime.admissionExams.value).toContainEqual({
+      name: "CEnT-S",
+      detail: "≥ 15",
+    });
+  });
+
   it("detects Italian bando cues for seats and open access", () => {
     const text = `
       Avviso di ammissione. Accesso libero.
@@ -215,6 +230,26 @@ describe("bando-url-discover", () => {
     </table></body></html>`;
     const parsed = parseCallText(html, "https://uni.example.it/corso");
     expect(parsed.nonEuSeats?.value).toBe(40);
+  });
+
+  it("keeps the nested non-EU quota instead of its parent round total", () => {
+    const parsed = parseCallText(
+      "The first selection round has 150 places (of which 10 are reserved for non-EU students residing abroad and applying for a visa).",
+      "https://uni.example.it/call.pdf"
+    );
+    expect(
+      parsed.quotaRows.find(
+        (row) => row.category === "NON_EU_RESIDENT_ABROAD"
+      )?.places
+    ).toBe(10);
+  });
+
+  it("extracts a total quota stated as a selection procedure", () => {
+    const parsed = parseCallText(
+      "The University has opened a selection procedure for 200 places for admission to the first year.",
+      "https://uni.example.it/call.pdf"
+    );
+    expect(parsed.totalSeats?.value).toBe(200);
   });
 
   it("decodes quota-table entities, preserves applicant scopes, and ignores menu exam noise", () => {

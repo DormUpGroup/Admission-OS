@@ -100,7 +100,20 @@ function seatsText(match: CuratorMatchView): string | null {
       | undefined;
     if (statusValue?.unlimited) return "Без лимита мест";
     const fromStatus = statusValue?.nonEu ?? statusValue?.eu;
-    if (fromStatus == null) return null;
+    if (fromStatus == null) {
+      const indicative = indicativeSeatsForMatch(match);
+      if (indicative.length === 0) return null;
+      return indicative
+        .map((seat) => {
+          const scopeLabel = seat.scope
+            ? labelApplicantCategory(seat.scope)
+            : null;
+          return scopeLabel && scopeLabel !== "Не указано"
+            ? `${seat.places} мест · ${scopeLabel}`
+            : `${seat.places} мест`;
+        })
+        .join(" · ");
+    }
     const scopeLabel = match.quotaScope
       ? labelApplicantCategory(match.quotaScope)
       : null;
@@ -116,17 +129,35 @@ function seatsText(match: CuratorMatchView): string | null {
     : `${seatsCount} мест`;
 }
 
-function indicativeNote(match: CuratorMatchView): string | null {
-  if (match.callFreshness !== "indicative" && !match.indicativeFromYear) {
-    return null;
-  }
-  return (
-    previousYearCallNote(
-      match.academicYear,
-      match.intake,
-      match.indicativeFromYear
-    ) ?? "Есть ориентир за прошлый год"
+function indicativeSeatsForMatch(match: CuratorMatchView) {
+  const normalizeYear = (value: string | null) =>
+    (value || "").match(/20\d{2}/g)?.slice(0, 2).join("/") || value || "";
+  const intakeYear = normalizeYear(match.intake);
+  const seats = (match.indicativeSeatOptions ?? []).filter(
+    (seat) => normalizeYear(seat.academicYear) !== intakeYear
   );
+  const exact = match.applicantCategory
+    ? seats.filter((seat) => seat.scope === match.applicantCategory)
+    : [];
+  return exact.length > 0 ? exact : seats;
+}
+
+function indicativeNote(match: CuratorMatchView): string | null {
+  const previousYearNote = previousYearCallNote(
+    match.academicYear,
+    match.intake,
+    match.indicativeFromYear
+  );
+  if (previousYearNote) return previousYearNote;
+  if (match.callFreshness !== "indicative" && !match.indicativeFromYear) {
+    const sourceYear = indicativeSeatsForMatch(match)[0]?.academicYear;
+    if (!sourceYear) return null;
+    return (
+      previousYearCallNote(sourceYear, match.intake, null) ??
+      `Ориентир за ${sourceYear}`
+    );
+  }
+  return "Есть ориентир за прошлый год";
 }
 
 function fieldReason(
@@ -184,6 +215,14 @@ function evidenceForCondition(
       quote: fact.quote,
       sourceUrl: fact.sourceUrl,
     }));
+}
+
+function indicativeSeatEvidence(match: CuratorMatchView): ConditionEvidence[] {
+  return indicativeSeatsForMatch(match).map((seat) => ({
+    field: "SEATS",
+    quote: seat.quote,
+    sourceUrl: seat.sourceUrl,
+  }));
 }
 
 function DecisionRow({
@@ -468,7 +507,10 @@ export function CuratorProgramLevelsCard({
             value={seats}
             reason={fieldReason(match, "seats")}
             note={seats ? orientir : null}
-            evidence={evidenceForCondition(match, ["SEATS"])}
+            evidence={[
+              ...evidenceForCondition(match, ["SEATS"]),
+              ...indicativeSeatEvidence(match),
+            ]}
             confirmField="nonEuSeats"
             studentId={match.studentId}
             programAcademicYearId={match.programAcademicYearId}
