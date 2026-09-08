@@ -109,7 +109,7 @@ function seatsText(match: CuratorMatchView): string | null {
             ? labelApplicantCategory(seat.scope)
             : null;
           return scopeLabel && scopeLabel !== "Не указано"
-            ? `${seat.places} мест · ${scopeLabel}`
+            ? `Для ${scopeLabel}: ${seat.places} мест`
             : `${seat.places} мест`;
         })
         .join(" · ");
@@ -118,14 +118,14 @@ function seatsText(match: CuratorMatchView): string | null {
       ? labelApplicantCategory(match.quotaScope)
       : null;
     return scopeLabel && scopeLabel !== "Не указано"
-      ? `${fromStatus} мест · ${scopeLabel}`
+      ? `Для ${scopeLabel}: ${fromStatus} мест`
       : `${fromStatus} мест`;
   }
   const scopeLabel = match.quotaScope
     ? labelApplicantCategory(match.quotaScope)
     : null;
   return scopeLabel && scopeLabel !== "Не указано"
-    ? `${seatsCount} мест · ${scopeLabel}`
+    ? `Для ${scopeLabel}: ${seatsCount} мест`
     : `${seatsCount} мест`;
 }
 
@@ -142,22 +142,31 @@ function indicativeSeatsForMatch(match: CuratorMatchView) {
   return exact.length > 0 ? exact : seats;
 }
 
-function indicativeNote(match: CuratorMatchView): string | null {
-  const previousYearNote = previousYearCallNote(
-    match.academicYear,
-    match.intake,
-    match.indicativeFromYear
+function indicativeSeatsNote(match: CuratorMatchView): string | null {
+  const sourceYear = indicativeSeatsForMatch(match)[0]?.academicYear;
+  if (!sourceYear) return null;
+  return (
+    previousYearCallNote(sourceYear, match.intake, null) ??
+    `Ориентир по местам за ${sourceYear}`
   );
-  if (previousYearNote) return previousYearNote;
-  if (match.callFreshness !== "indicative" && !match.indicativeFromYear) {
-    const sourceYear = indicativeSeatsForMatch(match)[0]?.academicYear;
-    if (!sourceYear) return null;
-    return (
-      previousYearCallNote(sourceYear, match.intake, null) ??
-      `Ориентир за ${sourceYear}`
-    );
+}
+
+function hasConfirmedSeats(match: CuratorMatchView): boolean {
+  if (
+    match.seatsUnlimited ||
+    match.quotaSeats != null ||
+    match.nonEuSeats != null ||
+    match.euSeats != null
+  ) {
+    return true;
   }
-  return "Есть ориентир за прошлый год";
+  const statusValue = match.fieldStatuses?.seats?.value as
+    | { eu?: number | null; nonEu?: number | null; unlimited?: boolean }
+    | null
+    | undefined;
+  return Boolean(
+    statusValue?.unlimited || statusValue?.nonEu != null || statusValue?.eu != null
+  );
 }
 
 function fieldReason(
@@ -167,6 +176,9 @@ function fieldReason(
   const status = match.fieldStatuses?.[field];
   if (status && !isFieldFilled(status) && status.reason) {
     if (status.reason === "ONLY_PREVIOUS_YEAR_AVAILABLE") {
+      if (field !== "seats") {
+        return unknownFieldReasonLabel(status.reason, match.intake);
+      }
       return (
         previousYearCallNote(
           status.sourceAcademicYear || match.academicYear,
@@ -180,8 +192,6 @@ function fieldReason(
       match.intake || status.targetIntakeYear
     );
   }
-  const note = indicativeNote(match);
-  if (note) return note;
   if (match.callFreshness === "unknown") {
     return unknownFieldReasonLabel(
       "NOT_PUBLISHED_FOR_TARGET_YEAR",
@@ -415,15 +425,12 @@ export function CuratorProgramLevelsCard({
   const access = accessText(match);
   const exams = examsText(match);
   const seats = seatsText(match);
-  const orientir = indicativeNote(match);
+  const seatsOrientir =
+    seats && !hasConfirmedSeats(match) ? indicativeSeatsNote(match) : null;
   const callFreshness =
     match.callFreshness === "current"
       ? `Опубликован набор ${match.academicYear}`
-      : orientir ??
-        unknownFieldReasonLabel(
-          "NOT_PUBLISHED_FOR_TARGET_YEAR",
-          match.intake
-        );
+      : null;
 
   return (
     <article
@@ -474,7 +481,6 @@ export function CuratorProgramLevelsCard({
             label="Доступ и отбор"
             value={access}
             reason={fieldReason(match, "access")}
-            note={access ? orientir : null}
             evidence={evidenceForCondition(match, ["ACCESS_TYPE", "SELECTION"])}
             highlightOpenAccess={match.accessMode === "OPEN"}
             confirmField="accessMode"
@@ -495,7 +501,6 @@ export function CuratorProgramLevelsCard({
             label="Экзамены"
             value={exams}
             reason={fieldReason(match, "exams")}
-            note={exams ? orientir : null}
             evidence={evidenceForCondition(match, ["ADMISSION_EXAMS", "SELECTION"])}
             confirmField="examsDisplay"
             studentId={match.studentId}
@@ -506,7 +511,7 @@ export function CuratorProgramLevelsCard({
             label="Места для категории"
             value={seats}
             reason={fieldReason(match, "seats")}
-            note={seats ? orientir : null}
+            note={seatsOrientir}
             evidence={[
               ...evidenceForCondition(match, ["SEATS"]),
               ...indicativeSeatEvidence(match),
@@ -517,7 +522,9 @@ export function CuratorProgramLevelsCard({
             applicantCategory={match.applicantCategory}
           />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">{callFreshness}</p>
+        {callFreshness ? (
+          <p className="mt-2 text-xs text-muted-foreground">{callFreshness}</p>
+        ) : null}
       </div>
 
       <details className="border-t border-border px-4 py-3" open={focused}>
