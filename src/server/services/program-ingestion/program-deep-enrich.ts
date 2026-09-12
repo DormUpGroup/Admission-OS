@@ -37,7 +37,9 @@ import {
   PROGRAMME_FACT_RESOLVER_VERSION,
 } from "@/server/services/program-matching/programme-fact-contract";
 import { isProgramEnrichmentEnabled } from "@/server/services/program-enrichment/config";
+import { extractFromHtml } from "@/server/services/program-enrichment/html-extract";
 import { validateEvidenceQuote } from "@/server/services/program-enrichment/quote-validator";
+import { planProgrammePageDiscovery } from "./programme-page-discovery";
 
 const ENRICH_TIMEOUT_MS = 18_000;
 const FETCH_RETRY_DELAY_MS = 800;
@@ -1135,7 +1137,7 @@ export async function deepEnrichProgram(
     });
   }
 
-  const officialUrl = pay.program.officialUrl;
+  let officialUrl = pay.program.officialUrl;
   const documentTraces: EnrichmentDocumentTrace[] = [];
   let falseSourceRejections = unrelatedDocumentIds.length;
 
@@ -1154,7 +1156,7 @@ export async function deepEnrichProgram(
   }
 
   const isPdfUrl = officialUrl.toLowerCase().endsWith(".pdf");
-  const fetched = await fetchWithTimeout(officialUrl, isPdfUrl);
+  let fetched = await fetchWithTimeout(officialUrl, isPdfUrl);
   if (!fetched.ok && !fetched.body.startsWith("PDF_EXTRACTION_")) {
     documentTraces.push(
       traceFromFetch(
@@ -1189,9 +1191,118 @@ export async function deepEnrichProgram(
     return { ok: false, reason: "fetch_failed" };
   }
 
-  const isHtml =
+  let isHtml =
     /html/i.test(fetched.contentType) ||
     /<!doctype html|<html/i.test(fetched.body.slice(0, 500));
+  let fetchCount = 1;
+
+  // Some Universitaly records point at a university landing page instead of
+  // the programme. Resolve an exact named link (or one catalogue hop followed
+  // by an exact named link) before looking for admission documents. This keeps
+  // generic university-wide requirements from being attributed to a course.
+  if (isHtml) {
+    const programmeNames = [
+      pay.program.name,
+      pay.program.titleOfficial,
+      pay.program.titleEnglish,
+    ];
+    const initialPage = extractFromHtml(fetched.body, officialUrl);
+    const initialPlan = planProgrammePageDiscovery({
+      pageUrl: officialUrl,
+      pageTitle: initialPage.title,
+      links: initialPage.links,
+      programmeNames,
+    });
+    let resolved:
+      | { url: string; fetched: typeof fetched }
+      | undefined;
+
+    const fetchHtmlLink = async (url: string) => {
+      // Initial page + two bounded resolver hops still leave room for the
+      // admission-call discovery below.
+      if (fetchCount >= 3) return null;
+      const next = await fetchWithTimeout(url);
+      fetchCount += 1;
+      const nextIsHtml =
+        /html/i.test(next.contentType) ||
+        /<!doctype html|<html/i.test(next.body.slice(0, 500));
+      return next.ok && nextIsHtml ? next : null;
+    };
+
+    if (initialPlan.kind === "direct_link") {
+      const next = await fetchHtmlLink(initialPlan.link.url);
+      if (next) resolved = { url: initialPlan.link.url, fetched: next };
+    } else if (initialPlan.kind === "catalogue_link") {
+      for (const catalogue of initialPlan.links) {
+        const catalogueFetched = await fetchHtmlLink(catalogue.url);
+        if (!catalogueFetched) continue;
+        const cataloguePage = extractFromHtml(catalogueFetched.body, catalogue.url);
+        const cataloguePlan = planProgrammePageDiscovery({
+          pageUrl: catalogue.url,
+          pageTitle: cataloguePage.title,
+          links: cataloguePage.links,
+          programmeNames,
+        });
+        if (cataloguePlan.kind === "already_programme_page") {
+          resolved = { url: catalogue.url, fetched: catalogueFetched };
+          break;
+        }
+        if (cataloguePlan.kind !== "direct_link") continue;
+        const programmeFetched = await fetchHtmlLink(cataloguePlan.link.url);
+        if (programmeFetched) {
+          resolved = { url: cataloguePlan.link.url, fetched: programmeFetched };
+          break;
+        }
+      }
+    }
+
+    if (resolved) {
+      officialUrl = resolved.url;
+      fetched = resolved.fetched;
+      isHtml = true;
+      // Store only a link selected by an exact multi-word title match, so the
+      // next refresh starts at the programme rather than the university home.
+      await prisma.program.update({
+        where: { id: pay.programId },
+        data: { officialUrl },
+      });
+    } else if (initialPlan.kind !== "already_programme_page") {
+      // Do not let university-wide text turn into programme requirements when
+      // the named course cannot be located. The candidate remains available
+      // from Universitaly, but its card correctly stays low-confidence.
+      documentTraces.push(
+        traceFromFetch(
+          officialUrl,
+          fetched.body,
+          "PROGRAMME_PAGE",
+          "HTML_SECTION",
+          true,
+          pay.academicYear
+        )
+      );
+      await persistEnrichmentTrace(
+        pay,
+        makeEnrichmentTrace({
+          officialUrl,
+          payAcademicYear: pay.academicYear,
+          enrichFailed: true,
+          enrichFailureReason: "programme_page_not_found",
+          documents: documentTraces,
+          falseSourceRejections,
+        })
+      );
+      await prisma.programAcademicYear.update({
+        where: { id: pay.id },
+        data: {
+          dossierEnrichedAt: new Date(),
+          lastUpdatedAt: new Date(),
+          dataConfidence: pay.dataConfidence === "HIGH" ? "HIGH" : "LOW",
+        },
+      });
+      return { ok: false, reason: "programme_page_not_found" };
+    }
+  }
+
   const contentIsPdf =
     /pdf/i.test(fetched.contentType) || (!isHtml && isPdfUrl);
 
@@ -1203,7 +1314,6 @@ export async function deepEnrichProgram(
   let bestMethod = contentIsPdf ? "PDF_TEXT" : "HTML_SECTION";
   let bestBody = fetched.body;
   let bestCoverage = -1;
-  let fetchCount = 1;
   const parsedDocuments: ParsedDocument[] = [];
 
   const consider = (
