@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,9 +43,11 @@ function stepIndex(stage: MatchProgressStage | "complete" | "error" | null) {
 export function GenerateProgramMatchesButton({
   studentId,
   disabled,
+  actions,
 }: {
   studentId: string;
   disabled?: boolean;
+  actions?: ReactNode;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -59,6 +61,7 @@ export function GenerateProgramMatchesButton({
   const stageStartedAtRef = useRef<number | null>(null);
   const lastStageRef = useRef<MatchProgressStage | null>(null);
   const etaSmoothRef = useRef<number | null>(null);
+  const completeCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!loading) return;
@@ -93,6 +96,40 @@ export function GenerateProgramMatchesButton({
     setEtaSeconds(smoothed);
   }, [loading, progress, nowMs]);
 
+  async function revealMatchResults() {
+    const scrollToResults = () => {
+      document
+        .getElementById("program-match-results")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    const programsUrl = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", "programs");
+      return `${url.pathname}?${url.searchParams.toString()}`;
+    };
+
+    try {
+      // router.refresh() is sync void in App Router; wait for RSC to repaint.
+      router.refresh();
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+      scrollToResults();
+    } catch {
+      window.location.assign(programsUrl());
+      return;
+    }
+
+    // Soft refresh sometimes leaves a stale empty list; hard-nav if still empty.
+    await new Promise((resolve) => window.setTimeout(resolve, 700));
+    const section = document.getElementById("program-match-results");
+    const hasCards = Boolean(section?.querySelector("article"));
+    if (!hasCards && (completeCountRef.current ?? 0) > 0) {
+      window.location.assign(programsUrl());
+      return;
+    }
+    scrollToResults();
+  }
+
   async function handleGenerate() {
     const start = Date.now();
     startedAtRef.current = start;
@@ -103,6 +140,7 @@ export function GenerateProgramMatchesButton({
     setLoading(true);
     setError(null);
     setCompleteCount(null);
+    completeCountRef.current = null;
     setEtaSeconds(null);
     setNowMs(start);
     setProgress({
@@ -150,6 +188,7 @@ export function GenerateProgramMatchesButton({
           }
 
           if (event.stage === "complete") {
+            completeCountRef.current = event.count;
             setCompleteCount(event.count);
             setEtaSeconds(0);
             setProgress({
@@ -158,7 +197,7 @@ export function GenerateProgramMatchesButton({
               percent: 100,
               detail: event.engine ? `движок ${event.engine}` : undefined,
             });
-            router.refresh();
+            await revealMatchResults();
             continue;
           }
 
@@ -187,18 +226,21 @@ export function GenerateProgramMatchesButton({
       : null;
 
   return (
-    <div className="w-full max-w-4xl space-y-3">
-      <Button
-        type="button"
-        onClick={handleGenerate}
-        disabled={disabled || loading}
-      >
-        {loading ? "Подбор программ…" : "Подобрать программы"}
-      </Button>
+    <div className="w-full space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          onClick={handleGenerate}
+          disabled={disabled || loading}
+        >
+          {loading ? "Подбор программ…" : "Подобрать программы"}
+        </Button>
+        {actions}
+      </div>
 
       {showProgress ? (
         <div
-          className="space-y-4 rounded-2xl border bg-muted/30 p-4 sm:p-5"
+          className="w-full space-y-4 rounded-2xl border bg-muted/30 p-4 sm:p-5"
           aria-live="polite"
           aria-busy={loading}
         >
@@ -243,10 +285,33 @@ export function GenerateProgramMatchesButton({
             {progress?.detail ? (
               <p className="text-xs text-muted-foreground">{progress.detail}</p>
             ) : null}
+            {completeCount != null && !loading ? (
+              <p className="text-xs text-muted-foreground">
+                {completeCount > 0 ? (
+                  <>
+                    Показаны {completeCount}{" "}
+                    {completeCount === 1
+                      ? "программа"
+                      : completeCount < 5
+                        ? "программы"
+                        : "программ"}{" "}
+                    ниже.{" "}
+                    <a
+                      href="#program-match-results"
+                      className="font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+                    >
+                      Перейти к результатам
+                    </a>
+                  </>
+                ) : (
+                  "Подбор завершён, подходящих программ не найдено."
+                )}
+              </p>
+            ) : null}
           </div>
 
-          <div className="-mx-1 overflow-x-auto px-1 pb-1">
-            <ol className="flex min-w-[760px] items-start">
+          <div className="w-full overflow-x-auto pb-1">
+            <ol className="flex w-full min-w-[760px] items-start">
               {STEPS.map((step, index) => {
                 const done = index < activeIndex;
                 const active = index === activeIndex && loading;
@@ -255,7 +320,7 @@ export function GenerateProgramMatchesButton({
                 return (
                   <li
                     key={step.id}
-                    className="flex min-w-[104px] flex-1 items-start"
+                    className="flex min-w-0 flex-1 items-start"
                     aria-current={active ? "step" : undefined}
                   >
                     <div
@@ -285,7 +350,7 @@ export function GenerateProgramMatchesButton({
                           index + 1
                         )}
                       </span>
-                      <span className="mt-2 max-w-[112px]">{step.label}</span>
+                      <span className="mt-2 max-w-[140px]">{step.label}</span>
                     </div>
 
                     {index < STEPS.length - 1 ? (

@@ -376,15 +376,15 @@ export default async function StudentProfilePage({
   const reviewViews = curatorViewsMarked.filter(
     (m) =>
       !m.onShortlist &&
+      m.curatorStatus !== "REJECTED" &&
       (m.curatorStatus === "NEEDS_REVIEW" ||
+        m.curatorStatus === "AUTO_MATCHED" ||
         m.eligibilityStatus === "NEEDS_REVIEW")
   );
+  const reviewIds = new Set(reviewViews.map((m) => m.matchId));
   const otherMatchViews = applyCuratorMatchFilters(
     curatorViewsMarked.filter(
-      (m) =>
-        !m.onShortlist &&
-        m.curatorStatus !== "NEEDS_REVIEW" &&
-        m.eligibilityStatus !== "NEEDS_REVIEW"
+      (m) => !m.onShortlist && !reviewIds.has(m.matchId)
     ),
     {
       eligibility: sp.eligibility,
@@ -729,15 +729,19 @@ export default async function StudentProfilePage({
 
       {tab === "programs" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-start gap-2">
+          <div className="w-full space-y-3">
             <GenerateProgramMatchesButton
               studentId={studentId}
               disabled={!matchingReady}
+              actions={
+                <>
+                  {persistedMatches.length > 0 || shortlist.length > 0 ? (
+                    <ResetProgramMatchesButton studentId={studentId} />
+                  ) : null}
+                  <ResetUniversitalyCacheButton />
+                </>
+              }
             />
-            {persistedMatches.length > 0 || shortlist.length > 0 ? (
-              <ResetProgramMatchesButton studentId={studentId} />
-            ) : null}
-            <ResetUniversitalyCacheButton />
           </div>
           {!matchingReady ? (
             <p className="text-xs text-muted-foreground">
@@ -766,7 +770,7 @@ export default async function StudentProfilePage({
               )}
             </section>
 
-            <section className="space-y-3">
+            <section id="program-match-results" className="scroll-mt-4 space-y-3">
               <h3 className="text-sm font-semibold">Программы на проверке</h3>
               {reviewViews.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -785,20 +789,22 @@ export default async function StudentProfilePage({
               )}
             </section>
 
-            <section className="space-y-3">
-              <h3 className="text-sm font-semibold">Остальные варианты</h3>
-              <ShowAllMatches count={otherMatchViews.length}>
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {otherMatchViews.map((m) => (
-                    <CuratorProgramLevelsCard
-                      key={m.matchId}
-                      match={m}
-                      focused={focusPayId === m.programAcademicYearId}
-                    />
-                  ))}
-                </div>
-              </ShowAllMatches>
-            </section>
+            {otherMatchViews.length > 0 ? (
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold">Остальные варианты</h3>
+                <ShowAllMatches count={otherMatchViews.length}>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {otherMatchViews.map((m) => (
+                      <CuratorProgramLevelsCard
+                        key={m.matchId}
+                        match={m}
+                        focused={focusPayId === m.programAcademicYearId}
+                      />
+                    ))}
+                  </div>
+                </ShowAllMatches>
+              </section>
+            ) : null}
           </div>
 
           <details className="rounded-2xl border border-border bg-card px-4 py-3">
