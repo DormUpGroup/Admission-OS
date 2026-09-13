@@ -38,6 +38,16 @@ export async function addToShortlist(input: {
   curatorNote?: string | null;
   userId: string;
 }) {
+  const { getProgrammeSelectionReadiness } = await import(
+    "@/server/services/program-ingestion/programme-source-resolution"
+  );
+  const readiness = await getProgrammeSelectionReadiness(
+    input.programAcademicYearId
+  );
+  if (!readiness.ready) {
+    throw new Error(readiness.reason);
+  }
+
   if (input.matchId) {
     await prisma.programMatch.update({
       where: { id: input.matchId },

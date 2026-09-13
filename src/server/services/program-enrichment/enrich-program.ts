@@ -28,7 +28,9 @@ import {
 import { persistEnrichmentOutput } from "./persist-enrichment";
 import { PROGRAMME_FACT_RESOLVER_VERSION } from "@/server/services/program-matching/programme-fact-contract";
 import { reconcileAdmissionExamsFromStoredSources } from "@/server/services/program-ingestion/exam-evidence-reconciliation";
-import { planProgrammePageDiscovery } from "@/server/services/program-ingestion/programme-page-discovery";
+import { universityWebsiteAdapter } from "@/server/services/program-ingestion/adapters/university-website";
+import { resolveProgrammeSource } from "@/server/services/program-ingestion/programme-source-resolver";
+import { recordProgrammeSourceResolution } from "@/server/services/program-ingestion/programme-source-resolution";
 
 export type AiEnrichResult = {
   status:
@@ -93,54 +95,6 @@ function isNavigatorPage(
   return "pageId" in page;
 }
 
-/**
- * Universitaly occasionally supplies a university home page as officialUrl.
- * Follow only an exact named course link, optionally through one course
- * catalogue page. This is deterministic so a model can never choose a
- * similarly named but different programme.
- */
-async function resolveProgrammePage(
-  navigator: OfficialSiteNavigator,
-  root: NavigatorPage,
-  programmeNames: Array<string | null | undefined>
-): Promise<{ page: NavigatorPage; resolved: boolean }> {
-  const planFor = (page: NavigatorPage) =>
-    planProgrammePageDiscovery({
-      pageUrl: page.url,
-      pageTitle: page.title,
-      links: page.links,
-      programmeNames,
-    });
-  const first = planFor(root);
-  if (first.kind === "already_programme_page") {
-    return { page: root, resolved: true };
-  }
-  if (first.kind === "not_found") {
-    return { page: root, resolved: false };
-  }
-  if (first.kind === "direct_link") {
-    const page = await navigator.follow_official_link(first.link.linkId);
-    return isNavigatorPage(page)
-      ? { page, resolved: true }
-      : { page: root, resolved: false };
-  }
-
-  for (const catalogue of first.links) {
-    const cataloguePage = await navigator.follow_official_link(catalogue.linkId);
-    if (!isNavigatorPage(cataloguePage)) continue;
-    const nested = planFor(cataloguePage);
-    if (nested.kind === "already_programme_page") {
-      return { page: cataloguePage, resolved: true };
-    }
-    if (nested.kind !== "direct_link") continue;
-    const programmePage = await navigator.follow_official_link(nested.link.linkId);
-    if (isNavigatorPage(programmePage)) {
-      return { page: programmePage, resolved: true };
-    }
-  }
-  return { page: root, resolved: false };
-}
-
 export async function enrichProgramWithAi(input: {
   programAcademicYearId: string;
   applicantCategory: ApplicantCategory;
@@ -193,6 +147,61 @@ export async function enrichProgramWithAi(input: {
     };
   }
 
+  const fetchOfficialPage = async (url: string) => {
+    const fetcher = universityWebsiteAdapter.fetch;
+    if (!fetcher) {
+      return { ok: false, body: "FETCH_ERROR no_adapter", contentType: "text/plain" };
+    }
+    try {
+      const page = await fetcher(url);
+      return {
+        ok:
+          !page.body.startsWith("FETCH_FAILED") &&
+          !page.body.startsWith("FETCH_ERROR"),
+        body: page.body,
+        contentType: page.contentType,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        body: `FETCH_ERROR ${error instanceof Error ? error.message : "unknown"}`,
+        contentType: "text/plain",
+      };
+    }
+  };
+  const initialSource = await fetchOfficialPage(officialUrl);
+  const sourceResolution = await resolveProgrammeSource({
+    officialUrl,
+    programmeNames: [
+      pay.program.name,
+      pay.program.titleOfficial,
+      pay.program.titleEnglish,
+    ],
+    initial: initialSource,
+    fetchUrl: fetchOfficialPage,
+  });
+  if (sourceResolution.status !== "RESOLVED" || !sourceResolution.url) {
+    return {
+      status: "FAILED",
+      aiEnabled: true,
+      error: "programme_page_not_found",
+    };
+  }
+  const resolvedOfficialUrl = sourceResolution.url;
+  if (resolvedOfficialUrl !== officialUrl) {
+    await prisma.program.update({
+      where: { id: pay.programId },
+      data: { officialUrl: resolvedOfficialUrl },
+    });
+  }
+  await recordProgrammeSourceResolution({
+    programId: pay.programId,
+    programAcademicYearId: pay.id,
+    academicYear: pay.academicYear,
+    programmeName: pay.program.name,
+    resolution: sourceResolution,
+  });
+
   const navigator =
       input.navigatorFactory?.({
         programId: pay.programId,
@@ -209,31 +218,16 @@ export async function enrichProgramWithAi(input: {
 
   // Refresh the official root before deciding whether old AI output is
   // reusable. A legacy dossier or stale local SourceDocument is never a hit.
-  const rootPage = await navigator.inspect_programme_site(officialUrl);
-  const programmeResolution = isNavigatorPage(rootPage)
-    ? await resolveProgrammePage(navigator, rootPage, [
-        pay.program.name,
-        pay.program.titleOfficial,
-        pay.program.titleEnglish,
-      ])
-    : null;
-  if (programmeResolution && !programmeResolution.resolved) {
+  const rootPage = await navigator.inspect_programme_site(resolvedOfficialUrl);
+  if (!isNavigatorPage(rootPage)) {
     return {
       status: "FAILED",
       aiEnabled: true,
-      error: "programme_page_not_found",
+      error: "programme_page_fetch_failed",
       toolCallCount: navigator.toolCallCount(),
     };
   }
-  const programmePage = programmeResolution?.page ?? null;
-  const resolvedOfficialUrl = programmePage?.url ?? officialUrl;
-  if (resolvedOfficialUrl !== officialUrl) {
-    await prisma.program.update({
-      where: { id: pay.programId },
-      data: { officialUrl: resolvedOfficialUrl },
-    });
-  }
-  await prefetchAdmissionLinks(navigator, programmePage?.pageId);
+  await prefetchAdmissionLinks(navigator, rootPage.pageId);
   // Close the source-to-card gap before checking the cache. Older successful
   // runs may have fetched a page with a named exam but never materialized that
   // fact; the deterministic reconciliation can safely recover it from the

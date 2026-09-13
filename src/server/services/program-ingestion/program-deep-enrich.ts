@@ -37,9 +37,9 @@ import {
   PROGRAMME_FACT_RESOLVER_VERSION,
 } from "@/server/services/program-matching/programme-fact-contract";
 import { isProgramEnrichmentEnabled } from "@/server/services/program-enrichment/config";
-import { extractFromHtml } from "@/server/services/program-enrichment/html-extract";
 import { validateEvidenceQuote } from "@/server/services/program-enrichment/quote-validator";
-import { planProgrammePageDiscovery } from "./programme-page-discovery";
+import { resolveProgrammeSource } from "./programme-source-resolver";
+import { recordProgrammeSourceResolution } from "./programme-source-resolution";
 
 const ENRICH_TIMEOUT_MS = 18_000;
 const FETCH_RETRY_DELAY_MS = 800;
@@ -1196,80 +1196,44 @@ export async function deepEnrichProgram(
     /<!doctype html|<html/i.test(fetched.body.slice(0, 500));
   let fetchCount = 1;
 
-  // Some Universitaly records point at a university landing page instead of
-  // the programme. Resolve an exact named link (or one catalogue hop followed
-  // by an exact named link) before looking for admission documents. This keeps
-  // generic university-wide requirements from being attributed to a course.
+  // Source resolution is a distinct stage: Universitaly discovery can point to
+  // an entire university, while evidence must start from the named programme.
+  // The resolver handles static links, course catalogues and official sitemaps
+  // (including the university's www domain for school subdomains / SPAs).
   if (isHtml) {
-    const programmeNames = [
-      pay.program.name,
-      pay.program.titleOfficial,
-      pay.program.titleEnglish,
-    ];
-    const initialPage = extractFromHtml(fetched.body, officialUrl);
-    const initialPlan = planProgrammePageDiscovery({
-      pageUrl: officialUrl,
-      pageTitle: initialPage.title,
-      links: initialPage.links,
-      programmeNames,
+    const source = await resolveProgrammeSource({
+      officialUrl,
+      programmeNames: [
+        pay.program.name,
+        pay.program.titleOfficial,
+        pay.program.titleEnglish,
+      ],
+      initial: fetched,
+      fetchUrl: (url) => fetchWithTimeout(url),
     });
-    let resolved:
-      | { url: string; fetched: typeof fetched }
-      | undefined;
 
-    const fetchHtmlLink = async (url: string) => {
-      // Initial page + two bounded resolver hops still leave room for the
-      // admission-call discovery below.
-      if (fetchCount >= 3) return null;
-      const next = await fetchWithTimeout(url);
-      fetchCount += 1;
-      const nextIsHtml =
-        /html/i.test(next.contentType) ||
-        /<!doctype html|<html/i.test(next.body.slice(0, 500));
-      return next.ok && nextIsHtml ? next : null;
-    };
-
-    if (initialPlan.kind === "direct_link") {
-      const next = await fetchHtmlLink(initialPlan.link.url);
-      if (next) resolved = { url: initialPlan.link.url, fetched: next };
-    } else if (initialPlan.kind === "catalogue_link") {
-      for (const catalogue of initialPlan.links) {
-        const catalogueFetched = await fetchHtmlLink(catalogue.url);
-        if (!catalogueFetched) continue;
-        const cataloguePage = extractFromHtml(catalogueFetched.body, catalogue.url);
-        const cataloguePlan = planProgrammePageDiscovery({
-          pageUrl: catalogue.url,
-          pageTitle: cataloguePage.title,
-          links: cataloguePage.links,
-          programmeNames,
-        });
-        if (cataloguePlan.kind === "already_programme_page") {
-          resolved = { url: catalogue.url, fetched: catalogueFetched };
-          break;
-        }
-        if (cataloguePlan.kind !== "direct_link") continue;
-        const programmeFetched = await fetchHtmlLink(cataloguePlan.link.url);
-        if (programmeFetched) {
-          resolved = { url: cataloguePlan.link.url, fetched: programmeFetched };
-          break;
-        }
-      }
-    }
-
-    if (resolved) {
-      officialUrl = resolved.url;
-      fetched = resolved.fetched;
+    if (source.status === "RESOLVED" && source.url && source.body) {
+      officialUrl = source.url;
+      fetched = {
+        ok: true,
+        body: source.body,
+        contentType: source.contentType ?? "text/html",
+      };
       isHtml = true;
-      // Store only a link selected by an exact multi-word title match, so the
-      // next refresh starts at the programme rather than the university home.
       await prisma.program.update({
         where: { id: pay.programId },
         data: { officialUrl },
       });
-    } else if (initialPlan.kind !== "already_programme_page") {
-      // Do not let university-wide text turn into programme requirements when
-      // the named course cannot be located. The candidate remains available
-      // from Universitaly, but its card correctly stays low-confidence.
+      await recordProgrammeSourceResolution({
+        programId: pay.programId,
+        programAcademicYearId: pay.id,
+        academicYear: pay.academicYear,
+        programmeName: pay.program.name,
+        resolution: source,
+      });
+    } else {
+      // A discovery candidate remains visible to the curator, but cannot turn
+      // generic university text into programme requirements.
       documentTraces.push(
         traceFromFetch(
           officialUrl,

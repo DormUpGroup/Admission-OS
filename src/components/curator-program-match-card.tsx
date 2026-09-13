@@ -62,6 +62,9 @@ export type CuratorMatchView = {
   admissionCallUrl?: string | null;
   extractQuality?: string | null;
   sourceUrls: string[];
+  /** A resolved, exact official programme page is required before selection. */
+  sourceResolved?: boolean;
+  selectionReady?: boolean;
   alreadyApplied: boolean;
   applicationId?: string;
   studentId: string;
@@ -588,14 +591,20 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               На проверку
             </Button>
           </form>
-          <form action={reviewProgramMatchAction}>
-            <input type="hidden" name="studentId" value={match.studentId} />
-            <input type="hidden" name="matchId" value={match.matchId} />
-            <input type="hidden" name="status" value="SHORTLISTED" />
-            <Button type="submit" size="sm" className="w-full">
-              В короткий список
-            </Button>
-          </form>
+          {match.selectionReady ? (
+            <form action={reviewProgramMatchAction}>
+              <input type="hidden" name="studentId" value={match.studentId} />
+              <input type="hidden" name="matchId" value={match.matchId} />
+              <input type="hidden" name="status" value="SHORTLISTED" />
+              <Button type="submit" size="sm" className="w-full">
+                В короткий список
+              </Button>
+            </form>
+          ) : (
+            <p className="col-span-2 text-xs text-muted-foreground">
+              Сначала найдите и подтвердите страницу программы.
+            </p>
+          )}
         </div>
 
         {match.alreadyApplied && match.applicationId ? (
@@ -606,7 +615,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               Открыть заявку
             </Link>
           </Button>
-        ) : (
+        ) : match.selectionReady ? (
           <form action={createApplicationAction}>
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="programId" value={match.programId} />
@@ -627,7 +636,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               Создать заявку
             </Button>
           </form>
-        )}
+        ) : null}
       </div>
     </article>
   );

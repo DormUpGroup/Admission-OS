@@ -106,6 +106,14 @@ export async function createApplicationAction(formData: FormData) {
   ) {
     throw new Error("Program academic year does not belong to program");
   }
+  if (!programAcademicYearId) {
+    throw new Error("Program academic year is required before creating an application");
+  }
+  const { getProgrammeSelectionReadiness } = await import(
+    "@/server/services/program-ingestion/programme-source-resolution"
+  );
+  const readiness = await getProgrammeSelectionReadiness(programAcademicYearId);
+  if (!readiness.ready) throw new Error(readiness.reason);
 
   const app = await prisma.application.create({
     data: {

@@ -700,14 +700,20 @@ export function CuratorProgramLevelsCard({
           ) : null}
           {catalog ? null : (
             <div className="flex flex-wrap gap-2 pt-1">
-            <form action={reviewProgramMatchAction}>
-              <input type="hidden" name="studentId" value={match.studentId} />
-              <input type="hidden" name="matchId" value={match.matchId} />
-              <input type="hidden" name="status" value="SHORTLISTED" />
-              <Button type="submit" size="sm">
-                В короткий список
-              </Button>
-            </form>
+            {match.selectionReady ? (
+              <form action={reviewProgramMatchAction}>
+                <input type="hidden" name="studentId" value={match.studentId} />
+                <input type="hidden" name="matchId" value={match.matchId} />
+                <input type="hidden" name="status" value="SHORTLISTED" />
+                <Button type="submit" size="sm">
+                  В короткий список
+                </Button>
+              </form>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Shortlist недоступен: нет подтверждённых условий поступления.
+              </span>
+            )}
             <form action={setMonitoringSelectedAction}>
               <input type="hidden" name="studentId" value={match.studentId} />
               <input type="hidden" name="matchId" value={match.matchId} />
@@ -730,7 +736,7 @@ export function CuratorProgramLevelsCard({
                   Открыть заявку
                 </Link>
               </Button>
-            ) : (
+            ) : match.selectionReady ? (
               <form action={createApplicationAction}>
                 <input type="hidden" name="studentId" value={match.studentId} />
                 <input type="hidden" name="programId" value={match.programId} />
@@ -744,7 +750,7 @@ export function CuratorProgramLevelsCard({
                   Создать заявку
                 </Button>
               </form>
-            )}
+            ) : null}
             </div>
           )}
         </div>

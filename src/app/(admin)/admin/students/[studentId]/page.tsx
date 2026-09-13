@@ -305,6 +305,29 @@ export default async function StudentProfilePage({
           ].filter(Boolean) as string[]
         ),
       ],
+      sourceResolved: pay.facts.some(
+        (fact) =>
+          fact.field === "PROGRAMME_SOURCE_RESOLUTION" &&
+          fact.decisionStatus === "ELIGIBLE" &&
+          fact.freshness === "CURRENT" &&
+          !fact.superseded
+      ),
+      selectionReady: pay.facts.some(
+        (fact) =>
+          [
+            "ACCESS_TYPE",
+            "ADMISSION_REGIME",
+            "SELECTION",
+            "ADMISSION_EXAMS",
+            "SEATS",
+            "APPLICATION_DEADLINE",
+          ].includes(fact.field) &&
+          fact.decisionStatus === "ELIGIBLE" &&
+          fact.freshness === "CURRENT" &&
+          !!fact.sourceUrl &&
+          !!fact.evidenceQuote &&
+          !fact.superseded
+      ),
       alreadyApplied: !!app,
       applicationId: app?.id,
       studentId,

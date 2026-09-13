@@ -1,14 +1,14 @@
 import type { ClassifiedLink } from "@/server/services/program-enrichment/html-extract";
 
-type LinkLike = Pick<
+export type ProgrammePageLink = Pick<
   ClassifiedLink,
   "linkId" | "label" | "url" | "classification"
 >;
 
 export type ProgrammePagePlan =
   | { kind: "already_programme_page" }
-  | { kind: "direct_link"; link: LinkLike }
-  | { kind: "catalogue_link"; links: LinkLike[] }
+  | { kind: "direct_link"; link: ProgrammePageLink }
+  | { kind: "catalogue_link"; links: ProgrammePageLink[] }
   | { kind: "not_found" };
 
 const GENERIC_WORDS = new Set([
@@ -44,7 +44,10 @@ function meaningfulTokens(value: string): string[] {
     .filter((word) => word.length >= 3 && !GENERIC_WORDS.has(word));
 }
 
-function titleMatchScore(haystack: string, programmeNames: string[]): number {
+export function programmeNameMatchScore(
+  haystack: string,
+  programmeNames: string[]
+): number {
   const hay = normalize(haystack);
   if (!hay) return 0;
 
@@ -79,7 +82,7 @@ function sameSite(url: string, pageUrl: string): boolean {
   }
 }
 
-function isCatalogueLink(link: LinkLike): boolean {
+function isCatalogueLink(link: ProgrammePageLink): boolean {
   const hay = `${link.label} ${link.url}`.toLowerCase();
   return (
     link.classification === "programme" ||
@@ -97,7 +100,7 @@ function isCatalogueLink(link: LinkLike): boolean {
 export function planProgrammePageDiscovery(input: {
   pageUrl: string;
   pageTitle: string | null;
-  links: LinkLike[];
+  links: ProgrammePageLink[];
   programmeNames: Array<string | null | undefined>;
 }): ProgrammePagePlan {
   const names = input.programmeNames.filter(
@@ -105,7 +108,7 @@ export function planProgrammePageDiscovery(input: {
   );
   if (names.length === 0) return { kind: "not_found" };
 
-  if (titleMatchScore(input.pageTitle ?? "", names) >= 75) {
+  if (programmeNameMatchScore(input.pageTitle ?? "", names) >= 75) {
     return { kind: "already_programme_page" };
   }
 
@@ -115,7 +118,7 @@ export function planProgrammePageDiscovery(input: {
   const direct = sameSiteLinks
     .map((link) => ({
       link,
-      score: titleMatchScore(`${link.label} ${link.url}`, names),
+      score: programmeNameMatchScore(`${link.label} ${link.url}`, names),
     }))
     .filter((candidate) => candidate.score >= 75)
     .sort((a, b) => b.score - a.score || a.link.url.localeCompare(b.link.url))[0];
