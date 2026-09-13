@@ -659,17 +659,6 @@ export async function createProgramAction(formData: FormData) {
   revalidatePath("/admin/programs");
 }
 
-export async function generateProgramMatchesAction(formData: FormData) {
-  await requireStaff();
-  const studentId = String(formData.get("studentId") || "");
-  await assertStudentAccess(studentId);
-  const { persistProgramMatches } = await import(
-    "@/server/services/program-matching/program-matching"
-  );
-  await persistProgramMatches(studentId);
-  revalidatePath(`/admin/students/${studentId}`);
-}
-
 export async function resetProgramMatchesAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
