@@ -271,6 +271,23 @@ describe("questionnaire adapter profiles A/B/C", () => {
     );
   });
 
+  it("keeps rendering a profile when a personal questionnaire was only partially saved", () => {
+    expect(() =>
+      buildMatchingProfileFromStudent({
+        id: "partial-personal-json",
+        intake: "2027/28",
+        nationality: "Kazakhstan",
+        studyLevel: "BACHELOR",
+        questionnairePersonalJson: "{",
+        questionnaireProgramsJson: JSON.stringify({
+          studyLevelPlan: "Бакалавриат",
+          studyLanguage: "Английский",
+          preferredDirections: ["Экономические науки"],
+        }),
+      })
+    ).not.toThrow();
+  });
+
   it("keeps SAT unknown for profile B and keeps multi-direction mix", () => {
     expect(profileB.sat).toBe("UNKNOWN");
     expect(profileB.englishLevel).toBe("B2");

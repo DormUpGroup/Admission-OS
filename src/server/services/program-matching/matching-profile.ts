@@ -230,9 +230,10 @@ export function buildMatchingProfileFromStudent(student: StudentInput): Matching
         ? false
         : preferredCities.length > 0,
     maxTuition: (() => {
-      const personal = student.questionnairePersonalJson
-        ? (JSON.parse(student.questionnairePersonalJson) as Record<string, string>)
-        : {};
+      // A partially saved questionnaire must never make the whole student
+      // page fail its server render. The same safe parser is used above for
+      // the remaining personal-profile fields.
+      const personal = parsePersonalAnswers(student.questionnairePersonalJson);
       const raw = personal.annualBudgetMax;
       const n = raw != null ? Number(String(raw).replace(/[^\d.]/g, "")) : NaN;
       return Number.isFinite(n) && n > 0 ? n : UNKNOWN;
