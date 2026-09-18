@@ -15,7 +15,12 @@ export type ResolvedProgrammeSource = {
   url: string;
   body: string;
   contentType: string;
-  method: "DIRECT" | "LANDING_LINK" | "CATALOGUE_LINK" | "SITEMAP";
+  method:
+    | "DIRECT"
+    | "LANDING_LINK"
+    | "CATALOGUE_LINK"
+    | "SITEMAP"
+    | "WEB_SEARCH";
   attemptedUrls: string[];
 };
 

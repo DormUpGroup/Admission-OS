@@ -31,6 +31,7 @@ import { reconcileAdmissionExamsFromStoredSources } from "@/server/services/prog
 import { universityWebsiteAdapter } from "@/server/services/program-ingestion/adapters/university-website";
 import { resolveProgrammeSource } from "@/server/services/program-ingestion/programme-source-resolver";
 import { recordProgrammeSourceResolution } from "@/server/services/program-ingestion/programme-source-resolution";
+import { findProgrammePageWithWebSearch } from "./programme-search-agent";
 
 export type AiEnrichResult = {
   status:
@@ -170,7 +171,7 @@ export async function enrichProgramWithAi(input: {
     }
   };
   const initialSource = await fetchOfficialPage(officialUrl);
-  const sourceResolution = await resolveProgrammeSource({
+  let sourceResolution = await resolveProgrammeSource({
     officialUrl,
     programmeNames: [
       pay.program.name,
@@ -180,6 +181,50 @@ export async function enrichProgramWithAi(input: {
     initial: initialSource,
     fetchUrl: fetchOfficialPage,
   });
+  // A Universitaly record sometimes links only to an admission portal or a
+  // university landing page whose programme catalogue is not crawlable. Give
+  // a bounded web-search agent one chance, restricted to the university's
+  // official domain. The returned URL is still verified by the deterministic
+  // resolver below; web search itself is never evidence for a programme fact.
+  if (
+    sourceResolution.status !== "RESOLVED" &&
+    cfg.programmeSearchAgentEnabled
+  ) {
+    const candidate = await findProgrammePageWithWebSearch({
+      officialUrl,
+      programmeNames: [
+        pay.program.name,
+        pay.program.titleOfficial,
+        pay.program.titleEnglish,
+      ],
+      universityName: pay.program.university.name,
+    });
+    if (candidate.status === "FOUND") {
+      const candidateInitial = await fetchOfficialPage(candidate.url);
+      const verified = await resolveProgrammeSource({
+        officialUrl: candidate.url,
+        programmeNames: [
+          pay.program.name,
+          pay.program.titleOfficial,
+          pay.program.titleEnglish,
+        ],
+        initial: candidateInitial,
+        fetchUrl: fetchOfficialPage,
+      });
+      if (verified.status === "RESOLVED") {
+        sourceResolution = {
+          ...verified,
+          method: "WEB_SEARCH",
+          attemptedUrls: [
+            ...new Set([
+              ...sourceResolution.attemptedUrls,
+              ...verified.attemptedUrls,
+            ]),
+          ],
+        };
+      }
+    }
+  }
   if (sourceResolution.status !== "RESOLVED" || !sourceResolution.url) {
     return {
       status: "FAILED",

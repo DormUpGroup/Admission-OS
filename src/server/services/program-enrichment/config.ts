@@ -42,6 +42,18 @@ export function getEnrichmentConfig() {
     maxDocuments: envInt("OPENAI_PROGRAM_ENRICHMENT_MAX_DOCUMENTS", 5),
     maxHops: envInt("OPENAI_PROGRAM_ENRICHMENT_MAX_HOPS", 5),
     maxToolCalls: envInt("OPENAI_PROGRAM_ENRICHMENT_MAX_TOOL_CALLS", 6),
+    // This is deliberately a separate, one-shot agent. It runs only after
+    // deterministic same-site discovery (links/catalogue/sitemap) fails.
+    // Keeping it bounded prevents a bad Universitaly URL from turning every
+    // programme card into an open-ended web-research task.
+    programmeSearchAgentEnabled: envBool(
+      "OPENAI_PROGRAMME_SEARCH_AGENT_ENABLED",
+      true
+    ),
+    programmeSearchAgentModel: envStr(
+      "OPENAI_PROGRAMME_SEARCH_AGENT_MODEL",
+      envStr("OPENAI_PROGRAM_ENRICHMENT_MODEL", "gpt-5.6-luna")
+    ),
     maxOutputTokens: (() => {
       const raw = process.env.OPENAI_PROGRAM_ENRICHMENT_MAX_OUTPUT_TOKENS;
       if (!raw?.trim()) return undefined;

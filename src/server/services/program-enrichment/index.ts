@@ -19,5 +19,9 @@ export {
 export { validateEvidenceQuote, quoteExistsInDocument } from "./quote-validator";
 export { EnrichmentOutputSchema, type EnrichmentOutput } from "./schema";
 export { shouldEscalateToTerra, validateOutputQuotes } from "./luna-terra";
+export {
+  findProgrammePageWithWebSearch,
+  createOpenAiProgrammeSearchClient,
+} from "./programme-search-agent";
 export { persistEnrichmentOutput } from "./persist-enrichment";
 export { factAppliesToCategory, scopeForApplicantCategory } from "./matching-context";
