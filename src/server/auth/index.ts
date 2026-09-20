@@ -69,15 +69,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Re-sync after DB reseed / user recreation so stale JWT ids don't break ACL
       if (token.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: String(token.email) },
-          select: { id: true, role: true, name: true, email: true },
-        });
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.role = dbUser.role as UserRole;
-          token.name = dbUser.name;
-          token.email = dbUser.email;
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: String(token.email) },
+            select: { id: true, role: true, name: true, email: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role as UserRole;
+            token.name = dbUser.name;
+            token.email = dbUser.email;
+          }
+        } catch (error) {
+          console.error("jwt user re-sync failed", error);
         }
       }
 

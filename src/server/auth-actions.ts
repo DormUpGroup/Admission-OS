@@ -33,15 +33,6 @@ function authErrorMessage(error: unknown): string | null {
   return null;
 }
 
-function signInUrlHasError(result: unknown) {
-  if (typeof result !== "string") return false;
-  try {
-    return new URL(result, "http://localhost").searchParams.has("error");
-  } catch {
-    return false;
-  }
-}
-
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
@@ -55,18 +46,21 @@ export async function loginAction(formData: FormData) {
     return { error: "Сервер не настроен: отсутствует DATABASE_URL" };
   }
 
+  let dest = "/admin";
   try {
-    const result = await signIn("credentials", {
+    const user = await prisma.user.findUnique({ where: { email } });
+    dest = user?.role === "STUDENT" ? "/portal" : "/admin";
+  } catch (e) {
+    console.error("loginAction user lookup failed", e);
+    return { error: "Не удалось войти: ошибка базы данных." };
+  }
+
+  try {
+    await signIn("credentials", {
       email,
       password,
-      redirect: false,
+      redirectTo: dest,
     });
-    if (
-      (typeof result === "object" && result && "error" in result && result.error) ||
-      signInUrlHasError(result)
-    ) {
-      return { error: "Неверный email или пароль" };
-    }
   } catch (e) {
     if (isNextRedirect(e)) throw e;
     const message = authErrorMessage(e);
@@ -75,15 +69,7 @@ export async function loginAction(formData: FormData) {
     return { error: "Не удалось войти. Проверьте логи сервера." };
   }
 
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    return {
-      redirectTo: user?.role === "STUDENT" ? "/portal" : "/admin",
-    };
-  } catch (e) {
-    console.error("loginAction user lookup failed", e);
-    return { error: "Не удалось войти: ошибка базы данных." };
-  }
+  redirect(dest);
 }
 
 export async function logoutAction() {
