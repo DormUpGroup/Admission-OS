@@ -4,13 +4,12 @@ Internal admissions operations system for IMMIGROME agency.
 
 > Student → Applications → Requirements → Documents → Tasks → Deadlines → Risk → Next Action
 
-## Stack (V1 local)
+## Stack (V1)
 
 - **Next.js 15** (App Router) + TypeScript + Tailwind
-- **Prisma** + **SQLite** (local file DB — Docker was not available for local Supabase)
+- **Prisma** + **Supabase Postgres** (session pooler)
 - **Auth.js (NextAuth v5)** credentials auth with roles: `ADMIN`, `CURATOR`, `STUDENT`
-- **Local filesystem** document storage (`storage/documents`)
-- Supabase client packages included for a future switch to local/hosted Supabase (Postgres + Auth + Storage)
+- **Supabase Storage** for student documents (private bucket, served via `/api/files`)
 
 ## Quick start
 
@@ -53,4 +52,4 @@ Request document → student sees Action Required → upload → curator inbox �
 
 ## Note on Supabase
 
-Plan target was local Supabase via Docker. This environment had no Docker, so V1 ships on SQLite + Auth.js + local files with the same domain model and operational loop. When Docker is available, migrate `DATABASE_URL` to Supabase Postgres and swap storage/auth adapters.
+`DATABASE_URL` points at the hosted Supabase session pooler. Student files go to a private Storage bucket and are served through `/api/files` after Auth.js access checks. Auth is still Auth.js, not Supabase Auth.

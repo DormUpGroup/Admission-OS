@@ -1,11 +1,9 @@
 import { createHash } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/db";
+import { saveRawSnapshot } from "@/lib/storage";
 import {
   FETCH_RATE_LIMIT_MS,
   PARSER_VERSION,
-  SOURCE_STORAGE_ROOT,
 } from "@/lib/program-matching/config";
 import { detectStaleness } from "@/server/services/program-matching/source-resolver";
 import { syncSourceDocumentSections } from "@/server/services/program-enrichment/document-sections";
@@ -34,10 +32,7 @@ export async function storeRawSnapshot(input: {
   key: string;
   content: string | Buffer;
 }) {
-  const fullPath = path.join(process.cwd(), SOURCE_STORAGE_ROOT, input.key);
-  await mkdir(path.dirname(fullPath), { recursive: true });
-  await writeFile(fullPath, input.content);
-  return input.key;
+  return saveRawSnapshot(input);
 }
 
 export async function upsertSourceDocument(input: {

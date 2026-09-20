@@ -85,7 +85,6 @@ export const SOURCE_PRIORITY: Record<string, number> = {
 
 export const FETCH_RATE_LIMIT_MS = 800;
 export const PARSER_VERSION = "call-v1.13";
-export const SOURCE_STORAGE_ROOT = "./storage/sources";
 
 /** Cineca Universitaly backend (used by universitaly.it UI). */
 export const UNIVERSITALY_BACKEND_BASE =
