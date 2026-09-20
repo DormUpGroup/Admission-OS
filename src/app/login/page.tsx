@@ -17,6 +17,10 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error);
       setLoading(false);
+      return;
+    }
+    if (result?.redirectTo) {
+      window.location.assign(result.redirectTo);
     }
   }
 

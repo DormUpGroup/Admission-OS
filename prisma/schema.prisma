@@ -1,9 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -66,6 +67,9 @@ model Student {
   programMatches ProgramMatch[]
   shortlistItems StudentShortlistItem[]
   notifications  InAppNotification[]
+
+  @@index([curatorId])
+  @@index([acceptedById])
 }
 
 model IntakeCohort {
@@ -165,6 +169,8 @@ model Application {
   activities          Activity[]
 
   @@index([programAcademicYearId])
+  @@index([studentId])
+  @@index([programId])
 }
 
 model Requirement {
@@ -183,6 +189,9 @@ model Requirement {
   application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   relatedDocument Document?   @relation(fields: [relatedDocumentId], references: [id])
   deadlines       Deadline[]
+
+  @@index([applicationId])
+  @@index([relatedDocumentId])
 }
 
 model Document {
@@ -209,6 +218,9 @@ model Document {
   reviewedBy   User?         @relation("DocumentReviewer", fields: [reviewedById], references: [id])
   requirements Requirement[]
   tasks        Task[]
+
+  @@index([studentId])
+  @@index([reviewedById])
 }
 
 model Task {
@@ -232,6 +244,11 @@ model Task {
   application Application? @relation(fields: [applicationId], references: [id])
   document    Document?    @relation(fields: [documentId], references: [id])
   deadlines   Deadline[]
+
+  @@index([assigneeId])
+  @@index([studentId])
+  @@index([applicationId])
+  @@index([documentId])
 }
 
 model Deadline {
@@ -253,6 +270,11 @@ model Deadline {
   application Application? @relation(fields: [applicationId], references: [id])
   requirement Requirement? @relation(fields: [requirementId], references: [id])
   task        Task?        @relation(fields: [taskId], references: [id])
+
+  @@index([studentId])
+  @@index([applicationId])
+  @@index([requirementId])
+  @@index([taskId])
 }
 
 model Activity {
@@ -267,6 +289,10 @@ model Activity {
   student     Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   application Application? @relation(fields: [applicationId], references: [id])
   user        User?        @relation(fields: [userId], references: [id])
+
+  @@index([studentId])
+  @@index([applicationId])
+  @@index([userId])
 }
 
 model ApplicationTemplate {
@@ -279,6 +305,8 @@ model ApplicationTemplate {
 
   program Program?                  @relation(fields: [programId], references: [id])
   items   ApplicationTemplateItem[]
+
+  @@index([programId])
 }
 
 model ApplicationTemplateItem {
@@ -289,6 +317,8 @@ model ApplicationTemplateItem {
   isCritical Boolean @default(false)
 
   template ApplicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }
 
 model ProgramAcademicYear {
@@ -341,6 +371,8 @@ model AdmissionCycle {
   notes                    String?
 
   programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
+
+  @@index([programAcademicYearId])
 }
 
 model AdmissionRequirement {
@@ -356,6 +388,9 @@ model AdmissionRequirement {
 
   programAcademicYear ProgramAcademicYear @relation(fields: [programAcademicYearId], references: [id], onDelete: Cascade)
   sourceFact          ProgramFact?        @relation(fields: [sourceFactId], references: [id])
+
+  @@index([programAcademicYearId])
+  @@index([sourceFactId])
 }
 
 model TuitionInfo {
@@ -404,6 +439,9 @@ model SourceDocument {
 
   @@index([contentHash])
   @@index([url])
+  @@index([universityId])
+  @@index([programId])
+  @@index([programAcademicYearId])
 }
 
 // Deterministic official-document sections for retrieval.
@@ -470,6 +508,8 @@ model ProgramFact {
 
   @@index([programAcademicYearId, field, academicYear, applicantCategoryScope])
   @@index([programAcademicYearId, field, origin, decisionStatus, superseded])
+  @@index([programId])
+  @@index([sourceDocumentId])
 }
 
 model ProgramEnrichmentRun {
@@ -577,6 +617,8 @@ model ScholarshipRule {
   sourceUrl             String?
 
   scholarshipProgram ScholarshipProgram @relation(fields: [scholarshipProgramId], references: [id], onDelete: Cascade)
+
+  @@index([scholarshipProgramId])
 }
 
 model ProgramChangeEvent {
@@ -592,6 +634,8 @@ model ProgramChangeEvent {
   createdAt             DateTime @default(now())
 
   sourceDocument SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+
+  @@index([sourceDocumentId])
 }
 
 model InAppNotification {
