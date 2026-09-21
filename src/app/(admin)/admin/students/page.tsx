@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { prisma } from "@/lib/db";
+import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
 import { fullName } from "@/lib/utils";
 import { parseNextAction } from "@/server/services/readiness";
 import { PageHeader } from "@/components/page-header";
@@ -37,6 +38,36 @@ const VIEWS = [
   { id: "waiting", label: "Ожидание" },
   { id: "completed", label: "Завершённые" },
 ] as const;
+
+type StudentListItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  intake: string;
+  journeyStage: string;
+  riskLevel: string;
+  curatorName: string | null;
+  applicationCount: number;
+  documentCount: number;
+  approvedDocumentCount: number;
+  nextActionJson: string | null;
+};
+
+type BackendStudent = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  intake: string;
+  journey_stage: string;
+  risk_level: string;
+  curator_name: string | null;
+  application_count: number;
+  document_count: number;
+  approved_document_count: number;
+  next_action_json: string | null;
+};
 
 export default async function StudentsPage({
   searchParams,
@@ -84,8 +115,46 @@ export default async function StudentsPage({
   if (sp.studyLevel) where.studyLevel = sp.studyLevel;
   if (sp.country) where.country = sp.country;
 
-  const [students, curators, intakes] = await Promise.all([
-    prisma.student.findMany({
+  let students: StudentListItem[];
+  let curators: { id: string; name: string }[];
+  let intakes: { intake: string }[];
+  if (isBackendApiConfigured()) {
+    const params = new URLSearchParams({ view });
+    if (sp.q) params.set("query", sp.q);
+    if (sp.intake) params.set("intake", sp.intake);
+    if (sp.curatorId) params.set("curator_id", sp.curatorId);
+    if (sp.studyLevel) params.set("study_level", sp.studyLevel);
+    if (sp.country) params.set("country", sp.country);
+    const response = await backendFetch(session.user, `/v1/students?${params}`);
+    if (!response.ok) throw new Error("Не удалось загрузить студентов из backend API");
+    const payload = (await response.json()) as BackendStudent[];
+    students = payload.map((student) => ({
+      id: student.id,
+      firstName: student.first_name,
+      lastName: student.last_name,
+      email: student.email,
+      intake: student.intake,
+      journeyStage: student.journey_stage,
+      riskLevel: student.risk_level,
+      curatorName: student.curator_name,
+      applicationCount: student.application_count,
+      documentCount: student.document_count,
+      approvedDocumentCount: student.approved_document_count,
+      nextActionJson: student.next_action_json,
+    }));
+    curators =
+      session.user.role === "ADMIN"
+        ? await prisma.user.findMany({
+            where: { role: { in: ["ADMIN", "CURATOR"] } },
+            orderBy: { name: "asc" },
+          })
+        : [];
+    intakes = [...new Set(students.map((student) => student.intake))]
+      .sort((a, b) => b.localeCompare(a))
+      .map((intake) => ({ intake }));
+  } else {
+    const [databaseStudents, databaseCurators, databaseIntakes] = await Promise.all([
+      prisma.student.findMany({
       where,
       include: {
         curator: true,
@@ -93,20 +162,37 @@ export default async function StudentsPage({
         documents: true,
       },
       orderBy: [{ riskLevel: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
-    }),
-    session.user.role === "ADMIN"
+      }),
+      session.user.role === "ADMIN"
       ? prisma.user.findMany({
           where: { role: { in: ["ADMIN", "CURATOR"] } },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
-    prisma.student.findMany({
+      prisma.student.findMany({
       where: scope,
       select: { intake: true },
       distinct: ["intake"],
       orderBy: { intake: "desc" },
-    }),
-  ]);
+      }),
+    ]);
+    students = databaseStudents.map((student) => ({
+      id: student.id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      email: student.email,
+      intake: student.intake,
+      journeyStage: student.journeyStage,
+      riskLevel: student.riskLevel,
+      curatorName: student.curator?.name ?? null,
+      applicationCount: student.applications.length,
+      documentCount: student.documents.length,
+      approvedDocumentCount: student.documents.filter((document) => document.status === "APPROVED").length,
+      nextActionJson: student.nextActionJson,
+    }));
+    curators = databaseCurators;
+    intakes = databaseIntakes;
+  }
 
   // SQLite has no reliable risk sort; sort in memory by RISK priority
   const riskRank: Record<string, number> = {
@@ -249,8 +335,6 @@ export default async function StudentsPage({
           </DataTableHeader>
           <DataTableBody>
             {students.map((s) => {
-              const approved = s.documents.filter((d) => d.status === "APPROVED")
-                .length;
               const next = parseNextAction(s.nextActionJson);
               return (
                 <DataTableRow key={s.id}>
@@ -279,13 +363,13 @@ export default async function StudentsPage({
                     <StatusBadge status={s.journeyStage} />
                   </DataTableCell>
                   <DataTableCell className="text-muted-foreground">
-                    {s.curator?.name ?? "—"}
+                    {s.curatorName ?? "—"}
                   </DataTableCell>
                   <DataTableCell className="tabular-nums">
-                    {s.applications.length}
+                    {s.applicationCount}
                   </DataTableCell>
                   <DataTableCell className="tabular-nums">
-                    {approved}/{s.documents.length}
+                    {s.approvedDocumentCount}/{s.documentCount}
                   </DataTableCell>
                   <DataTableCell className="max-w-[200px] truncate text-muted-foreground">
                     {next?.title ?? "—"}
