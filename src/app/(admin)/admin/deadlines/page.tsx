@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -44,6 +45,15 @@ function groupDeadlines<T extends { date: Date }>(items: T[]) {
   return groups.filter((g) => g.items.length > 0);
 }
 
+type DeadlineRow = {
+  id: string;
+  title: string;
+  date: Date;
+  type: string;
+  studentId: string;
+  studentName: string;
+};
+
 export default async function AdminDeadlinesPage({
   searchParams,
 }: {
@@ -64,16 +74,47 @@ export default async function AdminDeadlinesPage({
         ? endOfDay(addDays(now, 30))
         : undefined;
 
-  const deadlines = await prisma.deadline.findMany({
-    where: {
-      student: scope,
-      date: upper ? { gte: now, lte: upper } : { gte: now },
-    },
-    include: {
-      student: { select: { id: true, firstName: true, lastName: true } },
-    },
-    orderBy: { date: "asc" },
-  });
+  let deadlines: DeadlineRow[];
+  if (isBackendApiConfigured()) {
+    const days = range === "all" ? "" : `?days=${range}`;
+    const response = await backendFetch(session.user, `/v1/deadlines${days}`);
+    if (!response.ok) throw new Error("Не удалось загрузить дедлайны");
+    const payload = (await response.json()) as Array<{
+      id: string;
+      title: string;
+      date: string;
+      type: string;
+      student_id: string;
+      student_name: string | null;
+    }>;
+    deadlines = payload.map((deadline) => ({
+      id: deadline.id,
+      title: deadline.title,
+      date: new Date(deadline.date),
+      type: deadline.type,
+      studentId: deadline.student_id,
+      studentName: deadline.student_name ?? "Студент",
+    }));
+  } else {
+    const rows = await prisma.deadline.findMany({
+      where: {
+        student: scope,
+        date: upper ? { gte: now, lte: upper } : { gte: now },
+      },
+      include: {
+        student: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { date: "asc" },
+    });
+    deadlines = rows.map((deadline) => ({
+      id: deadline.id,
+      title: deadline.title,
+      date: deadline.date,
+      type: deadline.type,
+      studentId: deadline.studentId,
+      studentName: fullName(deadline.student.firstName, deadline.student.lastName),
+    }));
+  }
 
   const groups = groupDeadlines(deadlines);
 
@@ -119,7 +160,7 @@ export default async function AdminDeadlinesPage({
                   title: d.title,
                   dueDate: d.date,
                   type: d.type,
-                  studentName: fullName(d.student.firstName, d.student.lastName),
+                  studentName: d.studentName,
                   href: `/admin/students/${d.studentId}`,
                 }))}
               />

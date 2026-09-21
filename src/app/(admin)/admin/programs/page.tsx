@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
 import { requireRole } from "@/server/auth/guards";
 import { createProgramAction } from "@/server/actions";
 import { PageHeader } from "@/components/page-header";
@@ -23,19 +24,82 @@ import {
 } from "@/components/data-table";
 import { labelOf } from "@/lib/labels";
 
-export default async function AdminProgramsPage() {
-  await requireRole(["ADMIN"]);
+type ProgramListRow = {
+  id: string;
+  name: string;
+  degreeLevel: string;
+  language: string | null;
+  field: string | null;
+  university: { id: string; name: string };
+  applicationCount: number;
+};
 
-  const [programs, universities] = await Promise.all([
-    prisma.program.findMany({
-      include: {
-        university: true,
-        _count: { select: { applications: true } },
-      },
-      orderBy: [{ university: { name: "asc" } }, { name: "asc" }],
-    }),
-    prisma.university.findMany({ orderBy: { name: "asc" } }),
-  ]);
+type UniversityListRow = { id: string; name: string };
+
+type BackendProgram = {
+  id: string;
+  name: string;
+  degree_level: string;
+  language: string | null;
+  field: string | null;
+  university: { id: string; name: string };
+  application_count: number;
+};
+
+type BackendUniversity = { id: string; name: string };
+
+export default async function AdminProgramsPage() {
+  const session = await requireRole(["ADMIN"]);
+
+  let programs: ProgramListRow[];
+  let universities: UniversityListRow[];
+  if (isBackendApiConfigured()) {
+    const [programResponse, universityResponse] = await Promise.all([
+      backendFetch(session.user, "/v1/programs?include_inactive=true"),
+      backendFetch(session.user, "/v1/universities"),
+    ]);
+    if (!programResponse.ok || !universityResponse.ok) {
+      throw new Error("Не удалось загрузить каталог программ из backend API");
+    }
+    const [backendPrograms, backendUniversities] = await Promise.all([
+      programResponse.json() as Promise<BackendProgram[]>,
+      universityResponse.json() as Promise<BackendUniversity[]>,
+    ]);
+    programs = backendPrograms.map((program) => ({
+      id: program.id,
+      name: program.name,
+      degreeLevel: program.degree_level,
+      language: program.language,
+      field: program.field,
+      university: program.university,
+      applicationCount: program.application_count,
+    }));
+    universities = backendUniversities;
+  } else {
+    const [databasePrograms, databaseUniversities] = await Promise.all([
+      prisma.program.findMany({
+        include: {
+          university: true,
+          _count: { select: { applications: true } },
+        },
+        orderBy: [{ university: { name: "asc" } }, { name: "asc" }],
+      }),
+      prisma.university.findMany({ orderBy: { name: "asc" } }),
+    ]);
+    programs = databasePrograms.map((program) => ({
+      id: program.id,
+      name: program.name,
+      degreeLevel: program.degreeLevel,
+      language: program.language,
+      field: program.field,
+      university: { id: program.university.id, name: program.university.name },
+      applicationCount: program._count.applications,
+    }));
+    universities = databaseUniversities.map((university) => ({
+      id: university.id,
+      name: university.name,
+    }));
+  }
 
   return (
     <div className="space-y-6">
@@ -92,7 +156,7 @@ export default async function AdminProgramsPage() {
                       {p.field ?? "—"}
                     </DataTableCell>
                     <DataTableCell className="tabular-nums">
-                      {p._count.applications}
+                      {p.applicationCount}
                     </DataTableCell>
                   </DataTableRow>
                 ))}
