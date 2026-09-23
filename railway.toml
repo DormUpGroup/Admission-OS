@@ -1,7 +1,7 @@
 # Hobby pilot caps — keep cost predictable; raise only after metrics show pressure.
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm start"
