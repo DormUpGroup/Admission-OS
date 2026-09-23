@@ -8,7 +8,11 @@ import {
 } from "@/lib/program-matching/config";
 import { buildMiurProvenance } from "@/lib/program-matching/miur-provenance";
 import type { MatchingProfile } from "@/lib/program-matching/types";
-import { previousAcademicYear } from "./compare";
+import {
+  admissionDataYearForIntake,
+  preferAdmissionDataYearRow,
+  previousAcademicYear,
+} from "./compare";
 import { evaluateEligibility } from "./eligibility";
 import { buildExplanation } from "./explanation";
 import { calculateFitScore } from "./fit-score";
@@ -56,6 +60,7 @@ export async function generateProgramMatches(
 
   const profile = buildMatchingProfileFromStudent(student);
   const targetYear = profile.targetAcademicYear;
+  const dataYear = admissionDataYearForIntake(targetYear);
   const fallbackYear = previousAcademicYear(targetYear);
   const provenance = buildMiurProvenance(profile);
 
@@ -84,7 +89,9 @@ export async function generateProgramMatches(
       ? { id: { in: [...scopedIds] } }
       : {
           academicYear: {
-            in: [targetYear, fallbackYear].filter(Boolean) as string[],
+            in: [...new Set(
+              [dataYear, targetYear, fallbackYear].filter(Boolean) as string[]
+            )],
           },
           program: { active: true },
         },
@@ -93,16 +100,12 @@ export async function generateProgramMatches(
       facts: { where: { superseded: false }, take: 20 },
     },
   });
-  // Prefer target year row per program; fall back to previous year
-  const byProgram = new Map<string, (typeof academicYears)[number]>();
-  for (const row of academicYears) {
-    const existing = byProgram.get(row.programId);
-    if (!existing) {
-      byProgram.set(row.programId, row);
-      continue;
-    }
-    if (row.academicYear === targetYear) byProgram.set(row.programId, row);
-  }
+  // Prefer published admission-data year (26/27 for 27/28 intake); intake year only as fallback
+  const byProgram = preferAdmissionDataYearRow(
+    academicYears,
+    dataYear,
+    targetYear
+  );
 
   const applied = new Map(student.applications.map((a) => [a.programId, a.id]));
   const results: Array<{

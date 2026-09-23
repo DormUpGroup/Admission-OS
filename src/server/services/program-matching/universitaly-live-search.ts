@@ -14,6 +14,7 @@ import {
   type UniversitalySearchQuery,
 } from "@/server/services/program-ingestion/universitaly-client";
 import { upsertUniversitalyCandidates } from "@/server/services/program-ingestion/universitaly-upsert";
+import { admissionDataYearForIntake } from "@/server/services/program-matching/compare";
 import {
   emptyGateHistogram,
   isCandidateRelevant,
@@ -633,7 +634,8 @@ export async function searchUniversitalyForProfile(
   );
 
   const upserted = await upsertUniversitalyCandidates(relevant, {
-    fallbackAcademicYear: profile.targetAcademicYear,
+    // Store under the published call year (26/27), not the student intake (27/28).
+    fallbackAcademicYear: admissionDataYearForIntake(profile.targetAcademicYear),
   });
 
   const warningParts: string[] = [];

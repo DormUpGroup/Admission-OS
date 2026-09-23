@@ -31,6 +31,7 @@ import { EmptyState } from "@/components/empty-state";
 import { GenerateProgramMatchesButton } from "@/components/generate-program-matches-button";
 import { ResetProgramMatchesButton } from "@/components/reset-program-matches-button";
 import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
+import { AdmissionDataYearNotice } from "@/components/admission-data-year-notice";
 import type { CuratorMatchView } from "@/components/curator-program-match-card";
 import { CuratorProgramLevelsCard } from "@/components/admin/curator-program-levels";
 import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
@@ -755,6 +756,7 @@ export default async function StudentProfilePage({
           <div className="w-full space-y-3">
             <GenerateProgramMatchesButton
               studentId={studentId}
+              intake={student.intake}
               disabled={!matchingReady}
               actions={
                 <>
@@ -770,6 +772,9 @@ export default async function StudentProfilePage({
             <p className="text-xs text-muted-foreground">
               Заполните анкету №2, чтобы запускать подбор.
             </p>
+          ) : null}
+          {persistedMatches.length > 0 ? (
+            <AdmissionDataYearNotice intake={student.intake} />
           ) : null}
           <div className="space-y-6">
             <section className="space-y-3">
@@ -934,6 +939,7 @@ export default async function StudentProfilePage({
               ) : null}
               <GenerateProgramMatchesButton
                 studentId={studentId}
+                intake={student.intake}
                 disabled={!matchingReady}
               />
               {(() => {

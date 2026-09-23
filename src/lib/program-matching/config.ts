@@ -10,7 +10,15 @@ export const TARGET_ACADEMIC_YEARS = [
 
 export type AcademicYear = (typeof TARGET_ACADEMIC_YEARS)[number];
 
+/** Student intake we are matching toward (when they want to enroll). */
 export const DEFAULT_TARGET_ACADEMIC_YEAR: AcademicYear = "2027/2028";
+
+/**
+ * Published call year that currently backs admission facts for the default
+ * intake. Keep this on 2026/2027 while 2027/28 bandi are not yet ingested;
+ * flip to 2027/2028 once program updates start pulling that season's calls.
+ */
+export const DEFAULT_ADMISSION_DATA_YEAR: AcademicYear = "2026/2027";
 
 /**
  * Fit priorities for Immigrome ops:

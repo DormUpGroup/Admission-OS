@@ -14,6 +14,7 @@ import {
   formatEtaLabel,
   smoothEta,
 } from "@/components/match-progress-eta";
+import { AdmissionDataYearNotice } from "@/components/admission-data-year-notice";
 
 const STEPS: { id: MatchProgressStage; label: string }[] = [
   { id: "profile", label: "Профиль анкеты" },
@@ -42,10 +43,12 @@ function stepIndex(stage: MatchProgressStage | "complete" | "error" | null) {
 
 export function GenerateProgramMatchesButton({
   studentId,
+  intake,
   disabled,
   actions,
 }: {
   studentId: string;
+  intake?: string | null;
   disabled?: boolean;
   actions?: ReactNode;
 }) {
@@ -286,27 +289,35 @@ export function GenerateProgramMatchesButton({
               <p className="text-xs text-muted-foreground">{progress.detail}</p>
             ) : null}
             {completeCount != null && !loading ? (
-              <p className="text-xs text-muted-foreground">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {completeCount > 0 ? (
+                    <>
+                      Показаны {completeCount}{" "}
+                      {completeCount === 1
+                        ? "программа"
+                        : completeCount < 5
+                          ? "программы"
+                          : "программ"}{" "}
+                      ниже.{" "}
+                      <a
+                        href="#program-match-results"
+                        className="font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+                      >
+                        Перейти к результатам
+                      </a>
+                    </>
+                  ) : (
+                    "Подбор завершён, подходящих программ не найдено."
+                  )}
+                </p>
                 {completeCount > 0 ? (
-                  <>
-                    Показаны {completeCount}{" "}
-                    {completeCount === 1
-                      ? "программа"
-                      : completeCount < 5
-                        ? "программы"
-                        : "программ"}{" "}
-                    ниже.{" "}
-                    <a
-                      href="#program-match-results"
-                      className="font-medium text-[var(--brand)] underline-offset-2 hover:underline"
-                    >
-                      Перейти к результатам
-                    </a>
-                  </>
-                ) : (
-                  "Подбор завершён, подходящих программ не найдено."
-                )}
-              </p>
+                  <AdmissionDataYearNotice
+                    intake={intake}
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950"
+                  />
+                ) : null}
+              </div>
             ) : null}
           </div>
 

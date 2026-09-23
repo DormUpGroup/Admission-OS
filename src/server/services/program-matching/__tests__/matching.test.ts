@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  admissionDataYearForIntake,
   compareLanguageLevel,
   compareNumericRequirement,
   deadlineStatus,
   normalizeAcademicYear,
   parseIeltsFromText,
   parseSatFromText,
+  preferAdmissionDataYearRow,
   previousAcademicYear,
 } from "@/server/services/program-matching/compare";
 import { resolveProgramFact } from "@/server/services/program-matching/source-resolver";
@@ -47,6 +49,20 @@ describe("compare helpers", () => {
   it("resolves academic years", () => {
     expect(normalizeAcademicYear("2027/28")).toBe("2027/2028");
     expect(previousAcademicYear("2027/2028")).toBe("2026/2027");
+    expect(admissionDataYearForIntake("2027/28")).toBe("2026/2027");
+    expect(admissionDataYearForIntake("2027/2028")).toBe("2026/2027");
+  });
+
+  it("prefers admission data year over intake year when both rows exist", () => {
+    const picked = preferAdmissionDataYearRow(
+      [
+        { programId: "p1", academicYear: "2027/2028", id: "target" },
+        { programId: "p1", academicYear: "2026/2027", id: "data" },
+      ],
+      "2026/2027",
+      "2027/2028"
+    );
+    expect(picked.get("p1")?.id).toBe("data");
   });
 });
 

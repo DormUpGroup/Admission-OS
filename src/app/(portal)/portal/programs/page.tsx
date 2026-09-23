@@ -7,6 +7,7 @@ import { matchProgramsFromShortlist } from "@/server/services/program-match";
 import { EmptyState } from "@/components/empty-state";
 import { PortalUniversityCard } from "@/components/portal-university-card";
 import { ProgramMatchCard } from "@/components/program-match-card";
+import { AdmissionDataYearNotice } from "@/components/admission-data-year-notice";
 import { Button } from "@/components/ui/button";
 
 export default async function PortalProgramsPage() {
@@ -96,6 +97,7 @@ export default async function PortalProgramsPage() {
           <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
             Рекомендованные
           </h2>
+          <AdmissionDataYearNotice intake={student.intake} />
           <div className="grid gap-4 sm:grid-cols-2">
             {matches.map((m) => (
               <ProgramMatchCard

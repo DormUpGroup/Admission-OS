@@ -1,3 +1,7 @@
+import {
+  DEFAULT_ADMISSION_DATA_YEAR,
+  DEFAULT_TARGET_ACADEMIC_YEAR,
+} from "@/lib/program-matching/config";
 import { cefrAtLeast, parseCefr } from "@/lib/program-matching/taxonomy";
 import type { RequirementEvalStatus } from "@/lib/program-matching/types";
 
@@ -94,4 +98,43 @@ export function normalizeAcademicYear(year: string | null | undefined): string |
   const endRaw = m[2];
   const end = endRaw.length === 2 ? `${start.slice(0, 2)}${endRaw}` : endRaw;
   return `${start}/${end}`;
+}
+
+/**
+ * Academic year whose published admission calls should back facts for an
+ * intake. For the current default intake (2027/28) that is still 2026/27.
+ */
+export function admissionDataYearForIntake(intakeYear: string): string {
+  const intake =
+    normalizeAcademicYear(intakeYear) ?? DEFAULT_TARGET_ACADEMIC_YEAR;
+  if (intake === DEFAULT_TARGET_ACADEMIC_YEAR) {
+    return DEFAULT_ADMISSION_DATA_YEAR;
+  }
+  return intake;
+}
+
+/**
+ * Prefer the active admission-data year row per programme; only keep an
+ * intake-year row when the data year is missing.
+ */
+export function preferAdmissionDataYearRow<
+  T extends { programId: string; academicYear: string },
+>(rows: T[], dataYear: string, targetYear: string): Map<string, T> {
+  const byProgram = new Map<string, T>();
+  for (const row of rows) {
+    const existing = byProgram.get(row.programId);
+    if (!existing) {
+      byProgram.set(row.programId, row);
+      continue;
+    }
+    if (row.academicYear === dataYear) {
+      byProgram.set(row.programId, row);
+      continue;
+    }
+    if (existing.academicYear === dataYear) continue;
+    if (row.academicYear === targetYear) {
+      byProgram.set(row.programId, row);
+    }
+  }
+  return byProgram;
 }

@@ -3,7 +3,8 @@
 **Status date:** 31 August 2026  
 **Matching engine:** v1.8  
 **Admission parser:** call-v1.10  
-**Target intake:** 2027/2028
+**Target intake:** 2027/2028  
+**Admission data year:** 2026/2027 (published calls; flip `DEFAULT_ADMISSION_DATA_YEAR` when 27/28 bandi are ingested)
 
 ## Executive summary
 
@@ -71,7 +72,7 @@ Every critical admission field on a programme card now carries a **field status*
 - a classified reason (`NOT_PUBLISHED_FOR_TARGET_YEAR`, `ONLY_PREVIOUS_YEAR_AVAILABLE`, `OFFICIAL_SOURCE_NOT_FOUND`, `SOURCE_FETCH_FAILED`, `SCANNED_PDF_NEEDS_OCR`, `OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD`, `CURATOR_CONFIRMATION_NEEDED`), plus
 - source URL, academic year, parser version, extraction quality, and current/indicative freshness.
 
-**Previous-year data:** when the target intake call is not published yet, confirmed facts from the previous academic year are still shown (tuition, deadlines, seats, access, exams). They are marked `freshness: indicative` and `reason: ONLY_PREVIOUS_YEAR_AVAILABLE` — never presented as current rules. The curator card adds an «ориентир YYYY/YYYY» suffix on those fields. If even the previous year has no value, the field stays empty with `NOT_PUBLISHED_FOR_TARGET_YEAR` or `OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD`.
+**Previous-year data:** for the current season, admission facts are intentionally taken from **2026/2027** while student intake is **2027/2028** (`DEFAULT_ADMISSION_DATA_YEAR`). Confirmed facts are shown as `freshness: indicative` / `reason: ONLY_PREVIOUS_YEAR_AVAILABLE` — never as current 27/28 rules. Flip `DEFAULT_ADMISSION_DATA_YEAR` to `2027/2028` once that season's calls are ingested via program updates. If even the data year has no value, the field stays empty with `NOT_PUBLISHED_FOR_TARGET_YEAR` or `OFFICIAL_SOURCE_DOES_NOT_STATE_FIELD`.
 
 **Parser iterations (31 Aug 2026):** v1.8 wrong-doc/HTML/Universitaly access; v1.9 language + catalogue fold-in; v1.10 gated PDF raster OCR (`BANDO_OCR` + `BANDO_OCR_RASTER`). Unexplained **0%**. Raw unknown ~**30%** (was ~44%). Access fill ~**92%**. Remaining mass: unpublished 2027/28 calls, tuition/language not on official text, fetch/OCR ceilings.
 

@@ -1,4 +1,8 @@
-import { normalizeAcademicYear } from "@/server/services/program-matching/compare";
+import {
+  admissionDataYearForIntake,
+  normalizeAcademicYear,
+} from "@/server/services/program-matching/compare";
+import { DEFAULT_TARGET_ACADEMIC_YEAR } from "@/lib/program-matching/config";
 
 const TECHNICAL_RE =
   /\b(UNKNOWN|NEEDS_REVIEW|PARSER|FIT|MANUAL_VERIFIED|AUTO_MATCHED|ELIGIBLE|LIKELY_ELIGIBLE|NOT_ELIGIBLE|SHORTLISTED|confidence|scoreBreakdown)\b/i;
@@ -50,6 +54,27 @@ export function previousYearCallNote(
   const target = formatAcademicYearShort(intake);
   if (!from || !target) return null;
   return `Есть ориентир за ${from}; условия ${target} ещё не опубликованы`;
+}
+
+/**
+ * Banner copy after programme matching while admission facts still come from
+ * the previous published call year (see DEFAULT_ADMISSION_DATA_YEAR).
+ */
+export function admissionDataYearNotice(
+  intake: string | null | undefined,
+  dataYear?: string | null
+): string | null {
+  const sourceYear =
+    normalizeAcademicYear(dataYear) ??
+    admissionDataYearForIntake(intake ?? DEFAULT_TARGET_ACADEMIC_YEAR);
+  if (!isPreviousYearRelativeToIntake(sourceYear, intake)) return null;
+  const from = formatAcademicYearShort(sourceYear);
+  const target = formatAcademicYearShort(intake);
+  if (!from || !target) return null;
+  return (
+    `Условия поступления пока взяты из набора ${from} — как ориентир. ` +
+    `Официальные данные за ${target} ещё не опубликованы; обновим их, когда появятся бандо.`
+  );
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {

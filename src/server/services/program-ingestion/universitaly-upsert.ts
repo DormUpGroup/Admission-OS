@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { DEFAULT_ADMISSION_DATA_YEAR } from "@/lib/program-matching/config";
 import { normalizeMiurCode } from "@/lib/program-matching/miur-code";
 import {
   cityFromUniversityName,
@@ -38,12 +39,24 @@ function languageFromCorso(corso: UniversitalyCorso): string {
 
 function academicYearFromCorso(corso: UniversitalyCorso, fallback: string): string {
   const d = corso.anno?.descrizione?.trim();
-  if (d && /^\d{4}\/\d{4}$/.test(d)) return d;
-  if (d && /^\d{4}\/\d{2}$/.test(d)) {
+  let fromCorso: string | null = null;
+  if (d && /^\d{4}\/\d{4}$/.test(d)) fromCorso = d;
+  else if (d && /^\d{4}\/\d{2}$/.test(d)) {
     const [a, b] = d.split("/");
-    return `${a}/20${b}`;
+    fromCorso = `${a}/20${b}`;
   }
-  return fallback;
+  if (!fromCorso) return fallback;
+  // Do not attach programmes to a future call year before we ingest that season.
+  const corsoStart = Number(fromCorso.slice(0, 4));
+  const dataStart = Number(fallback.slice(0, 4));
+  if (
+    Number.isFinite(corsoStart) &&
+    Number.isFinite(dataStart) &&
+    corsoStart > dataStart
+  ) {
+    return fallback;
+  }
+  return fromCorso;
 }
 
 /**
@@ -127,7 +140,8 @@ export async function upsertUniversitalyCandidates(
   corsi: UniversitalyCorso[],
   options?: { fallbackAcademicYear?: string }
 ): Promise<UpsertedCandidate[]> {
-  const fallbackYear = options?.fallbackAcademicYear ?? "2026/2027";
+  const fallbackYear =
+    options?.fallbackAcademicYear ?? DEFAULT_ADMISSION_DATA_YEAR;
   const out: UpsertedCandidate[] = [];
 
   for (const corso of corsi) {

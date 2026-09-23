@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildStudentJourneyView } from "../build-journey-view";
+import {
+  admissionDataYearNotice,
+  previousYearCallNote,
+} from "../humanize";
 import type {
   StudentJourneyInput,
   StudentJourneyProgramInput,
@@ -47,6 +51,24 @@ function base(overrides: Partial<StudentJourneyInput> = {}): StudentJourneyInput
 function stageMap(view: ReturnType<typeof buildStudentJourneyView>) {
   return Object.fromEntries(view.stages.map((s) => [s.id, s.status]));
 }
+
+describe("admission data year notice", () => {
+  it("warns that 27/28 facts still come from 26/27", () => {
+    expect(admissionDataYearNotice("2027/28")).toMatch(
+      /взяты из набора 2026\/27/
+    );
+    expect(admissionDataYearNotice("2027/28")).toMatch(
+      /2027\/28 ещё не опубликованы/
+    );
+    expect(previousYearCallNote("2026/2027", "2027/28")).toMatch(
+      /ориентир за 2026\/27/
+    );
+  });
+
+  it("hides the banner when data year matches intake", () => {
+    expect(admissionDataYearNotice("2026/2027", "2026/2027")).toBeNull();
+  });
+});
 
 describe("buildStudentJourneyView", () => {
   it("1. новая анкета, подбор ещё не запускался", () => {
