@@ -16,16 +16,7 @@ import {
   isAllowedMessageFilename,
   type MessageAttachment,
 } from "@/lib/message-attachments";
-import {
-  factDimensionKey,
-  PROGRAMME_FACT_RESOLVER_VERSION,
-} from "@/server/services/program-matching/programme-fact-contract";
-import type { ApplicantCategory } from "@/lib/program-matching/types";
-import { upsertSourceDocument } from "@/server/services/program-ingestion/snapshot";
-import {
-  assertSafeHttpUrl,
-  isSameUniversityDomain,
-} from "@/server/services/program-enrichment/url-safety";
+import { verifyProgramDossierFacts } from "@/server/services/program-matching/manual-fact-verification";
 
 async function refreshStudentAfterBackendMutation(_studentId: string, paths: string[]) {
   for (const path of paths) revalidatePath(path);
@@ -922,210 +913,20 @@ export async function verifyProgramDossierFactsAction(formData: FormData) {
   const studentId = String(formData.get("studentId") || "");
   if (studentId) await assertStudentAccess(studentId);
 
-  const programAcademicYearId = String(
-    formData.get("programAcademicYearId") || ""
-  );
-  if (!programAcademicYearId) throw new Error("Missing programAcademicYearId");
-  const explicitCategory = String(
-    formData.get("applicantCategory") || ""
-  ) as ApplicantCategory;
-  const matchingProfile = studentId
-    ? await import("@/server/services/program-matching/program-matching").then(
-        ({ buildMatchingProfile }) => buildMatchingProfile(studentId)
-      )
-    : null;
-  const applicantCategory =
-    explicitCategory || matchingProfile?.applicantCategory || "UNKNOWN";
-  if (
-    ![
-      "EU_CITIZEN",
-      "EU_EQUIVALENT",
-      "NON_EU_RESIDENT_ITALY",
-      "NON_EU_RESIDENT_ABROAD",
-    ].includes(applicantCategory)
-  ) {
-    throw new Error("Applicant category is required for manual verification");
-  }
-
-  const pay = await prisma.programAcademicYear.findUnique({
-    where: { id: programAcademicYearId },
-    include: {
-      program: {
-        select: { officialUrl: true, universityId: true, name: true },
-      },
-      facts: { where: { superseded: false } },
-    },
+  await verifyProgramDossierFacts({
+    actorUserId: session.user.id,
+    studentId,
+    programAcademicYearId: String(formData.get("programAcademicYearId") || ""),
+    explicitCategory: String(formData.get("applicantCategory") || ""),
+    deadline: String(formData.get("deadline") || ""),
+    tuitionMin: String(formData.get("tuitionMin") || ""),
+    tuitionMax: String(formData.get("tuitionMax") || ""),
+    accessMode: String(formData.get("accessMode") || ""),
+    nonEuSeats: String(formData.get("nonEuSeats") || ""),
+    examsDisplay: String(formData.get("examsDisplay") || ""),
+    manualSourceUrl: String(formData.get("manualSourceUrl") || ""),
+    evidenceQuote: String(formData.get("evidenceQuote") || ""),
   });
-  if (!pay) throw new Error("Program academic year not found");
-
-  const deadlineRaw = String(formData.get("deadline") || "").trim();
-  const tuitionMinRaw = String(formData.get("tuitionMin") || "").trim();
-  const tuitionMaxRaw = String(formData.get("tuitionMax") || "").trim();
-  const accessMode = String(formData.get("accessMode") || "UNKNOWN").toUpperCase();
-  const nonEuSeatsRaw = String(formData.get("nonEuSeats") || "").trim();
-  const examsDisplay = String(formData.get("examsDisplay") || "").trim();
-  const manualSourceUrl = String(formData.get("manualSourceUrl") || "").trim();
-  const evidenceQuote = String(formData.get("evidenceQuote") || "").trim();
-  if (!manualSourceUrl || !evidenceQuote) {
-    throw new Error("Official source URL and evidence quote are required");
-  }
-  const sourceSafety = assertSafeHttpUrl(manualSourceUrl);
-  const officialSafety = pay.program.officialUrl
-    ? assertSafeHttpUrl(pay.program.officialUrl)
-    : null;
-  if (
-    !sourceSafety.ok ||
-    (officialSafety?.ok &&
-      !isSameUniversityDomain(
-        sourceSafety.url.hostname,
-        officialSafety.url.hostname
-      ))
-  ) {
-    throw new Error("Manual verification source must be on the official domain");
-  }
-  const manualSource = await upsertSourceDocument({
-    sourceType: "MANUAL_VERIFIED",
-    sourceAuthority: pay.program.name,
-    url: manualSourceUrl,
-    academicYear: pay.academicYear,
-    universityId: pay.program.universityId,
-    programId: pay.programId,
-    programAcademicYearId: pay.id,
-    contentType: "manual-quote",
-    body: evidenceQuote,
-    status: "VERIFIED",
-    extractionQuality: "MANUAL_VERIFIED",
-  });
-
-  const deadline = deadlineRaw ? new Date(`${deadlineRaw}T12:00:00Z`) : null;
-  const tuitionMin = tuitionMinRaw ? Number(tuitionMinRaw) : null;
-  const tuitionMax = tuitionMaxRaw ? Number(tuitionMaxRaw) : null;
-  const nonEuSeats = nonEuSeatsRaw ? Number(nonEuSeatsRaw) : null;
-
-  async function writeVerifiedFact(
-    field: string,
-    value: unknown,
-    rawValue?: string,
-    discriminator = "primary"
-  ) {
-    const dimensionKey = factDimensionKey({
-      field,
-      scope: applicantCategory,
-      discriminator,
-    });
-    const existing = await prisma.programFact.findFirst({
-      where: {
-        programId: pay!.programId,
-        programAcademicYearId: pay!.id,
-        field,
-        superseded: false,
-        applicantCategoryScope: applicantCategory,
-        dimensionKey,
-      },
-    });
-    if (existing && existing.sourceType !== "MANUAL_VERIFIED") {
-      await prisma.programFact.update({
-        where: { id: existing.id },
-        data: { superseded: true },
-      });
-    }
-    const data = {
-      normalizedValueJson: JSON.stringify(value),
-      rawValue: rawValue ?? null,
-      sourceType: "MANUAL_VERIFIED",
-      confidence: "HIGH",
-      extractionMethod: "MANUAL",
-      verificationStatus: "VERIFIED",
-      sourceDocumentId: manualSource.document.id,
-      sourceUrl: manualSourceUrl,
-      evidenceQuote,
-      evidenceValidatedAt: new Date(),
-      applicantCategoryScope: applicantCategory,
-      freshness: "CURRENT",
-      origin: "MANUAL_VERIFIED",
-      dimensionKey,
-      decisionStatus: "ELIGIBLE",
-      resolverVersion: PROGRAMME_FACT_RESOLVER_VERSION,
-      verifiedById: session.user.id,
-      verifiedAt: new Date(),
-      retrievedAt: new Date(),
-    };
-    if (existing?.sourceType === "MANUAL_VERIFIED") {
-      await prisma.programFact.update({
-        where: { id: existing.id },
-        data,
-      });
-    } else {
-      await prisma.programFact.create({
-        data: {
-          programId: pay!.programId,
-          programAcademicYearId: pay!.id,
-          field,
-          academicYear: pay!.academicYear,
-          ...data,
-        },
-      });
-    }
-  }
-
-  if (deadline && !Number.isNaN(deadline.getTime())) {
-    await writeVerifiedFact("APPLICATION_DEADLINE", {
-      date: deadline.toISOString(),
-      roundName: "Primary",
-    }, deadlineRaw, "primary");
-  }
-
-  if (nonEuSeats != null && Number.isFinite(nonEuSeats)) {
-    await writeVerifiedFact(
-      "SEATS",
-      {
-        places: nonEuSeats,
-        category: applicantCategory,
-        originalGroup: "Manual curator verification",
-      },
-      `Manual: ${nonEuSeats} places for ${applicantCategory}`,
-      applicantCategory
-    );
-  }
-
-  if (
-    (tuitionMin != null && Number.isFinite(tuitionMin)) ||
-    (tuitionMax != null && Number.isFinite(tuitionMax))
-  ) {
-    const minVal =
-      tuitionMin != null && Number.isFinite(tuitionMin) ? tuitionMin : null;
-    const maxVal =
-      tuitionMax != null && Number.isFinite(tuitionMax) ? tuitionMax : null;
-    const fixed =
-      minVal != null && maxVal != null && minVal === maxVal ? minVal : null;
-    await writeVerifiedFact("TUITION", {
-      min: minVal,
-      max: maxVal,
-      fixed,
-    }, undefined, "annual");
-  }
-
-  if (accessMode === "OPEN" || accessMode === "CLOSED") {
-    await writeVerifiedFact("ACCESS_TYPE", {
-      mode: accessMode,
-    }, accessMode, "access");
-  }
-
-  if (examsDisplay) {
-    await writeVerifiedFact(
-      "ADMISSION_EXAMS",
-      {
-        description: examsDisplay,
-        type: /SAT/i.test(examsDisplay)
-          ? "SAT"
-          : /TOLC/i.test(examsDisplay)
-            ? "TOLC"
-            : "ADMISSION_TEST",
-      },
-      examsDisplay,
-      examsDisplay
-    );
-  }
 
   if (studentId) revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/admin/programs/data");
