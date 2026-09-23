@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { recalculateStudent } from "../src/server/services/recalculate";
 
 const prisma = new PrismaClient();
 
@@ -666,10 +665,7 @@ async function main() {
     students.push({ ...student, caseType: "healthy", curator: pending.curatorId ? anna : admin });
   }
 
-  for (const student of students) {
-    await recalculateStudent(student.id);
-  }
-
+  // Derived readiness/risk is owned by the Python API recalculate service now.
   console.log("Seed complete");
   console.log("Login accounts (password: password123):");
   console.log("  admin@immigrome.local (ADMIN)");
