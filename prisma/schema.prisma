@@ -18,13 +18,18 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  curatedStudents  Student[]           @relation("CuratorStudents")
-  acceptedStudents Student[]           @relation("StudentAcceptedBy")
-  studentProfile   Student?            @relation("StudentUser")
-  assignedTasks    Task[]              @relation("TaskAssignee")
-  reviewedDocs     Document[]          @relation("DocumentReviewer")
-  activities       Activity[]
-  notifications    InAppNotification[]
+  curatedStudents            Student[]           @relation("CuratorStudents")
+  acceptedStudents           Student[]           @relation("StudentAcceptedBy")
+  studentProfile             Student?            @relation("StudentUser")
+  assignedTasks              Task[]              @relation("TaskAssignee")
+  reviewedDocs               Document[]          @relation("DocumentReviewer")
+  activities                 Activity[]
+  notifications              InAppNotification[]
+  assignedLeads              Lead[]              @relation("LeadAssignee")
+  assignedConversations      Conversation[]      @relation("ConversationAssignee")
+  assignedAppointments       Appointment[]       @relation("AppointmentAssignee")
+  approvedAutomationRequests ApprovalRequest[]   @relation("ApprovalDecider")
+  auditEntries               AuditLog[]          @relation("AuditUser")
 }
 
 model Student {
@@ -53,20 +58,25 @@ model Student {
   accompanimentStatus       String    @default("NONE")
   acceptedAt                DateTime?
   acceptedById              String?
+  version                   Int       @default(1)
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
 
-  user           User?                  @relation("StudentUser", fields: [userId], references: [id])
-  curator        User?                  @relation("CuratorStudents", fields: [curatorId], references: [id])
-  acceptedBy     User?                  @relation("StudentAcceptedBy", fields: [acceptedById], references: [id])
-  applications   Application[]
-  documents      Document[]
-  tasks          Task[]
-  deadlines      Deadline[]
-  activities     Activity[]
-  programMatches ProgramMatch[]
-  shortlistItems StudentShortlistItem[]
-  notifications  InAppNotification[]
+  user              User?                  @relation("StudentUser", fields: [userId], references: [id])
+  curator           User?                  @relation("CuratorStudents", fields: [curatorId], references: [id])
+  acceptedBy        User?                  @relation("StudentAcceptedBy", fields: [acceptedById], references: [id])
+  applications      Application[]
+  documents         Document[]
+  tasks             Task[]
+  deadlines         Deadline[]
+  activities        Activity[]
+  programMatches    ProgramMatch[]
+  shortlistItems    StudentShortlistItem[]
+  notifications     InAppNotification[]
+  convertedLead     Lead?                  @relation("ConvertedLead")
+  channelIdentities ChannelIdentity[]
+  conversations     Conversation[]
+  appointments      Appointment[]
 
   @@index([curatorId])
   @@index([acceptedById])
@@ -77,6 +87,7 @@ model IntakeCohort {
   intake    String   @unique
   seatLimit Int?
   isActive  Boolean  @default(false)
+  version   Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -157,6 +168,7 @@ model Application {
   applicationFeePaid         Boolean   @default(false)
   readinessPercent           Int       @default(0)
   riskLevel                  String    @default("NONE")
+  version                    Int       @default(1)
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
 
@@ -654,4 +666,383 @@ model InAppNotification {
 
   @@index([userId, readAt])
   @@index([studentId])
+}
+
+model Lead {
+  id                 String    @id @default(cuid())
+  firstName          String?
+  lastName           String?
+  email              String?
+  phone              String?
+  status             String    @default("NEW")
+  source             String    @default("TELEGRAM")
+  locale             String?
+  consentStatus      String    @default("UNKNOWN")
+  consentAt          DateTime?
+  qualificationJson  Json?
+  assignedCuratorId  String?
+  convertedStudentId String?   @unique
+  convertedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  assignedCurator   User?             @relation("LeadAssignee", fields: [assignedCuratorId], references: [id])
+  convertedStudent  Student?          @relation("ConvertedLead", fields: [convertedStudentId], references: [id])
+  channelIdentities ChannelIdentity[]
+  conversations     Conversation[]
+  appointments      Appointment[]
+
+  @@index([status, createdAt])
+  @@index([assignedCuratorId, status])
+  @@index([email])
+  @@index([phone])
+}
+
+model ChannelIdentity {
+  id           String    @id @default(cuid())
+  channel      String
+  externalId   String
+  username     String?
+  displayName  String?
+  leadId       String?
+  studentId    String?
+  verifiedAt   DateTime?
+  metadataJson Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, externalId])
+  @@index([leadId])
+  @@index([studentId])
+}
+
+model Conversation {
+  id                    String    @id @default(cuid())
+  channel               String
+  status                String    @default("OPEN")
+  leadId                String?
+  studentId             String?
+  assignedCuratorId     String?
+  hermesSessionId       String?
+  automationPausedAt    DateTime?
+  automationPauseReason String?
+  lastInboundAt         DateTime?
+  lastOutboundAt        DateTime?
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  lead            Lead?                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student         Student?              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignedCurator User?                 @relation("ConversationAssignee", fields: [assignedCuratorId], references: [id])
+  messages        ConversationMessage[]
+  agentRuns       AgentRun[]
+  appointments    Appointment[]
+
+  @@index([leadId, status])
+  @@index([studentId, status])
+  @@index([assignedCuratorId, status])
+}
+
+model ConversationMessage {
+  id                String    @id @default(cuid())
+  conversationId    String
+  clientRequestId   String?   @unique
+  legacyActivityId  String?   @unique
+  providerMessageId String?
+  direction         String
+  senderType        String
+  senderUserId      String?
+  body              String?
+  attachmentsJson   Json?
+  deliveryStatus    String    @default("RECEIVED")
+  policyStatus      String    @default("PENDING")
+  replyToMessageId  String?
+  agentRunId        String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  conversation     Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo          ConversationMessage?  @relation("MessageReplies", fields: [replyToMessageId], references: [id])
+  replies          ConversationMessage[] @relation("MessageReplies")
+  agentRun         AgentRun?             @relation(fields: [agentRunId], references: [id])
+  deliveryAttempts DeliveryAttempt[]
+
+  @@unique([conversationId, providerMessageId])
+  @@index([conversationId, createdAt])
+  @@index([deliveryStatus, createdAt])
+  @@index([agentRunId])
+}
+
+model Appointment {
+  id                String   @id @default(cuid())
+  clientRequestId   String   @unique
+  leadId            String?
+  studentId         String?
+  conversationId    String?
+  assignedCuratorId String?
+  title             String
+  startsAt          DateTime
+  endsAt            DateTime
+  timezone          String   @default("Europe/Rome")
+  status            String   @default("PENDING")
+  googleEventId     String?  @unique
+  participantsJson  Json?
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student         Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  assignedCurator User?         @relation("AppointmentAssignee", fields: [assignedCuratorId], references: [id])
+
+  @@index([assignedCuratorId, startsAt])
+  @@index([leadId, startsAt])
+  @@index([studentId, startsAt])
+  @@index([status, startsAt])
+}
+
+model AgentDefinition {
+  key                String   @id
+  version            String
+  enabled            Boolean  @default(false)
+  autonomyLevel      String   @default("DRAFT_ONLY")
+  allowedToolsJson   Json
+  eventTypesJson     Json
+  approvalPolicyJson Json
+  promptVersion      String
+  maxIterations      Int      @default(8)
+  timeoutSeconds     Int      @default(120)
+  maxCostUsd         Decimal? @db.Decimal(10, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  runs AgentRun[]
+}
+
+model AgentRun {
+  id              String    @id @default(cuid())
+  agentKey        String
+  parentRunId     String?
+  conversationId  String?
+  subjectType     String
+  subjectId       String
+  status          String    @default("PENDING")
+  hermesRunId     String?   @unique
+  hermesSessionId String?
+  model           String?
+  promptVersion   String
+  policyVersion   String
+  idempotencyKey  String    @unique
+  inputJson       Json?
+  outputJson      Json?
+  inputTokens     Int?
+  outputTokens    Int?
+  toolCallCount   Int       @default(0)
+  errorCode       String?
+  errorMessage    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  definition   AgentDefinition       @relation(fields: [agentKey], references: [key])
+  parent       AgentRun?             @relation("AgentRunChildren", fields: [parentRunId], references: [id])
+  children     AgentRun[]            @relation("AgentRunChildren")
+  conversation Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  steps        AgentRunStep[]
+  messages     ConversationMessage[]
+  approvals    ApprovalRequest[]
+  audits       AuditLog[]
+
+  @@index([subjectType, subjectId, createdAt])
+  @@index([status, createdAt])
+  @@index([agentKey, createdAt])
+  @@index([conversationId])
+}
+
+model AgentRunStep {
+  id             String    @id @default(cuid())
+  agentRunId     String
+  sequence       Int
+  kind           String
+  toolName       String?
+  status         String    @default("PENDING")
+  inputJson      Json?
+  outputJson     Json?
+  approvalStatus String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  agentRun AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@unique([agentRunId, sequence])
+  @@index([status, createdAt])
+}
+
+model ApprovalRequest {
+  id           String    @id @default(cuid())
+  agentRunId   String?
+  action       String
+  riskClass    String
+  status       String    @default("PENDING")
+  subjectType  String
+  subjectId    String
+  proposedJson Json
+  decidedById  String?
+  decisionNote String?
+  decidedAt    DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  agentRun  AgentRun? @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+  decidedBy User?     @relation("ApprovalDecider", fields: [decidedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([subjectType, subjectId])
+  @@index([decidedById])
+}
+
+model OutboxEvent {
+  id             String    @id @default(cuid())
+  aggregateType  String
+  aggregateId    String
+  eventType      String
+  eventVersion   Int       @default(1)
+  payloadJson    Json
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(8)
+  nextAttemptAt  DateTime  @default(now())
+  lockedBy       String?
+  lockedAt       DateTime?
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  processedAt    DateTime?
+  lastError      String?
+  idempotencyKey String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  deliveryAttempts DeliveryAttempt[]
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId, createdAt])
+  @@index([lockedAt])
+  @@index([status, leaseExpiresAt])
+}
+
+model InboxEvent {
+  id              String    @id @default(cuid())
+  provider        String
+  providerEventId String
+  payloadHash     String
+  payloadJson     Json
+  status          String    @default("RECEIVED")
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  errorMessage    String?
+
+  @@unique([provider, providerEventId])
+  @@index([status, receivedAt])
+}
+
+model DeliveryAttempt {
+  id                 String    @id @default(cuid())
+  messageId          String?
+  outboxEventId      String?
+  provider           String
+  attempt            Int
+  status             String
+  providerResponseId String?
+  errorCode          String?
+  errorMessage       String?
+  nextRetryAt        DateTime?
+  createdAt          DateTime  @default(now())
+
+  message     ConversationMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  outboxEvent OutboxEvent?         @relation(fields: [outboxEventId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, messageId, attempt])
+  @@index([outboxEventId])
+  @@index([status, nextRetryAt])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorType     String
+  actorId       String?
+  userId        String?
+  agentRunId    String?
+  action        String
+  entityType    String
+  entityId      String
+  correlationId String
+  beforeJson    Json?
+  afterJson     Json?
+  metadataJson  Json?
+  createdAt     DateTime @default(now())
+
+  user     User?     @relation("AuditUser", fields: [userId], references: [id], onDelete: SetNull)
+  agentRun AgentRun? @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([correlationId])
+  @@index([actorType, actorId, createdAt])
+}
+
+model FollowUpRule {
+  id             String   @id @default(cuid())
+  name           String
+  triggerEvent   String
+  audience       String
+  delayMinutes   Int
+  quietHoursJson Json
+  maxAttempts    Int      @default(3)
+  templateKey    String
+  policyVersion  String
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([name, policyVersion])
+  @@index([enabled, triggerEvent])
+}
+
+model AutomationSetting {
+  key         String   @id
+  valueJson   Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model CommandExecution {
+  id             String    @id @default(cuid())
+  principalId    String
+  operation      String
+  idempotencyKey String
+  requestHash    String
+  status         String    @default("PENDING")
+  correlationId  String
+  responseJson   Json?
+  httpStatus     Int?
+  entityType     String?
+  entityId       String?
+  errorCode      String?
+  errorMessage   String?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([principalId, operation, idempotencyKey])
+  @@index([status, createdAt])
+  @@index([correlationId])
+  @@index([entityType, entityId])
 }

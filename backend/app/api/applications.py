@@ -1,18 +1,13 @@
-import json
-from datetime import UTC, datetime
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import insert, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentActor, StaffActor
 from app.db.session import get_db_session
 from app.db.tables import (
-    activity_table,
     application_table,
-    deadline_table,
     program_academic_year_table,
     program_table,
     requirement_table,
@@ -20,12 +15,24 @@ from app.db.tables import (
     university_table,
 )
 from app.schemas.applications import (
+    AddRequirementRequest,
     ApplicationProgram,
     ApplicationSummary,
     CreateApplicationRequest,
     RequirementSummary,
     SubmitApplicationRequest,
     UpdateApplicationStatusRequest,
+)
+from app.services.commands.applications import (
+    add_requirement_command,
+    create_application_command,
+    submit_application_command,
+    update_application_status_command,
+)
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
 )
 
 router = APIRouter(tags=["applications"])
@@ -139,6 +146,7 @@ async def _create_application(
     request: CreateApplicationRequest,
     *,
     student_initiated: bool,
+    idempotency_key: str,
 ) -> ApplicationSummary:
     if student_initiated:
         if actor.role != "STUDENT":
@@ -195,205 +203,169 @@ async def _create_application(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Academic year does not belong to program",
             )
-    existing = (
-        (
-            await db.execute(
-                select(application_table.c.id).where(
-                    application_table.c.studentId == request.student_id,
-                    application_table.c.programId == request.program_id,
-                )
-            )
-        )
-        .mappings()
-        .first()
-    )
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Application already exists"
-        )
-    now = datetime.now(UTC)
-    application_id = uuid4().hex
-    app_status = "SELECTED" if student_initiated else "PREPARING"
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            insert(application_table).values(
-                id=application_id,
-                studentId=request.student_id,
-                programId=request.program_id,
-                programAcademicYearId=request.program_academic_year_id,
-                intake=request.intake,
-                applicationRound=request.application_round,
-                status=app_status,
-                hardDeadline=request.hard_deadline,
-                targetSubmissionDate=request.target_submission_date,
-                readinessPercent=0,
-                riskLevel="NONE",
-                applicationFeePaid=False,
-                createdAt=now,
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation=(
+                "portal.application.create"
+                if student_initiated
+                else "application.create"
+            ),
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        if request.hard_deadline:
-            await db.execute(
-                insert(deadline_table).values(
-                    id=uuid4().hex,
-                    title=f"{program.university_name} hard deadline",
-                    date=request.hard_deadline,
-                    type="HARD",
-                    studentId=request.student_id,
-                    applicationId=application_id,
-                    isHardDeadline=True,
-                    isInternal=False,
-                    riskWeight=3,
-                    createdAt=now,
-                    updatedAt=now,
-                )
-            )
-        await db.execute(
-            insert(activity_table).values(
-                id=uuid4().hex,
-                type="APPLICATION_CREATED",
-                studentId=request.student_id,
-                applicationId=application_id,
-                userId=actor.id,
-                metadata=json.dumps(
-                    {
-                        "university": program.university_name,
-                        "program": program.name,
-                        "source": "student_request" if student_initiated else "python-api",
-                    }
-                ),
-                createdAt=now,
-            )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload=request.model_dump(mode="json"),
+            handler=lambda command: create_application_command(
+                db,
+                context=command,
+                request=request,
+                program=dict(program),
+                student_initiated=student_initiated,
+            ),
         )
-        if student_initiated:
-            await db.execute(
-                update(student_table)
-                .where(
-                    student_table.c.id == request.student_id,
-                    student_table.c.journeyStage.in_(["PROFILE", "STRATEGY", "PROGRAMS"]),
-                )
-                .values(journeyStage="APPLICATIONS")
-            )
-    return ApplicationSummary(
-        id=application_id,
-        student_id=request.student_id,
-        status=app_status,
-        intake=request.intake,
-        hard_deadline=request.hard_deadline,
-        target_submission_date=request.target_submission_date,
-        readiness_percent=0,
-        risk_level="NONE",
-        program=ApplicationProgram(
-            id=program.id, name=program.name, university_name=program.university_name
-        ),
-        requirements=[],
-    )
+    return ApplicationSummary.model_validate(executed.result.response)
 
 
 @router.post(
     "/applications", response_model=ApplicationSummary, status_code=status.HTTP_201_CREATED
 )
 async def create_application(
-    actor: StaffActor, db: DbSession, request: CreateApplicationRequest
+    actor: StaffActor,
+    db: DbSession,
+    request: CreateApplicationRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> ApplicationSummary:
-    return await _create_application(actor, db, request, student_initiated=False)
+    return await _create_application(
+        actor,
+        db,
+        request,
+        student_initiated=False,
+        idempotency_key=idempotency_key,
+    )
 
 
 @router.post(
     "/portal/applications", response_model=ApplicationSummary, status_code=status.HTTP_201_CREATED
 )
 async def request_application(
-    actor: CurrentActor, db: DbSession, request: CreateApplicationRequest
+    actor: CurrentActor,
+    db: DbSession,
+    request: CreateApplicationRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> ApplicationSummary:
-    return await _create_application(actor, db, request, student_initiated=True)
+    return await _create_application(
+        actor,
+        db,
+        request,
+        student_initiated=True,
+        idempotency_key=idempotency_key,
+    )
 
 
 @router.patch("/applications/{application_id}/status", status_code=status.HTTP_204_NO_CONTENT)
 async def update_application_status(
-    actor: StaffActor, db: DbSession, application_id: str, request: UpdateApplicationStatusRequest
+    actor: StaffActor,
+    db: DbSession,
+    application_id: str,
+    request: UpdateApplicationStatusRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> Response:
-    application = await _application_for_actor(actor, db, application_id)
-    now = datetime.now(UTC)
+    await _application_for_actor(actor, db, application_id)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(application_table)
-            .where(application_table.c.id == application_id)
-            .values(status=request.status, updatedAt=now)
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="application.status.update",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            insert(activity_table).values(
-                id=uuid4().hex,
-                type="APPLICATION_STATUS_CHANGED",
-                studentId=application.studentId,
-                applicationId=application_id,
-                userId=actor.id,
-                metadata=json.dumps(
-                    {"from": application.status, "to": request.status, "source": "python-api"}
-                ),
-                createdAt=now,
-            )
+        await execute_command(
+            db,
+            context=context,
+            payload={"application_id": application_id, **request.model_dump(mode="json")},
+            handler=lambda command: update_application_status_command(
+                db,
+                context=command,
+                application_id=application_id,
+                new_status=request.status,
+            ),
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/applications/{application_id}/submit")
 async def submit_application(
-    actor: StaffActor, db: DbSession, application_id: str, request: SubmitApplicationRequest
+    actor: StaffActor,
+    db: DbSession,
+    application_id: str,
+    request: SubmitApplicationRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> dict[str, object]:
-    application = await _application_for_actor(actor, db, application_id)
-    requirements = (
-        (
-            await db.execute(
-                select(
-                    requirement_table.c.name,
-                    requirement_table.c.status,
-                    requirement_table.c.isCritical,
-                ).where(requirement_table.c.applicationId == application_id)
-            )
-        )
-        .mappings()
-        .all()
-    )
-    blockers = [
-        row.name
-        for row in requirements
-        if row.isCritical and row.status not in {"COMPLETED", "NOT_APPLICABLE"}
-    ]
-    if blockers and not (request.force and actor.role == "ADMIN"):
-        return {"ok": False, "warning": True, "blockers": blockers}
-    now = datetime.now(UTC)
+    await _application_for_actor(actor, db, application_id)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(application_table)
-            .where(application_table.c.id == application_id)
-            .values(
-                status="SUBMITTED",
-                submittedAt=now,
-                applicationIdExternal=request.application_id_external,
-                submissionConfirmationNote=request.submission_confirmation_note,
-                applicationFeePaid=request.application_fee_paid or application.applicationFeePaid,
-                riskLevel="NONE",
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="application.submit",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            insert(activity_table).values(
-                id=uuid4().hex,
-                type="APPLICATION_SUBMITTED",
-                studentId=application.studentId,
-                applicationId=application_id,
-                userId=actor.id,
-                metadata=json.dumps(
-                    {
-                        "applicationIdExternal": request.application_id_external,
-                        "source": "python-api",
-                    }
-                ),
-                createdAt=now,
-            )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload={"application_id": application_id, **request.model_dump(mode="json")},
+            handler=lambda command: submit_application_command(
+                db,
+                context=command,
+                application_id=application_id,
+                request=request,
+                actor_role=actor.role,
+            ),
         )
-    return {"ok": True}
+    return executed.result.response
+
+
+@router.post(
+    "/applications/{application_id}/requirements",
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_requirement(
+    actor: StaffActor,
+    db: DbSession,
+    application_id: str,
+    request: AddRequirementRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+) -> dict[str, str]:
+    await _application_for_actor(actor, db, application_id)
+    await db.rollback()
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="requirement.create",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
+        )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload={"application_id": application_id, **request.model_dump()},
+            handler=lambda command: add_requirement_command(
+                db,
+                context=command,
+                application_id=application_id,
+                request=request,
+            ),
+        )
+    return executed.result.response

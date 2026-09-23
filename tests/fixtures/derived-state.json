@@ -1,0 +1,193 @@
+{
+  "now": "2026-09-22T12:00:00.000Z",
+  "readiness": [
+    {
+      "name": "ignores not applicable requirements",
+      "statuses": ["COMPLETED", "NOT_APPLICABLE", "MISSING"],
+      "expected": 50
+    },
+    {
+      "name": "rounds the completed ratio",
+      "statuses": ["COMPLETED", "MISSING", "MISSING"],
+      "expected": 33
+    },
+    {
+      "name": "returns zero without applicable requirements",
+      "statuses": ["NOT_APPLICABLE"],
+      "expected": 0
+    }
+  ],
+  "applicationRisk": [
+    {
+      "name": "critical blocker two calendar days before deadline",
+      "status": "PREPARING",
+      "requirements": [{ "status": "MISSING", "isCritical": true }],
+      "hardDeadline": "2026-09-24T23:00:00.000Z",
+      "waitingDaysMax": 0,
+      "hasOverdueUrgent": false,
+      "expected": "CRITICAL"
+    },
+    {
+      "name": "linked document waiting nine days is high risk",
+      "status": "PREPARING",
+      "requirements": [{ "status": "MISSING", "isCritical": false }],
+      "hardDeadline": null,
+      "waitingDaysMax": 9,
+      "hasOverdueUrgent": false,
+      "expected": "HIGH"
+    },
+    {
+      "name": "closed application has no risk",
+      "status": "SUBMITTED",
+      "requirements": [{ "status": "MISSING", "isCritical": true }],
+      "hardDeadline": "2026-09-23T12:00:00.000Z",
+      "waitingDaysMax": 12,
+      "hasOverdueUrgent": true,
+      "expected": "NONE"
+    }
+  ],
+  "studentRisk": [
+    {
+      "name": "three waiting days starts low risk",
+      "applicationRisks": ["NONE"],
+      "waitingDaysMax": 3,
+      "hasOverdueUrgent": false,
+      "expected": "LOW"
+    },
+    {
+      "name": "six waiting days starts medium risk",
+      "applicationRisks": ["LOW"],
+      "waitingDaysMax": 6,
+      "hasOverdueUrgent": false,
+      "expected": "MEDIUM"
+    },
+    {
+      "name": "nine waiting days starts high risk",
+      "applicationRisks": ["MEDIUM"],
+      "waitingDaysMax": 9,
+      "hasOverdueUrgent": false,
+      "expected": "HIGH"
+    },
+    {
+      "name": "overdue urgent task raises high risk",
+      "applicationRisks": ["LOW"],
+      "waitingDaysMax": 0,
+      "hasOverdueUrgent": true,
+      "expected": "HIGH"
+    }
+  ],
+  "nextAction": [
+    {
+      "name": "critical application blocker includes programme evidence",
+      "input": {
+        "studentId": "student_1",
+        "applications": [
+          {
+            "id": "application_1",
+            "status": "PREPARING",
+            "hardDeadline": "2026-09-29T12:00:00.000Z",
+            "program": {
+              "name": "Computer Science",
+              "university": { "name": "Sapienza" }
+            },
+            "requirements": [
+              {
+                "id": "requirement_1",
+                "name": "Transcript",
+                "status": "MISSING",
+                "isCritical": true,
+                "relatedDocumentId": "document_1"
+              }
+            ]
+          }
+        ],
+        "documents": [],
+        "tasks": [],
+        "deadlines": []
+      },
+      "expected": {
+        "title": "Не хватает: Transcript",
+        "description": "Нужно для Sapienza — Computer Science. Дедлайн через 7 дн.",
+        "priority": 1,
+        "kind": "CRITICAL_BLOCKER",
+        "studentId": "student_1",
+        "applicationId": "application_1",
+        "documentId": "document_1",
+        "dueDate": "2026-09-29T12:00:00.000Z"
+      }
+    },
+    {
+      "name": "overdue task wins over document review",
+      "input": {
+        "studentId": "student_2",
+        "applications": [],
+        "documents": [
+          {
+            "id": "document_2",
+            "name": "Passport",
+            "status": "UPLOADED",
+            "requestedAt": null,
+            "uploadedAt": "2026-09-21T12:00:00.000Z"
+          }
+        ],
+        "tasks": [
+          {
+            "id": "task_1",
+            "title": "Pay application fee",
+            "status": "TODO",
+            "priority": "HIGH",
+            "dueDate": "2026-09-21T12:00:00.000Z",
+            "applicationId": null
+          }
+        ],
+        "deadlines": []
+      },
+      "expected": {
+        "title": "Просрочено: Pay application fee",
+        "description": "Срок задачи истёк — нужно выполнить.",
+        "priority": 2,
+        "kind": "OVERDUE_TASK",
+        "studentId": "student_2",
+        "applicationId": null,
+        "taskId": "task_1",
+        "dueDate": "2026-09-21T12:00:00.000Z"
+      }
+    },
+    {
+      "name": "closed application does not emit a critical blocker",
+      "input": {
+        "studentId": "student_3",
+        "applications": [
+          {
+            "id": "application_3",
+            "status": "SUBMITTED",
+            "hardDeadline": "2026-09-23T12:00:00.000Z",
+            "program": {
+              "name": "Medicine",
+              "university": { "name": "Bologna" }
+            },
+            "requirements": [
+              {
+                "id": "requirement_3",
+                "name": "Motivation letter",
+                "status": "MISSING",
+                "isCritical": true,
+                "relatedDocumentId": null
+              }
+            ]
+          }
+        ],
+        "documents": [],
+        "tasks": [],
+        "deadlines": []
+      },
+      "expected": {
+        "title": "Нет срочных действий",
+        "description": "Все текущие шаги выполнены или ожидают внешнего события.",
+        "priority": 99,
+        "kind": "NONE",
+        "studentId": "student_3"
+      }
+    }
+  ]
+}

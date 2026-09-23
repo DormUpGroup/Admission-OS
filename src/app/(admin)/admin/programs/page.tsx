@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
+import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { requireRole } from "@/server/auth/guards";
 import { createProgramAction } from "@/server/actions";
 import { PageHeader } from "@/components/page-header";
@@ -53,7 +53,7 @@ export default async function AdminProgramsPage() {
 
   let programs: ProgramListRow[];
   let universities: UniversityListRow[];
-  if (isBackendApiConfigured()) {
+  if (isBackendCapabilityEnabled("programs")) {
     const [programResponse, universityResponse] = await Promise.all([
       backendFetch(session.user, "/v1/programs?include_inactive=true"),
       backendFetch(session.user, "/v1/universities"),

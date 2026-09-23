@@ -110,6 +110,11 @@ export default async function PortalProgramsPage() {
                     </Button>
                   ) : (
                     <form action={requestApplicationAction}>
+                      <input
+                        type="hidden"
+                        name="commandId"
+                        value={crypto.randomUUID()}
+                      />
                       <input type="hidden" name="programId" value={m.programId} />
                       <input
                         type="hidden"

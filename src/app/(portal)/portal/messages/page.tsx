@@ -1,4 +1,5 @@
 import { Paperclip } from "lucide-react";
+import { CommandIdInput } from "@/components/command-id-input";
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { sendStudentMessageAction } from "@/server/actions";
@@ -13,22 +14,6 @@ import {
   type MessageAttachment,
 } from "@/lib/message-attachments";
 
-type MessageMeta = {
-  note?: string;
-  channel?: string;
-  from?: string;
-  attachments?: unknown;
-};
-
-function parseMeta(raw: string | null): MessageMeta {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as MessageMeta;
-  } catch {
-    return {};
-  }
-}
-
 export default async function PortalMessagesPage() {
   const { session, student } = await getCurrentStudent();
 
@@ -39,11 +24,10 @@ export default async function PortalMessagesPage() {
       })
     : null;
 
-  const [activities, uploadedDocuments, notifications] = await Promise.all([
-    prisma.activity.findMany({
-      where: { studentId: student.id, type: "NOTE" },
-      include: { user: { select: { name: true } } },
-      orderBy: { createdAt: "asc" },
+  const [conversation, uploadedDocuments, notifications] = await Promise.all([
+    prisma.conversation.findFirst({
+      where: { studentId: student.id, channel: "PORTAL", status: "OPEN" },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
     }),
     curator
       ? prisma.document.findMany({
@@ -62,24 +46,21 @@ export default async function PortalMessagesPage() {
     }),
   ]);
 
-  const messages = activities
-    .map((activity) => {
-      const meta = parseMeta(activity.metadata);
-      if (meta.channel !== "student-curator") return null;
-      const attachments = parseMessageAttachments(meta.attachments);
-      const text = meta.note?.trim() ?? "";
+  const messages = (conversation?.messages ?? [])
+    .map((message) => {
+      const attachments = parseMessageAttachments(message.attachmentsJson);
+      const text = message.body?.trim() ?? "";
       if (!text && attachments.length === 0) return null;
-      const fromStudent =
-        meta.from === "student" || activity.userId === session.user.id;
+      const fromStudent = message.senderType === "STUDENT";
       return {
-        id: activity.id,
+        id: message.id,
         text,
         attachments,
-        createdAt: activity.createdAt,
+        createdAt: message.createdAt,
         fromStudent,
         author: fromStudent
           ? "Вы"
-          : activity.user?.name || curator?.name || "Куратор",
+          : curator?.name || "Куратор",
       };
     })
     .filter((item): item is NonNullable<typeof item> => item != null);
@@ -136,6 +117,12 @@ export default async function PortalMessagesPage() {
           encType="multipart/form-data"
           className="space-y-4"
         >
+          <CommandIdInput
+            operation="message.student.send"
+            entityId={student.id}
+            entityVersion={conversation?.version ?? student.version}
+            formInstance="compose"
+          />
           <label className="block">
             <span className="sr-only">Сообщение куратору</span>
             <textarea

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CommandIdInput } from "@/components/command-id-input";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -56,6 +57,12 @@ export function AnketaDecisionScreen({
         {view.canAccept || view.acceptBlockedReason ? (
           <form action={acceptAccompanimentAction}>
             <input type="hidden" name="studentId" value={view.studentId} />
+            <CommandIdInput
+              operation="accompaniment.accept"
+              entityId={view.studentId}
+              entityVersion={view.studentVersion}
+              formInstance="accept"
+            />
             <Button
               type="submit"
               size="lg"
@@ -75,6 +82,12 @@ export function AnketaDecisionScreen({
         {view.canClarify ? (
           <form action={requestAccompanimentClarificationAction} className="space-y-2">
             <input type="hidden" name="studentId" value={view.studentId} />
+            <CommandIdInput
+              operation="accompaniment.request_clarification"
+              entityId={view.studentId}
+              entityVersion={view.studentVersion}
+              formInstance="clarify"
+            />
             <textarea
               name="note"
               rows={2}
@@ -99,6 +112,12 @@ export function AnketaDecisionScreen({
         {view.canReject ? (
           <form action={rejectAccompanimentAction}>
             <input type="hidden" name="studentId" value={view.studentId} />
+            <CommandIdInput
+              operation="accompaniment.reject"
+              entityId={view.studentId}
+              entityVersion={view.studentVersion}
+              formInstance="reject"
+            />
             <Button type="submit" size="lg" variant="ghost" className="w-full sm:w-auto">
               Отказать
             </Button>

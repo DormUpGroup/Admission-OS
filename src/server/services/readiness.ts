@@ -2,15 +2,6 @@ import type { NextAction } from "@/server/services/next-action";
 import type { Requirement } from "@prisma/client";
 import type { RiskLevel } from "@/lib/enums";
 
-export function calculateReadiness(
-  requirements: Pick<Requirement, "status">[]
-): number {
-  const applicable = requirements.filter((r) => r.status !== "NOT_APPLICABLE");
-  if (applicable.length === 0) return 0;
-  const completed = applicable.filter((r) => r.status === "COMPLETED").length;
-  return Math.round((completed / applicable.length) * 100);
-}
-
 export function criticalIncomplete<
   T extends Pick<Requirement, "status" | "isCritical">,
 >(requirements: T[]): T[] {

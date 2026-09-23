@@ -5,7 +5,22 @@ does not own them yet: Prisma remains the schema owner until the final database
 migration phase.
 """
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 
 metadata = MetaData()
 
@@ -17,7 +32,7 @@ university_table = Table(
     Column("slug", String, nullable=False),
     Column("city", String),
     Column("region", String),
-    Column("country", String),
+    Column("country", String, nullable=False),
     Column("publicPrivate", String),
     Column("website", String),
 )
@@ -35,6 +50,32 @@ program_table = Table(
     Column("active", Boolean, nullable=False),
 )
 
+application_template_table = Table(
+    "ApplicationTemplate",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("name", String, nullable=False),
+    Column("programId", String, ForeignKey("Program.id")),
+    Column("intake", String),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+application_template_item_table = Table(
+    "ApplicationTemplateItem",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column(
+        "templateId",
+        String,
+        ForeignKey("ApplicationTemplate.id"),
+        nullable=False,
+    ),
+    Column("name", String, nullable=False),
+    Column("type", String, nullable=False),
+    Column("isCritical", Boolean, nullable=False),
+)
+
 application_table = Table(
     "Application",
     metadata,
@@ -49,6 +90,7 @@ application_table = Table(
     Column("targetSubmissionDate", DateTime(timezone=True)),
     Column("readinessPercent", Integer, nullable=False),
     Column("riskLevel", String, nullable=False),
+    Column("version", Integer, nullable=False, server_default=text("1")),
     Column("submittedAt", DateTime(timezone=True)),
     Column("applicationIdExternal", String),
     Column("submissionConfirmationNote", String),
@@ -78,6 +120,8 @@ student_table = Table(
     Column("firstName", String, nullable=False),
     Column("lastName", String, nullable=False),
     Column("email", String, nullable=False),
+    Column("phone", String),
+    Column("nationality", String),
     Column("userId", String),
     Column("curatorId", String),
     Column("status", String, nullable=False),
@@ -86,9 +130,20 @@ student_table = Table(
     Column("intake", String, nullable=False),
     Column("targetField", String),
     Column("preferredLanguage", String),
+    Column("preferredCities", String),
+    Column("questionnaireAt", DateTime(timezone=True)),
+    Column("questionnairePersonalJson", Text),
+    Column("questionnaireProgramsJson", Text),
+    Column("questionnaireProgramsAt", DateTime(timezone=True)),
     Column("nextActionJson", String),
     Column("studyLevel", String, nullable=False),
     Column("country", String),
+    Column("accompanimentStatus", String, nullable=False, server_default=text("'NONE'")),
+    Column("acceptedAt", DateTime(timezone=True)),
+    Column("acceptedById", String),
+    Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("createdAt", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updatedAt", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
 user_table = Table(
@@ -97,6 +152,18 @@ user_table = Table(
     Column("id", String, primary_key=True),
     Column("name", String, nullable=False),
     Column("role", String, nullable=False),
+)
+
+intake_cohort_table = Table(
+    "IntakeCohort",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("intake", String, nullable=False),
+    Column("seatLimit", Integer),
+    Column("isActive", Boolean, nullable=False),
+    Column("version", Integer, nullable=False, server_default="1"),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
 )
 
 task_table = Table(
@@ -140,6 +207,7 @@ document_table = Table(
     Column("status", String, nullable=False),
     Column("storagePath", String),
     Column("fileUrl", String),
+    Column("version", Integer, nullable=False, server_default=text("1")),
     Column("uploadedAt", DateTime(timezone=True)),
     Column("reviewedAt", DateTime(timezone=True)),
     Column("reviewedById", String),
@@ -187,4 +255,296 @@ program_academic_year_table = Table(
     Column("id", String, primary_key=True),
     Column("programId", String, ForeignKey("Program.id"), nullable=False),
     Column("academicYear", String, nullable=False),
+)
+
+lead_table = Table(
+    "Lead",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("firstName", String),
+    Column("lastName", String),
+    Column("email", String),
+    Column("phone", String),
+    Column("status", String, nullable=False),
+    Column("source", String, nullable=False),
+    Column("locale", String),
+    Column("consentStatus", String, nullable=False),
+    Column("consentAt", DateTime(timezone=True)),
+    Column("qualificationJson", JSON),
+    Column("assignedCuratorId", String, ForeignKey("User.id")),
+    Column("convertedStudentId", String, ForeignKey("Student.id")),
+    Column("convertedAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+channel_identity_table = Table(
+    "ChannelIdentity",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("channel", String, nullable=False),
+    Column("externalId", String, nullable=False),
+    Column("username", String),
+    Column("displayName", String),
+    Column("leadId", String, ForeignKey("Lead.id")),
+    Column("studentId", String, ForeignKey("Student.id")),
+    Column("verifiedAt", DateTime(timezone=True)),
+    Column("metadataJson", JSON),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+conversation_table = Table(
+    "Conversation",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("channel", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("leadId", String, ForeignKey("Lead.id")),
+    Column("studentId", String, ForeignKey("Student.id")),
+    Column("assignedCuratorId", String, ForeignKey("User.id")),
+    Column("hermesSessionId", String),
+    Column("automationPausedAt", DateTime(timezone=True)),
+    Column("automationPauseReason", Text),
+    Column("lastInboundAt", DateTime(timezone=True)),
+    Column("lastOutboundAt", DateTime(timezone=True)),
+    Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+agent_definition_table = Table(
+    "AgentDefinition",
+    metadata,
+    Column("key", String, primary_key=True),
+    Column("version", String, nullable=False),
+    Column("enabled", Boolean, nullable=False),
+    Column("autonomyLevel", String, nullable=False),
+    Column("allowedToolsJson", JSON, nullable=False),
+    Column("eventTypesJson", JSON, nullable=False),
+    Column("approvalPolicyJson", JSON, nullable=False),
+    Column("promptVersion", String, nullable=False),
+    Column("maxIterations", Integer, nullable=False),
+    Column("timeoutSeconds", Integer, nullable=False),
+    Column("maxCostUsd", Numeric(10, 4)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+agent_run_table = Table(
+    "AgentRun",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("agentKey", String, ForeignKey("AgentDefinition.key"), nullable=False),
+    Column("parentRunId", String, ForeignKey("AgentRun.id")),
+    Column("conversationId", String, ForeignKey("Conversation.id")),
+    Column("subjectType", String, nullable=False),
+    Column("subjectId", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("hermesRunId", String),
+    Column("hermesSessionId", String),
+    Column("model", String),
+    Column("promptVersion", String, nullable=False),
+    Column("policyVersion", String, nullable=False),
+    Column("idempotencyKey", String, nullable=False),
+    Column("inputJson", JSON),
+    Column("outputJson", JSON),
+    Column("inputTokens", Integer),
+    Column("outputTokens", Integer),
+    Column("toolCallCount", Integer, nullable=False),
+    Column("errorCode", String),
+    Column("errorMessage", Text),
+    Column("startedAt", DateTime(timezone=True)),
+    Column("completedAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+conversation_message_table = Table(
+    "ConversationMessage",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("conversationId", String, ForeignKey("Conversation.id"), nullable=False),
+    Column("clientRequestId", String),
+    Column("legacyActivityId", String),
+    Column("providerMessageId", String),
+    Column("direction", String, nullable=False),
+    Column("senderType", String, nullable=False),
+    Column("senderUserId", String),
+    Column("body", Text),
+    Column("attachmentsJson", JSON),
+    Column("deliveryStatus", String, nullable=False),
+    Column("policyStatus", String, nullable=False),
+    Column("replyToMessageId", String, ForeignKey("ConversationMessage.id")),
+    Column("agentRunId", String, ForeignKey("AgentRun.id")),
+    Column("sentAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("clientRequestId", name="ConversationMessage_clientRequestId_key"),
+    UniqueConstraint("legacyActivityId", name="ConversationMessage_legacyActivityId_key"),
+)
+
+appointment_table = Table(
+    "Appointment",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("clientRequestId", String, nullable=False),
+    Column("leadId", String, ForeignKey("Lead.id")),
+    Column("studentId", String, ForeignKey("Student.id")),
+    Column("conversationId", String, ForeignKey("Conversation.id")),
+    Column("assignedCuratorId", String, ForeignKey("User.id")),
+    Column("title", String, nullable=False),
+    Column("startsAt", DateTime(timezone=True), nullable=False),
+    Column("endsAt", DateTime(timezone=True), nullable=False),
+    Column("timezone", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("googleEventId", String),
+    Column("participantsJson", JSON),
+    Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+approval_request_table = Table(
+    "ApprovalRequest",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("agentRunId", String, ForeignKey("AgentRun.id")),
+    Column("action", String, nullable=False),
+    Column("riskClass", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("subjectType", String, nullable=False),
+    Column("subjectId", String, nullable=False),
+    Column("proposedJson", JSON, nullable=False),
+    Column("decidedById", String, ForeignKey("User.id")),
+    Column("decisionNote", Text),
+    Column("decidedAt", DateTime(timezone=True)),
+    Column("expiresAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+outbox_event_table = Table(
+    "OutboxEvent",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("aggregateType", String, nullable=False),
+    Column("aggregateId", String, nullable=False),
+    Column("eventType", String, nullable=False),
+    Column("eventVersion", Integer, nullable=False),
+    Column("payloadJson", JSON, nullable=False),
+    Column("status", String, nullable=False),
+    Column("attempts", Integer, nullable=False),
+    Column("maxAttempts", Integer, nullable=False),
+    Column("nextAttemptAt", DateTime(timezone=True), nullable=False),
+    Column("lockedBy", String),
+    Column("lockedAt", DateTime(timezone=True)),
+    Column("leaseToken", String),
+    Column("leaseExpiresAt", DateTime(timezone=True)),
+    Column("processedAt", DateTime(timezone=True)),
+    Column("lastError", Text),
+    Column("idempotencyKey", String, nullable=False),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+inbox_event_table = Table(
+    "InboxEvent",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("provider", String, nullable=False),
+    Column("providerEventId", String, nullable=False),
+    Column("payloadHash", String, nullable=False),
+    Column("payloadJson", JSON, nullable=False),
+    Column("status", String, nullable=False),
+    Column("receivedAt", DateTime(timezone=True), nullable=False),
+    Column("processedAt", DateTime(timezone=True)),
+    Column("errorMessage", Text),
+)
+
+delivery_attempt_table = Table(
+    "DeliveryAttempt",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("messageId", String, ForeignKey("ConversationMessage.id")),
+    Column("outboxEventId", String, ForeignKey("OutboxEvent.id")),
+    Column("provider", String, nullable=False),
+    Column("attempt", Integer, nullable=False),
+    Column("status", String, nullable=False),
+    Column("providerResponseId", String),
+    Column("errorCode", String),
+    Column("errorMessage", Text),
+    Column("nextRetryAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+)
+
+audit_log_table = Table(
+    "AuditLog",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("actorType", String, nullable=False),
+    Column("actorId", String),
+    Column("userId", String, ForeignKey("User.id")),
+    Column("agentRunId", String, ForeignKey("AgentRun.id")),
+    Column("action", String, nullable=False),
+    Column("entityType", String, nullable=False),
+    Column("entityId", String, nullable=False),
+    Column("correlationId", String, nullable=False),
+    Column("beforeJson", JSON),
+    Column("afterJson", JSON),
+    Column("metadataJson", JSON),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+)
+
+follow_up_rule_table = Table(
+    "FollowUpRule",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("name", String, nullable=False),
+    Column("triggerEvent", String, nullable=False),
+    Column("audience", String, nullable=False),
+    Column("delayMinutes", Integer, nullable=False),
+    Column("quietHoursJson", JSON, nullable=False),
+    Column("maxAttempts", Integer, nullable=False),
+    Column("templateKey", String, nullable=False),
+    Column("policyVersion", String, nullable=False),
+    Column("enabled", Boolean, nullable=False),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+automation_setting_table = Table(
+    "AutomationSetting",
+    metadata,
+    Column("key", String, primary_key=True),
+    Column("valueJson", JSON, nullable=False),
+    Column("description", Text),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+command_execution_table = Table(
+    "CommandExecution",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("principalId", String, nullable=False),
+    Column("operation", String, nullable=False),
+    Column("idempotencyKey", String, nullable=False),
+    Column("requestHash", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("correlationId", String, nullable=False),
+    Column("responseJson", JSON),
+    Column("httpStatus", Integer),
+    Column("entityType", String),
+    Column("entityId", String),
+    Column("errorCode", String),
+    Column("errorMessage", Text),
+    Column("completedAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+    UniqueConstraint(
+        "principalId",
+        "operation",
+        "idempotencyKey",
+        name="CommandExecution_principal_operation_key",
+    ),
 )

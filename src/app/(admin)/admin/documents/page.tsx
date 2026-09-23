@@ -173,6 +173,11 @@ export default async function AdminDocumentsPage({
                           </Button>
                         </form>
                         <form action={needsChangesAction} className="flex gap-1">
+                          <input
+                            type="hidden"
+                            name="commandId"
+                            value={crypto.randomUUID()}
+                          />
                           <input type="hidden" name="documentId" value={doc.id} />
                           <Input
                             name="reason"

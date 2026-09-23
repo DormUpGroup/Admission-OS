@@ -223,6 +223,7 @@ function NewAnketasBlock({
                 {view.canAccept ? (
                   <form action={acceptAccompanimentAction}>
                     <input type="hidden" name="studentId" value={row.studentId} />
+                    <input type="hidden" name="commandId" value={crypto.randomUUID()} />
                     <input type="hidden" name="redirectTo" value="/admin" />
                     <Button
                       type="submit"

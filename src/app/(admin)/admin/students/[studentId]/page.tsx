@@ -1193,6 +1193,11 @@ export default async function StudentProfilePage({
                 action={addManualProgramMatchAction}
                 className="flex flex-wrap items-end gap-2"
               >
+                <input
+                  type="hidden"
+                  name="commandId"
+                  value={crypto.randomUUID()}
+                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="min-w-[240px] flex-1 space-y-1.5">
                   <Label htmlFor="manualProgramId">Program database</Label>
@@ -1340,6 +1345,11 @@ export default async function StudentProfilePage({
                 action={createApplicationAction}
                 className="grid gap-3 sm:grid-cols-2"
               >
+                <input
+                  type="hidden"
+                  name="commandId"
+                  value={crypto.randomUUID()}
+                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="programId">Программа</Label>
@@ -1439,6 +1449,11 @@ export default async function StudentProfilePage({
                 action={createDocumentAction}
                 className="flex flex-wrap items-end gap-2"
               >
+                <input
+                  type="hidden"
+                  name="commandId"
+                  value={crypto.randomUUID()}
+                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="min-w-[180px] flex-1 space-y-1.5">
                   <Label htmlFor="docName">Название</Label>
@@ -1520,6 +1535,11 @@ export default async function StudentProfilePage({
                             >
                               <input
                                 type="hidden"
+                                name="commandId"
+                                value={crypto.randomUUID()}
+                              />
+                              <input
+                                type="hidden"
                                 name="documentId"
                                 value={doc.id}
                               />
@@ -1556,6 +1576,7 @@ export default async function StudentProfilePage({
                 className="grid gap-3 sm:grid-cols-2"
               >
                 <input type="hidden" name="studentId" value={studentId} />
+                <input type="hidden" name="commandId" value={crypto.randomUUID()} />
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="title">Название</Label>
                   <Input id="title" name="title" required />

@@ -1,14 +1,19 @@
-from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select, update
+from fastapi import APIRouter, Depends, Query, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentActor
 from app.db.session import get_db_session
 from app.db.tables import notification_table
 from app.schemas.notifications import NotificationSummary
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
+)
+from app.services.commands.notifications import mark_notification_read_command
 
 router = APIRouter(tags=["notifications"])
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
@@ -46,14 +51,26 @@ async def list_notifications(
 
 @router.post("/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_notification_read(
-    actor: CurrentActor, db: DbSession, notification_id: str
+    actor: CurrentActor,
+    db: DbSession,
+    notification_id: str,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> Response:
-    result = await db.execute(
-        update(notification_table)
-        .where(notification_table.c.id == notification_id, notification_table.c.userId == actor.id)
-        .values(readAt=datetime.now(UTC))
-    )
-    await db.commit()
-    if result.rowcount == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="notification.read",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
+        )
+        await execute_command(
+            db,
+            context=context,
+            payload={"notification_id": notification_id},
+            handler=lambda command: mark_notification_read_command(
+                db, context=command, notification_id=notification_id
+            ),
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

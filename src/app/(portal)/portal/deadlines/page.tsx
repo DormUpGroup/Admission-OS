@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
+import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { DeadlineList } from "@/components/deadline-list";
 import { EmptyState } from "@/components/empty-state";
@@ -8,7 +8,7 @@ export default async function PortalDeadlinesPage() {
   const { session, student } = await getCurrentStudent();
 
   let deadlines: Array<{ id: string; title: string; date: Date; type: string }>;
-  if (isBackendApiConfigured()) {
+  if (isBackendCapabilityEnabled("reads")) {
     const response = await backendFetch(session.user, "/v1/deadlines");
     if (!response.ok) throw new Error("Не удалось загрузить дедлайны");
     const payload = (await response.json()) as Array<{

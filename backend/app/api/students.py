@@ -4,10 +4,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import StaffActor
+from app.core.security import CurrentActor, StaffActor
 from app.db.session import get_db_session
 from app.db.tables import application_table, document_table, student_table, user_table
-from app.schemas.students import StudentSummary
+from app.schemas.students import (
+    CreateStudentRequest,
+    StudentSummary,
+    UpdateStudentRequest,
+)
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
+)
+from app.services.commands.students import (
+    create_student_command,
+    update_student_command,
+)
 
 router = APIRouter(tags=["students"])
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
@@ -134,3 +147,100 @@ async def get_student(actor: StaffActor, db: DbSession, student_id: str) -> Stud
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     return to_student_summary(row)
+
+
+@router.post("/students", status_code=status.HTTP_201_CREATED)
+async def create_student(
+    actor: StaffActor,
+    db: DbSession,
+    request: CreateStudentRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+) -> dict[str, str]:
+    await db.rollback()
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="student.create",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
+        )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload=request.model_dump(mode="json"),
+            handler=lambda command: create_student_command(
+                db, context=command, request=request
+            ),
+        )
+    return executed.result.response
+
+
+@router.patch("/students/{student_id}")
+async def update_student(
+    actor: CurrentActor,
+    db: DbSession,
+    student_id: str,
+    request: UpdateStudentRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+) -> dict[str, object]:
+    student = (
+        await db.execute(select(student_table).where(student_table.c.id == student_id))
+    ).mappings().first()
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    fields = request.model_fields_set
+    if actor.role == "STUDENT":
+        if student.userId != actor.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Student access denied",
+            )
+        forbidden = {"status", "curator_id"}
+        if fields & forbidden:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Student cannot update protected fields",
+            )
+        if (
+            "accompaniment_status" in fields
+            and request.accompaniment_status != "PENDING"
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Student cannot set this accompaniment status",
+            )
+    elif actor.role == "CURATOR":
+        if student.curatorId not in {actor.id, None}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Student access denied",
+            )
+        if "curator_id" in fields and request.curator_id != actor.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Curator can only assign an unassigned case to self",
+            )
+    await db.rollback()
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="student.update",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
+        )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload={
+                "student_id": student_id,
+                **request.model_dump(mode="json", exclude_unset=True),
+            },
+            handler=lambda command: update_student_command(
+                db, context=command, student_id=student_id, request=request
+            ),
+        )
+    return executed.result.response

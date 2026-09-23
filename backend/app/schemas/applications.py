@@ -40,6 +40,7 @@ class CreateApplicationRequest(BaseModel):
     hard_deadline: datetime | None = None
     target_submission_date: datetime | None = None
     application_round: str | None = None
+    template_id: str | None = None
 
 
 class UpdateApplicationStatusRequest(BaseModel):
@@ -51,3 +52,9 @@ class SubmitApplicationRequest(BaseModel):
     submission_confirmation_note: str | None = None
     application_fee_paid: bool = False
     force: bool = False
+
+
+class AddRequirementRequest(BaseModel):
+    name: str
+    type: str = "DOCUMENT"
+    is_critical: bool = False

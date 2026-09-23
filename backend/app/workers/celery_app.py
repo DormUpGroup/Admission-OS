@@ -35,6 +35,26 @@ celery_app.conf.update(
     accept_content=["json"],
     task_track_started=True,
     timezone="Europe/Rome",
+    task_routes={
+        "immigrome.outbox.dispatch": {"queue": "maintenance"},
+        "immigrome.followups.scan": {"queue": "maintenance"},
+        "immigrome.hermes.poll": {"queue": "orchestration"},
+        "immigrome.ingestion.fetch_extract": {"queue": "programs"},
+    },
+    beat_schedule={
+        "dispatch-outbox-every-five-seconds": {
+            "task": "immigrome.outbox.dispatch",
+            "schedule": 5.0,
+        },
+        "scan-followups-every-fifteen-minutes": {
+            "task": "immigrome.followups.scan",
+            "schedule": 900.0,
+        },
+        "poll-hermes-runs-every-ten-seconds": {
+            "task": "immigrome.hermes.poll",
+            "schedule": 10.0,
+        },
+    },
 )
 
 # Register local tasks when the module is imported as well as when Celery starts

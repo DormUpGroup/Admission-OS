@@ -1,23 +1,12 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
+import { backendFetch } from "@/lib/backend-api";
 import { prisma } from "@/lib/db";
 import { requireStaff, requireRole, assertStudentAccess, getCurrentStudent } from "@/server/auth/guards";
 import { logActivity } from "@/server/services/activity";
-import { recalculateStudent } from "@/server/services/recalculate";
-import {
-  requestDocument,
-  approveDocument,
-  needsChangesDocument,
-  markDocumentUploaded,
-} from "@/server/services/documents";
-import {
-  applyTemplateToApplication,
-  markApplicationSubmitted,
-  updateApplicationStatus,
-} from "@/server/services/applications";
 import { saveDocumentFile } from "@/lib/storage";
 import type { ApplicationStatus } from "@/lib/enums";
 import {
@@ -38,9 +27,16 @@ import {
   isSameUniversityDomain,
 } from "@/server/services/program-enrichment/url-safety";
 
-async function refreshStudentAfterBackendMutation(studentId: string, paths: string[]) {
-  await recalculateStudent(studentId);
+async function refreshStudentAfterBackendMutation(_studentId: string, paths: string[]) {
   for (const path of paths) revalidatePath(path);
+}
+
+function deterministicCommandId(prefix: string, payload: unknown) {
+  const digest = createHash("sha256")
+    .update(JSON.stringify(payload))
+    .digest("hex")
+    .slice(0, 32);
+  return `${prefix}:${digest}`;
 }
 
 export async function createStudentAction(formData: FormData) {
@@ -56,32 +52,32 @@ export async function createStudentAction(formData: FormData) {
   const targetField = String(formData.get("targetField") || "") || null;
   const preferredLanguage = String(formData.get("preferredLanguage") || "") || null;
   const curatorId = String(formData.get("curatorId") || "") || session.user.id;
+  const commandId = String(formData.get("commandId") || "");
 
-  const student = await prisma.student.create({
-    data: {
-      firstName,
-      lastName,
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(session.user, "/v1/students", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      first_name: firstName,
+      last_name: lastName,
       email,
       phone,
       country,
       nationality,
-      studyLevel,
+      study_level: studyLevel,
       intake,
-      targetField,
-      preferredLanguage,
-      curatorId: session.user.role === "CURATOR" ? session.user.id : curatorId,
-      status: "ACTIVE",
-      journeyStage: "PROFILE",
-    },
+      target_field: targetField,
+      preferred_language: preferredLanguage,
+      curator_id: session.user.role === "CURATOR" ? session.user.id : curatorId,
+    }),
   });
-
-  await logActivity({
-    type: "STUDENT_CREATED",
-    studentId: student.id,
-    userId: session.user.id,
-  });
-
-  redirect(`/admin/students/${student.id}`);
+  if (!response.ok) throw new Error("Не удалось создать студента");
+  const created = (await response.json()) as { id: string };
+  redirect(`/admin/students/${created.id}`);
 }
 
 export async function createApplicationAction(formData: FormData) {
@@ -92,101 +88,48 @@ export async function createApplicationAction(formData: FormData) {
   const programId = String(formData.get("programId") || "");
   const programAcademicYearId =
     String(formData.get("programAcademicYearId") || "") || null;
+  const commandId = String(formData.get("commandId") || "");
   const intake = String(formData.get("intake") || "2027/28");
   const hardDeadline = String(formData.get("hardDeadline") || "");
   const targetSubmissionDate = String(formData.get("targetSubmissionDate") || "");
   const applicationRound = String(formData.get("applicationRound") || "") || null;
   const templateId = String(formData.get("templateId") || "") || null;
 
-  // Templates still compose requirements in the legacy layer; all plain
-  // application creation goes through the Python transaction.
-  if (isBackendApiConfigured() && !templateId) {
-    const response = await backendFetch(session.user, "/v1/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        student_id: studentId,
-        program_id: programId,
-        program_academic_year_id: programAcademicYearId,
-        intake,
-        hard_deadline: hardDeadline || null,
-        target_submission_date: targetSubmissionDate || null,
-        application_round: applicationRound,
-      }),
-    });
-    if (!response.ok) throw new Error("Не удалось создать подачу");
-    const created = (await response.json()) as { id: string };
-    await recalculateStudent(studentId);
-    redirect(`/admin/students/${studentId}/applications/${created.id}`);
-  }
-
-  const program = await prisma.program.findUnique({
-    where: { id: programId },
-    include: { university: true },
-  });
-  if (!program) throw new Error("Program not found");
-  if (
-    programAcademicYearId &&
-    !(await prisma.programAcademicYear.findFirst({
-      where: { id: programAcademicYearId, programId },
-      select: { id: true },
-    }))
-  ) {
-    throw new Error("Program academic year does not belong to program");
-  }
-  if (!programAcademicYearId) {
-    throw new Error("Program academic year is required before creating an application");
-  }
-  const { getProgrammeSelectionReadiness } = await import(
-    "@/server/services/program-ingestion/programme-source-resolution"
-  );
-  const readiness = await getProgrammeSelectionReadiness(programAcademicYearId);
-  if (!readiness.ready) throw new Error(readiness.reason);
-
-  const app = await prisma.application.create({
-    data: {
-      studentId,
-      programId,
-      programAcademicYearId,
-      intake,
-      status: "PREPARING",
-      applicationRound,
-      hardDeadline: hardDeadline ? new Date(hardDeadline) : null,
-      targetSubmissionDate: targetSubmissionDate
-        ? new Date(targetSubmissionDate)
-        : null,
-    },
-  });
-
-  if (hardDeadline) {
-    await prisma.deadline.create({
-      data: {
-        title: `${program.university.name} hard deadline`,
-        date: new Date(hardDeadline),
-        type: "HARD",
-        studentId,
-        applicationId: app.id,
-        isHardDeadline: true,
-        isInternal: false,
-        riskWeight: 3,
-      },
-    });
-  }
-
   if (templateId) {
-    await applyTemplateToApplication(app.id, templateId);
+    if (!programAcademicYearId) {
+      throw new Error(
+        "Program academic year is required before creating an application"
+      );
+    }
+    const { getProgrammeSelectionReadiness } = await import(
+      "@/server/services/program-ingestion/programme-source-resolution"
+    );
+    const readiness = await getProgrammeSelectionReadiness(
+      programAcademicYearId
+    );
+    if (!readiness.ready) throw new Error(readiness.reason);
   }
-
-  await logActivity({
-    type: "APPLICATION_CREATED",
-    studentId,
-    applicationId: app.id,
-    userId: session.user.id,
-    metadata: { university: program.university.name, program: program.name },
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(session.user, "/v1/applications", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: studentId,
+      program_id: programId,
+      program_academic_year_id: programAcademicYearId,
+      intake,
+      hard_deadline: hardDeadline || null,
+      target_submission_date: targetSubmissionDate || null,
+      application_round: applicationRound,
+      template_id: templateId,
+    }),
   });
-
-  await recalculateStudent(studentId);
-  redirect(`/admin/students/${studentId}/applications/${app.id}`);
+  if (!response.ok) throw new Error("Не удалось создать подачу");
+  const created = (await response.json()) as { id: string };
+  redirect(`/admin/students/${studentId}/applications/${created.id}`);
 }
 
 export async function createTaskAction(formData: FormData) {
@@ -199,29 +142,26 @@ export async function createTaskAction(formData: FormData) {
   const priority = String(formData.get("priority") || "MEDIUM");
   const isStudentFacing = formData.get("isStudentFacing") === "on";
   const applicationId = String(formData.get("applicationId") || "") || null;
+  const commandId = String(formData.get("commandId") || "");
 
-  await prisma.task.create({
-    data: {
-      title,
-      studentId,
-      applicationId,
-      assigneeId: session.user.id,
-      priority,
-      dueDate: dueDate ? new Date(dueDate) : null,
-      isStudentFacing,
-      status: "TODO",
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(session.user, "/v1/tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
     },
+    body: JSON.stringify({
+      student_id: studentId,
+      title,
+      description: null,
+      due_date: dueDate || null,
+      priority,
+      is_student_facing: isStudentFacing,
+      application_id: applicationId,
+    }),
   });
-
-  await logActivity({
-    type: "TASK_CREATED",
-    studentId,
-    applicationId,
-    userId: session.user.id,
-    metadata: { title },
-  });
-
-  await recalculateStudent(studentId);
+  if (!response.ok) throw new Error("Не удалось создать задачу");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/admin");
 }
@@ -231,38 +171,22 @@ export async function completeTaskAction(taskId: string) {
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) throw new Error("Not found");
   await assertStudentAccess(task.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/tasks/${encodeURIComponent(taskId)}/complete`,
-      { method: "POST" }
-    );
-    if (!response.ok) throw new Error("Не удалось завершить задачу");
-    await refreshStudentAfterBackendMutation(task.studentId, [
-      "/admin",
-      "/admin/tasks",
-      `/admin/students/${task.studentId}`,
-    ]);
-    return;
-  }
-
-  await prisma.task.update({
-    where: { id: taskId },
-    data: { status: "DONE", completedAt: new Date() },
-  });
-
-  await logActivity({
-    type: "TASK_COMPLETED",
-    studentId: task.studentId,
-    applicationId: task.applicationId,
-    userId: session.user.id,
-    metadata: { title: task.title },
-  });
-
-  await recalculateStudent(task.studentId);
-  revalidatePath("/admin");
-  revalidatePath("/admin/tasks");
-  revalidatePath(`/admin/students/${task.studentId}`);
+  const response = await backendFetch(
+    session.user,
+    `/v1/tasks/${encodeURIComponent(taskId)}/complete`,
+    {
+      method: "POST",
+      headers: {
+        "Idempotency-Key": `task-complete:${taskId}:${task.updatedAt.toISOString()}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось завершить задачу");
+  await refreshStudentAfterBackendMutation(task.studentId, [
+    "/admin",
+    "/admin/tasks",
+    `/admin/students/${task.studentId}`,
+  ]);
 }
 
 export async function requestDocumentAction(documentId: string) {
@@ -270,23 +194,22 @@ export async function requestDocumentAction(documentId: string) {
   const doc = await prisma.document.findUnique({ where: { id: documentId } });
   if (!doc) throw new Error("Not found");
   await assertStudentAccess(doc.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/documents/${encodeURIComponent(documentId)}/request`,
-      { method: "POST" }
-    );
-    if (!response.ok) throw new Error("Не удалось запросить документ");
-    await refreshStudentAfterBackendMutation(doc.studentId, [
-      "/admin",
-      "/admin/documents",
-      `/admin/students/${doc.studentId}`,
-    ]);
-    return;
-  }
-  await requestDocument({ documentId, userId: session.user.id });
-  revalidatePath(`/admin/students/${doc.studentId}`);
-  revalidatePath("/admin/documents");
+  const response = await backendFetch(
+    session.user,
+    `/v1/documents/${encodeURIComponent(documentId)}/request`,
+    {
+      method: "POST",
+      headers: {
+        "Idempotency-Key": `document-request:${documentId}:${doc.version}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось запросить документ");
+  await refreshStudentAfterBackendMutation(doc.studentId, [
+    "/admin",
+    "/admin/documents",
+    `/admin/students/${doc.studentId}`,
+  ]);
 }
 
 export async function approveDocumentAction(documentId: string) {
@@ -294,57 +217,51 @@ export async function approveDocumentAction(documentId: string) {
   const doc = await prisma.document.findUnique({ where: { id: documentId } });
   if (!doc) throw new Error("Not found");
   await assertStudentAccess(doc.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/documents/${encodeURIComponent(documentId)}/approve`,
-      { method: "POST" }
-    );
-    if (!response.ok) throw new Error("Не удалось одобрить документ");
-    await refreshStudentAfterBackendMutation(doc.studentId, [
-      "/admin",
-      "/admin/documents",
-      `/admin/students/${doc.studentId}`,
-    ]);
-    return;
-  }
-  await approveDocument({ documentId, userId: session.user.id });
-  revalidatePath(`/admin/students/${doc.studentId}`);
-  revalidatePath("/admin/documents");
+  const response = await backendFetch(
+    session.user,
+    `/v1/documents/${encodeURIComponent(documentId)}/approve`,
+    {
+      method: "POST",
+      headers: {
+        "Idempotency-Key": `document-approve:${documentId}:${doc.version}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось одобрить документ");
+  await refreshStudentAfterBackendMutation(doc.studentId, [
+    "/admin",
+    "/admin/documents",
+    `/admin/students/${doc.studentId}`,
+  ]);
 }
 
 export async function needsChangesAction(formData: FormData) {
   const session = await requireStaff();
   const documentId = String(formData.get("documentId") || "");
   const reason = String(formData.get("reason") || "");
+  const commandId = String(formData.get("commandId") || "");
   const doc = await prisma.document.findUnique({ where: { id: documentId } });
   if (!doc) throw new Error("Not found");
   await assertStudentAccess(doc.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/documents/${encodeURIComponent(documentId)}/needs-changes`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось отправить документ на доработку");
-    await refreshStudentAfterBackendMutation(doc.studentId, [
-      "/admin",
-      "/admin/documents",
-      `/admin/students/${doc.studentId}`,
-    ]);
-    return;
-  }
-  await needsChangesDocument({
-    documentId,
-    userId: session.user.id,
-    reason,
-  });
-  revalidatePath(`/admin/students/${doc.studentId}`);
-  revalidatePath("/admin/documents");
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(
+    session.user,
+    `/v1/documents/${encodeURIComponent(documentId)}/needs-changes`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ reason }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось отправить документ на доработку");
+  await refreshStudentAfterBackendMutation(doc.studentId, [
+    "/admin",
+    "/admin/documents",
+    `/admin/students/${doc.studentId}`,
+  ]);
 }
 
 export async function createDocumentAction(formData: FormData) {
@@ -353,26 +270,24 @@ export async function createDocumentAction(formData: FormData) {
   await assertStudentAccess(studentId);
   const name = String(formData.get("name") || "");
   const category = String(formData.get("category") || "OTHER");
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/students/${encodeURIComponent(studentId)}/documents`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: studentId, name, category }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось создать документ");
-    await refreshStudentAfterBackendMutation(studentId, [`/admin/students/${studentId}`]);
-    return;
-  }
-
-  await prisma.document.create({
-    data: { studentId, name, category, status: "MISSING" },
-  });
-  await recalculateStudent(studentId);
-  revalidatePath(`/admin/students/${studentId}`);
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/documents`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ student_id: studentId, name, category }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось создать документ");
+  await refreshStudentAfterBackendMutation(studentId, [
+    `/admin/students/${studentId}`,
+  ]);
 }
 
 export async function submitApplicationAction(formData: FormData) {
@@ -386,48 +301,31 @@ export async function submitApplicationAction(formData: FormData) {
   const app = await prisma.application.findUnique({ where: { id: applicationId } });
   if (!app) throw new Error("Not found");
   await assertStudentAccess(app.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/applications/${encodeURIComponent(applicationId)}/submit`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          application_id_external: applicationIdExternal,
-          submission_confirmation_note: submissionConfirmationNote,
-          application_fee_paid: applicationFeePaid,
-          force: force || session.user.role === "ADMIN",
-        }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось отметить подачу");
-    const result = (await response.json()) as { ok: boolean; blockers?: string[] };
-    if (!result.ok) return { warning: true, blockers: result.blockers ?? [] };
-    await refreshStudentAfterBackendMutation(app.studentId, [
-      "/admin",
-      `/admin/students/${app.studentId}`,
-      `/admin/students/${app.studentId}/applications/${applicationId}`,
-    ]);
-    return { ok: true };
-  }
-
-  const result = await markApplicationSubmitted({
-    applicationId,
-    userId: session.user.id,
-    applicationIdExternal,
-    submissionConfirmationNote,
-    applicationFeePaid,
-    force: force || session.user.role === "ADMIN",
-  });
-
-  if (!result.ok) {
-    return { warning: true, blockers: result.blockers };
-  }
-  revalidatePath(`/admin/students/${app.studentId}`);
-  revalidatePath(
-    `/admin/students/${app.studentId}/applications/${applicationId}`
+  const response = await backendFetch(
+    session.user,
+    `/v1/applications/${encodeURIComponent(applicationId)}/submit`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": `application-submit:${applicationId}:${app.version}`,
+      },
+      body: JSON.stringify({
+        application_id_external: applicationIdExternal,
+        submission_confirmation_note: submissionConfirmationNote,
+        application_fee_paid: applicationFeePaid,
+        force: force || session.user.role === "ADMIN",
+      }),
+    }
   );
+  if (!response.ok) throw new Error("Не удалось отметить подачу");
+  const result = (await response.json()) as { ok: boolean; blockers?: string[] };
+  if (!result.ok) return { warning: true, blockers: result.blockers ?? [] };
+  await refreshStudentAfterBackendMutation(app.studentId, [
+    "/admin",
+    `/admin/students/${app.studentId}`,
+    `/admin/students/${app.studentId}/applications/${applicationId}`,
+  ]);
   return { ok: true };
 }
 
@@ -439,34 +337,47 @@ export async function updateApplicationStatusAction(
   const app = await prisma.application.findUnique({ where: { id: applicationId } });
   if (!app) throw new Error("Not found");
   await assertStudentAccess(app.studentId);
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/applications/${encodeURIComponent(applicationId)}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось обновить статус подачи");
-    await refreshStudentAfterBackendMutation(app.studentId, [
-      "/admin",
-      `/admin/students/${app.studentId}`,
-    ]);
-    return;
-  }
-  await updateApplicationStatus({
-    applicationId,
-    status,
-    userId: session.user.id,
-  });
+  const response = await backendFetch(
+    session.user,
+    `/v1/applications/${encodeURIComponent(applicationId)}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": `application-status:${applicationId}:${status}:${app.updatedAt.toISOString()}`,
+      },
+      body: JSON.stringify({ status }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось обновить статус подачи");
+  await refreshStudentAfterBackendMutation(app.studentId, [
+    "/admin",
+    `/admin/students/${app.studentId}`,
+  ]);
 }
 
 export async function updateStudentStatusAction(studentId: string, status: string) {
-  await requireStaff();
+  const session = await requireStaff();
   await assertStudentAccess(studentId);
-  await prisma.student.update({ where: { id: studentId }, data: { status } });
+  const current = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: { updatedAt: true },
+  });
+  if (!current) throw new Error("Not found");
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": `student-status:${studentId}:${status}:${current.updatedAt.toISOString()}`,
+      },
+      body: JSON.stringify({ status }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось обновить статус студента");
+  revalidatePath(`/admin/students/${studentId}`);
 }
 
 export async function changeCuratorAction(formData: FormData) {
@@ -474,15 +385,29 @@ export async function changeCuratorAction(formData: FormData) {
   if (session.user.role !== "ADMIN") throw new Error("Admin only");
   const studentId = String(formData.get("studentId") || "");
   const curatorId = String(formData.get("curatorId") || "");
-  await prisma.student.update({
-    where: { id: studentId },
-    data: { curatorId },
-  });
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ curator_id: curatorId || null }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось назначить куратора");
+  revalidatePath(`/admin/students/${studentId}`);
 }
 
 export async function portalUploadAction(formData: FormData) {
   const { session, student } = await getCurrentStudent();
   const documentId = String(formData.get("documentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   const file = formData.get("file") as File | null;
   if (!file) throw new Error("No file");
 
@@ -497,64 +422,52 @@ export async function portalUploadAction(formData: FormData) {
     documentId,
     filename: file.name,
     data: buffer,
+    idempotencyKey: commandId,
   });
 
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/portal/documents/${encodeURIComponent(documentId)}/uploaded`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storage_path: saved.storagePath, file_url: saved.fileUrl }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось сохранить загруженный документ");
-    await refreshStudentAfterBackendMutation(student.id, [
-      "/portal/documents",
-      "/portal",
-      `/admin/students/${student.id}`,
-    ]);
-    return;
-  }
-
-  await markDocumentUploaded({
-    documentId,
-    storagePath: saved.storagePath,
-    fileUrl: saved.fileUrl,
-    userId: session.user.id,
-  });
-  revalidatePath("/portal/documents");
-  revalidatePath("/portal");
+  const response = await backendFetch(
+    session.user,
+    `/v1/portal/documents/${encodeURIComponent(documentId)}/uploaded`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({
+        storage_path: saved.storagePath,
+        file_url: saved.fileUrl,
+      }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось сохранить загруженный документ");
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal/documents",
+    "/portal",
+    `/admin/students/${student.id}`,
+  ]);
 }
 
 export async function portalCompleteTaskAction(taskId: string) {
   const { session, student } = await getCurrentStudent();
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/portal/tasks/${encodeURIComponent(taskId)}/complete`,
-      { method: "POST" }
-    );
-    if (!response.ok) throw new Error("Не удалось завершить задачу");
-    await refreshStudentAfterBackendMutation(student.id, [
-      "/portal/tasks",
-      "/portal",
-      `/admin/students/${student.id}`,
-    ]);
-    return;
-  }
-  const task = await prisma.task.findFirst({
-    where: { id: taskId, studentId: student.id, isStudentFacing: true },
-  });
-  if (!task) throw new Error("Not found");
-  await prisma.task.update({
-    where: { id: taskId },
-    data: { status: "DONE", completedAt: new Date() },
-  });
-  await recalculateStudent(student.id);
-  revalidatePath("/portal/tasks");
-  revalidatePath("/portal");
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task || task.studentId !== student.id) throw new Error("Not found");
+  const response = await backendFetch(
+    session.user,
+    `/v1/portal/tasks/${encodeURIComponent(taskId)}/complete`,
+    {
+      method: "POST",
+      headers: {
+        "Idempotency-Key": `portal-task-complete:${taskId}:${task.updatedAt.toISOString()}`,
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось завершить задачу");
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal/tasks",
+    "/portal",
+    `/admin/students/${student.id}`,
+  ]);
 }
 
 export async function savePersonalQuestionnaireAction(
@@ -588,36 +501,41 @@ export async function savePersonalQuestionnaireAction(
     journeyStage = "STRATEGY";
   }
 
-  await prisma.student.update({
-    where: { id: student.id },
-    data: {
-      firstName,
-      lastName,
+  const payload = {
+      first_name: firstName,
+      last_name: lastName,
       phone,
       country,
       nationality,
-      questionnairePersonalJson: JSON.stringify(answers),
-      questionnaireAt: new Date(),
-      journeyStage,
-    },
-  });
-
-  await logActivity({
-    type: "NOTE",
-    studentId: student.id,
-    userId: session.user.id,
-    metadata: { note: "Заполнена анкета №1 (личная информация)" },
-  });
-
-  const { markQuestionnairePending } = await import(
-    "@/server/services/accompaniment"
-  );
-  await markQuestionnairePending(student.id);
-
-  revalidatePath("/portal");
-  revalidatePath("/portal/questionnaire");
-  revalidatePath("/admin");
-  revalidatePath(`/admin/students/${student.id}`);
+      questionnaire_personal_json: JSON.stringify(answers),
+      mark_questionnaire_at: true,
+      journey_stage: journeyStage,
+      ...(student.accompanimentStatus === "NONE"
+        ? { accompaniment_status: "PENDING" }
+        : {}),
+  };
+  const response = await backendFetch(
+      session.user,
+      `/v1/students/${encodeURIComponent(student.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": deterministicCommandId(
+            "questionnaire-personal",
+            answers
+          ),
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+  if (!response.ok) throw new Error("Не удалось сохранить анкету");
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal",
+    "/portal/questionnaire",
+    "/admin",
+    `/admin/students/${student.id}`,
+  ]);
 }
 
 export async function saveProgramsQuestionnaireAction(
@@ -638,40 +556,45 @@ export async function saveProgramsQuestionnaireAction(
     journeyStage = "PROGRAMS";
   }
 
-  await prisma.student.update({
-    where: { id: student.id },
-    data: {
-      studyLevel: mapped.studyLevel,
-      preferredLanguage: mapped.preferredLanguage,
-      targetField: mapped.targetField,
-      preferredCities: JSON.stringify(mapped.preferredCities),
-      questionnaireProgramsJson: JSON.stringify(answers),
-      questionnaireProgramsAt: new Date(),
-      journeyStage,
-    },
-  });
-
-  await logActivity({
-    type: "NOTE",
-    studentId: student.id,
-    userId: session.user.id,
-    metadata: { note: "Заполнена анкета №2 (подбор программ)" },
-  });
-
-  const { markQuestionnairePending } = await import(
-    "@/server/services/accompaniment"
-  );
-  await markQuestionnairePending(student.id);
-
-  revalidatePath("/portal");
-  revalidatePath("/portal/questionnaire-2");
-  revalidatePath("/portal/programs");
-  revalidatePath("/admin");
-  revalidatePath(`/admin/students/${student.id}`);
+  const payload = {
+      study_level: mapped.studyLevel,
+      preferred_language: mapped.preferredLanguage,
+      target_field: mapped.targetField,
+      preferred_cities: JSON.stringify(mapped.preferredCities),
+      questionnaire_programs_json: JSON.stringify(answers),
+      mark_questionnaire_programs_at: true,
+      journey_stage: journeyStage,
+      ...(student.accompanimentStatus === "NONE"
+        ? { accompaniment_status: "PENDING" }
+        : {}),
+  };
+  const response = await backendFetch(
+      session.user,
+      `/v1/students/${encodeURIComponent(student.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": deterministicCommandId(
+            "questionnaire-programs",
+            answers
+          ),
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+  if (!response.ok) throw new Error("Не удалось сохранить анкету программ");
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal",
+    "/portal/questionnaire-2",
+    "/portal/programs",
+    "/admin",
+    `/admin/students/${student.id}`,
+  ]);
 }
 
 export async function saveQuestionnaireAction(formData: FormData) {
-  const { student } = await getCurrentStudent();
+  const { session, student } = await getCurrentStudent();
 
   const studyLevel = String(formData.get("studyLevel") || "BACHELOR");
   const preferredLanguage = String(formData.get("preferredLanguage") || "") || null;
@@ -697,23 +620,40 @@ export async function saveQuestionnaireAction(formData: FormData) {
     journeyStage = preview.length > 0 ? "PROGRAMS" : "STRATEGY";
   }
 
-  await prisma.student.update({
-    where: { id: student.id },
-    data: {
-      studyLevel,
-      preferredLanguage,
-      targetField,
+  const payload = {
+      study_level: studyLevel,
+      preferred_language: preferredLanguage,
+      target_field: targetField,
       intake,
-      preferredCities: JSON.stringify(cities),
-      questionnaireAt: new Date(),
-      journeyStage,
-    },
-  });
-
-  revalidatePath("/portal");
-  revalidatePath("/portal/questionnaire");
-  revalidatePath("/portal/programs");
-  revalidatePath(`/admin/students/${student.id}`);
+      preferred_cities: JSON.stringify(cities),
+      mark_questionnaire_at: true,
+      journey_stage: journeyStage,
+      ...(student.accompanimentStatus === "NONE"
+        ? { accompaniment_status: "PENDING" }
+        : {}),
+  };
+  const response = await backendFetch(
+      session.user,
+      `/v1/students/${encodeURIComponent(student.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": deterministicCommandId(
+            "questionnaire-profile",
+            { studyLevel, preferredLanguage, targetField, intake, cities, journeyStage }
+          ),
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+  if (!response.ok) throw new Error("Не удалось сохранить анкету");
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal",
+    "/portal/questionnaire",
+    "/portal/programs",
+    `/admin/students/${student.id}`,
+  ]);
   redirect("/portal/programs");
 }
 
@@ -722,92 +662,36 @@ export async function requestApplicationAction(formData: FormData) {
   const programId = String(formData.get("programId") || "");
   const programAcademicYearId =
     String(formData.get("programAcademicYearId") || "") || null;
+  const commandId = String(formData.get("commandId") || "");
   if (!programId) throw new Error("Program required");
 
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(session.user, "/v1/portal/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        student_id: student.id,
-        program_id: programId,
-        program_academic_year_id: programAcademicYearId,
-        intake: student.intake,
-      }),
-    });
-    if (response.status === 409) {
-      revalidatePath("/portal/applications");
-      return;
-    }
-    if (!response.ok) throw new Error("Не удалось создать заявку");
-    const created = (await response.json()) as { id: string };
-    await refreshStudentAfterBackendMutation(student.id, [
-      "/portal",
-      "/portal/programs",
-      "/portal/applications",
-      `/admin/students/${student.id}`,
-    ]);
-    redirect(`/portal/applications/${created.id}`);
-  }
-
-  const program = await prisma.program.findUnique({
-    where: { id: programId },
-    include: { university: true },
-  });
-  if (!program) throw new Error("Program not found");
-  if (
-    programAcademicYearId &&
-    !(await prisma.programAcademicYear.findFirst({
-      where: { id: programAcademicYearId, programId },
-      select: { id: true },
-    }))
-  ) {
-    throw new Error("Program academic year does not belong to program");
-  }
-
-  const existing = await prisma.application.findFirst({
-    where: { studentId: student.id, programId },
-  });
-  if (existing) {
-    redirect(`/portal/applications/${existing.id}`);
-  }
-
-  const app = await prisma.application.create({
-    data: {
-      studentId: student.id,
-      programId,
-      programAcademicYearId,
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(session.user, "/v1/portal/applications", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: student.id,
+      program_id: programId,
+      program_academic_year_id: programAcademicYearId,
       intake: student.intake,
-      status: "SELECTED",
-    },
+    }),
   });
-
-  await logActivity({
-    type: "APPLICATION_CREATED",
-    studentId: student.id,
-    applicationId: app.id,
-    userId: session.user.id,
-    metadata: {
-      university: program.university.name,
-      program: program.name,
-      source: "student_request",
-    },
-  });
-
-  const earlyStages = new Set(["PROFILE", "STRATEGY", "PROGRAMS"]);
-  if (earlyStages.has(student.journeyStage)) {
-    await prisma.student.update({
-      where: { id: student.id },
-      data: { journeyStage: "APPLICATIONS" },
-    });
+  if (response.status === 409) {
+    revalidatePath("/portal/applications");
+    return;
   }
-
-  await recalculateStudent(student.id);
-  revalidatePath("/portal");
-  revalidatePath("/portal/programs");
-  revalidatePath("/portal/applications");
-  revalidatePath(`/admin/students/${student.id}`);
-  redirect(`/portal/applications/${app.id}`);
+  if (!response.ok) throw new Error("Не удалось создать заявку");
+  const created = (await response.json()) as { id: string };
+  await refreshStudentAfterBackendMutation(student.id, [
+    "/portal",
+    "/portal/programs",
+    "/portal/applications",
+    `/admin/students/${student.id}`,
+  ]);
+  redirect(`/portal/applications/${created.id}`);
 }
 
 export async function createUniversityAction(formData: FormData) {
@@ -953,23 +837,17 @@ export async function markNotificationReadAction(formData: FormData) {
   const { requireSession } = await import("@/server/auth/guards");
   const session = await requireSession();
   const id = String(formData.get("notificationId") || "");
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/notifications/${encodeURIComponent(id)}/read`,
-      { method: "POST" }
-    );
-    if (!response.ok && response.status !== 404) {
-      throw new Error("Не удалось отметить уведомление прочитанным");
+  const response = await backendFetch(
+    session.user,
+    `/v1/notifications/${encodeURIComponent(id)}/read`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": `notification-read:${id}` },
     }
-    revalidatePath("/admin");
-    revalidatePath("/portal");
-    return;
-  }
-  const { markNotificationRead } = await import(
-    "@/server/services/notifications"
   );
-  await markNotificationRead(id, session.user.id);
+  if (!response.ok && response.status !== 404) {
+    throw new Error("Не удалось отметить уведомление прочитанным");
+  }
   revalidatePath("/admin");
   revalidatePath("/portal");
 }
@@ -1010,22 +888,30 @@ export async function addManualProgramMatchAction(formData: FormData) {
 }
 
 export async function addRequirementAction(formData: FormData) {
-  await requireStaff();
+  const session = await requireStaff();
   const applicationId = String(formData.get("applicationId") || "");
+  const commandId = String(formData.get("commandId") || "");
   const app = await prisma.application.findUnique({ where: { id: applicationId } });
   if (!app) throw new Error("Not found");
   await assertStudentAccess(app.studentId);
-
-  await prisma.requirement.create({
-    data: {
-      applicationId,
-      name: String(formData.get("name") || ""),
-      type: String(formData.get("type") || "DOCUMENT"),
-      isCritical: formData.get("isCritical") === "on",
-      status: "MISSING",
-    },
-  });
-  await recalculateStudent(app.studentId);
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(
+    session.user,
+    `/v1/applications/${encodeURIComponent(applicationId)}/requirements`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({
+        name: String(formData.get("name") || ""),
+        type: String(formData.get("type") || "DOCUMENT"),
+        is_critical: formData.get("isCritical") === "on",
+      }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось добавить требование");
   revalidatePath(
     `/admin/students/${app.studentId}/applications/${applicationId}`
   );
@@ -1249,6 +1135,8 @@ export async function sendStudentMessageAction(formData: FormData) {
   const { session, student } = await getCurrentStudent();
   if (!student.curatorId) return;
 
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   const text = String(formData.get("message") || "").trim();
   if (text.length > 2000) return;
 
@@ -1285,7 +1173,7 @@ export async function sendStudentMessageAction(formData: FormData) {
 
   if (attachments.length + uploaded.length > MAX_MESSAGE_FILES) return;
 
-  for (const file of uploaded) {
+  for (const [index, file] of uploaded.entries()) {
     if (file.size > MAX_MESSAGE_FILE_BYTES) return;
     if (!isAllowedMessageFilename(file.name)) return;
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -1294,6 +1182,7 @@ export async function sendStudentMessageAction(formData: FormData) {
       documentId: MESSAGE_ATTACHMENT_FOLDER,
       filename: file.name,
       data: buffer,
+      idempotencyKey: `${commandId}:${index}`,
     });
     attachments.push({
       name: file.name,
@@ -1304,41 +1193,24 @@ export async function sendStudentMessageAction(formData: FormData) {
 
   if (!text && attachments.length === 0) return;
 
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(session.user, "/v1/portal/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        attachments: attachments.map((attachment) => ({
-          name: attachment.name,
-          file_url: attachment.fileUrl,
-          storage_path: attachment.storagePath,
-          document_id: attachment.documentId,
-        })),
-      }),
-    });
-    if (!response.ok) throw new Error("Не удалось отправить сообщение");
-    revalidatePath("/portal/messages");
-    revalidatePath("/admin");
-    revalidatePath("/admin/messages");
-    return;
-  }
-
-  await logActivity({
-    type: "NOTE",
-    studentId: student.id,
-    userId: session.user.id,
-    metadata: {
-      note: text,
-      channel: "student-curator",
-      from: "student",
-      attachments,
+  const response = await backendFetch(session.user, "/v1/portal/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
     },
+    body: JSON.stringify({
+      text,
+      attachments: attachments.map((attachment) => ({
+        name: attachment.name,
+        file_url: attachment.fileUrl,
+        storage_path: attachment.storagePath,
+        document_id: attachment.documentId,
+      })),
+    }),
   });
-
+  if (!response.ok) throw new Error("Не удалось отправить сообщение");
   revalidatePath("/portal/messages");
-  revalidatePath("/portal");
   revalidatePath("/admin");
   revalidatePath("/admin/messages");
 }
@@ -1374,10 +1246,19 @@ export async function assignStudentToMeAction(formData: FormData) {
     if (session.user.role !== "ADMIN") return;
   }
 
-  await prisma.student.update({
-    where: { id: studentId },
-    data: { curatorId: session.user.id },
-  });
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": `student-assign-self:${studentId}:${session.user.id}`,
+      },
+      body: JSON.stringify({ curator_id: session.user.id }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось назначить кейс");
 
   revalidatePath("/admin");
   revalidatePath(`/admin/students/${studentId}`);
@@ -1387,35 +1268,23 @@ export async function sendCuratorMessageAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
   const text = String(formData.get("message") || "").trim();
+  const commandId = String(formData.get("commandId") || "");
   if (!studentId || !text || text.length > 2000) return;
-  if (isBackendApiConfigured()) {
-    const response = await backendFetch(
-      session.user,
-      `/v1/students/${encodeURIComponent(studentId)}/messages`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, attachments: [] }),
-      }
-    );
-    if (!response.ok) throw new Error("Не удалось отправить сообщение");
-    revalidatePath("/portal/messages");
-    revalidatePath("/admin");
-    revalidatePath("/admin/messages");
-    return;
-  }
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
-
-  await logActivity({
-    type: "NOTE",
-    studentId,
-    userId: session.user.id,
-    metadata: {
-      note: text,
-      channel: "student-curator",
-      from: "curator",
-    },
-  });
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ text, attachments: [] }),
+    }
+  );
+  if (!response.ok) throw new Error("Не удалось отправить сообщение");
 
   revalidatePath("/portal/messages");
   revalidatePath("/admin");
@@ -1426,30 +1295,28 @@ export async function sendCuratorMessageAction(formData: FormData) {
 export async function acceptAccompanimentAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
   if (!studentId) return;
   await assertStudentAccess(studentId);
+  if (!commandId) throw new Error("Command id is required");
 
-  const { acceptStudentToAccompaniment } = await import(
-    "@/server/services/accompaniment"
-  );
-
-  try {
-    await acceptStudentToAccompaniment({
-      studentId,
-      userId: session.user.id,
-      role: session.user.role,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error && error.name === "AccompanimentError"
-        ? error.message
-        : null;
-    if (message) {
-      redirect(
-        `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
-      );
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/accompaniment/accept`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": commandId },
     }
-    throw error;
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    const message =
+      typeof body?.detail === "string" ? body.detail : "Не удалось принять";
+    redirect(
+      `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
+    );
   }
 
   revalidatePath("/admin");
@@ -1462,30 +1329,32 @@ export async function requestAccompanimentClarificationAction(formData: FormData
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
   const note = String(formData.get("note") || "").trim();
+  const commandId = String(formData.get("commandId") || "");
   if (!studentId) return;
   await assertStudentAccess(studentId);
+  if (!commandId) throw new Error("Command id is required");
 
-  const { requestAccompanimentClarification } = await import(
-    "@/server/services/accompaniment"
-  );
-
-  try {
-    await requestAccompanimentClarification({
-      studentId,
-      userId: session.user.id,
-      note,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error && error.name === "AccompanimentError"
-        ? error.message
-        : null;
-    if (message) {
-      redirect(
-        `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
-      );
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/accompaniment/clarification`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ note: note || null }),
     }
-    throw error;
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    const message =
+      typeof body?.detail === "string" ? body.detail : "Не удалось запросить уточнение";
+    redirect(
+      `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
+    );
   }
 
   revalidatePath("/admin");
@@ -1497,30 +1366,32 @@ export async function requestAccompanimentClarificationAction(formData: FormData
 export async function rejectAccompanimentAction(formData: FormData) {
   const session = await requireRole(["ADMIN"]);
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
   if (!studentId) return;
   await assertStudentAccess(studentId);
+  if (!commandId) throw new Error("Command id is required");
 
-  const { rejectAccompaniment } = await import(
-    "@/server/services/accompaniment"
-  );
-
-  try {
-    await rejectAccompaniment({
-      studentId,
-      userId: session.user.id,
-      role: session.user.role,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error && error.name === "AccompanimentError"
-        ? error.message
-        : null;
-    if (message) {
-      redirect(
-        `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
-      );
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/accompaniment/reject`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({ note: null }),
     }
-    throw error;
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
+    const message =
+      typeof body?.detail === "string" ? body.detail : "Не удалось отказать";
+    redirect(
+      `/admin/students/${studentId}/anketa?error=${encodeURIComponent(message)}`
+    );
   }
 
   revalidatePath("/admin");
@@ -1532,32 +1403,32 @@ export async function rejectAccompanimentAction(formData: FormData) {
 export async function updateIntakeSeatLimitAction(formData: FormData) {
   const session = await requireRole(["ADMIN"]);
   const intake = String(formData.get("intake") || "");
+  const commandId = String(formData.get("commandId") || "");
   const rawLimit = String(formData.get("seatLimit") || "").trim();
   const parsed = rawLimit === "" ? null : Number(rawLimit);
   const seatLimit = parsed == null || Number.isFinite(parsed) ? parsed : null;
   const isActive = formData.get("isActive") === "on";
+  if (!commandId) throw new Error("Command id is required");
 
-  const { updateIntakeSeatLimit } = await import(
-    "@/server/services/accompaniment"
-  );
-
-  try {
-    await updateIntakeSeatLimit({
+  const response = await backendFetch(session.user, "/v1/intake-cohorts/seat-limit", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
       intake,
-      seatLimit,
-      isActive,
-      userId: session.user.id,
-      role: session.user.role,
-    });
-  } catch (error) {
+      seat_limit: seatLimit,
+      is_active: isActive,
+    }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as
+      | { detail?: string }
+      | null;
     const message =
-      error instanceof Error && error.name === "AccompanimentError"
-        ? error.message
-        : null;
-    if (message) {
-      redirect(`/admin/settings?error=${encodeURIComponent(message)}`);
-    }
-    throw error;
+      typeof body?.detail === "string" ? body.detail : "Не удалось сохранить лимит";
+    redirect(`/admin/settings?error=${encodeURIComponent(message)}`);
   }
 
   revalidatePath("/admin");

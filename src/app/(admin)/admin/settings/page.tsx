@@ -82,6 +82,7 @@ export default async function AdminSettingsPage({
                 className="space-y-3 border-b border-border pb-4 last:border-b-0 last:pb-0"
               >
                 <input type="hidden" name="intake" value={intake} />
+                <input type="hidden" name="commandId" value={crypto.randomUUID()} />
                 <p className="text-sm font-medium">Набор {formatIntakeLabel(intake)}</p>
                 <p className="text-xs text-muted-foreground">
                   Принято сейчас: {occupied}
@@ -123,6 +124,7 @@ export default async function AdminSettingsPage({
 
           {canEditLimit ? (
             <form action={updateIntakeSeatLimitAction} className="space-y-3">
+              <input type="hidden" name="commandId" value={crypto.randomUUID()} />
               <p className="text-sm font-medium">Добавить набор</p>
               <div className="space-y-1">
                 <Label htmlFor="new-intake">Набор (например 2028/29)</Label>

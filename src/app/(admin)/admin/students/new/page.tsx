@@ -33,6 +33,11 @@ export default async function NewStudentPage() {
       <Card>
         <CardContent className="pt-4">
           <form action={createStudentAction} className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="hidden"
+              name="commandId"
+              value={crypto.randomUUID()}
+            />
             <div className="space-y-1.5">
               <Label htmlFor="firstName">Имя</Label>
               <Input id="firstName" name="firstName" required />

@@ -26,6 +26,7 @@ function asText(value: string | string[] | undefined): string | null {
 
 export type AnketaDecisionView = {
   studentId: string;
+  studentVersion: number;
   fullName: string;
   email: string;
   intake: string;
@@ -164,6 +165,7 @@ export async function loadAnketaDecision(input: {
 
   return {
     studentId: student.id,
+    studentVersion: student.version,
     fullName: `${student.firstName} ${student.lastName}`,
     email: student.email,
     intake: formatIntakeLabel(student.intake),

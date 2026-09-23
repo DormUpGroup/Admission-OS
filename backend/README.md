@@ -27,15 +27,44 @@ Set `REDIS_URL`, then run this in a second terminal:
 .\.venv\Scripts\celery -A app.workers.celery_app worker --pool=solo --loglevel=INFO
 ```
 
-The first task is a non-destructive worker ping. Programme imports, matching,
-document OCR and monitoring will be added as separate idempotent jobs.
+Run Celery Beat in one additional terminal so the outbox dispatcher and
+follow-up scanner are scheduled:
+
+```powershell
+.\.venv\Scripts\celery -A app.workers.celery_app beat --loglevel=INFO
+```
+
+Redis transports tasks, while durable work is recorded in Postgres
+`OutboxEvent`.
+
+## Production deploy
+
+Deploy Next.js, FastAPI, worker, beat, Hermes, and Redis in one Railway
+project. Supabase remains the shared Postgres/Storage data platform. The full
+service topology, variables, activation sequence, and rollback steps are in
+[`docs/deployment/railway-hermes.md`](../docs/deployment/railway-hermes.md).
+
+Human bridge tokens use `INTERNAL_API_SECRET`. Machine credentials use the
+separate `AUTOMATION_API_SECRET` or private `HERMES_MCP_KEY`; there is no
+fallback to `AUTH_SECRET`.
+
+Local API Docker equivalent (from `backend/`):
+
+```powershell
+docker build -t immigrome-api .
+docker run --rm -p 8000:8000 `
+  -e APP_ENV=production `
+  -e DATABASE_URL="postgresql://..." `
+  -e INTERNAL_API_SECRET="..." `
+  immigrome-api
+```
 
 ## Python-owned operations
 
 The internal API now owns the transactional actions for documents, applications,
-deadlines, portal task completion, messages and notification read state.  Next.js
-continues to authenticate the browser session and, for uploads, writes the file
-to the configured storage before passing its trusted storage URL to the API.
+tasks, automation, Telegram ingestion, messages, and approval state. Next.js
+continues to authenticate the browser session and acts as the human control
+plane. Enable migrated surfaces independently with `BACKEND_CAPABILITIES`.
 
 Useful read endpoints are `GET /v1/deadlines`, `GET /v1/notifications`,
 `GET /v1/dashboard/overview`, and `GET /v1/portal/overview`.  They are all

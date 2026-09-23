@@ -78,6 +78,11 @@ export default async function PortalDocumentsPage() {
                     action={portalUploadAction}
                     className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
                   >
+                    <input
+                      type="hidden"
+                      name="commandId"
+                      value={crypto.randomUUID()}
+                    />
                     <input type="hidden" name="documentId" value={doc.id} />
                     <Input
                       type="file"

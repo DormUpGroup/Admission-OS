@@ -211,6 +211,11 @@ export default async function ApplicationDetailPage({
                 action={addRequirementAction}
                 className="flex flex-wrap items-end gap-2"
               >
+                <input
+                  type="hidden"
+                  name="commandId"
+                  value={crypto.randomUUID()}
+                />
                 <input type="hidden" name="applicationId" value={applicationId} />
                 <div className="min-w-[160px] flex-1 space-y-1.5">
                   <Label htmlFor="name">Название</Label>
@@ -291,6 +296,11 @@ export default async function ApplicationDetailPage({
                 action={createTaskAction}
                 className="grid gap-3 sm:grid-cols-2"
               >
+                <input
+                  type="hidden"
+                  name="commandId"
+                  value={crypto.randomUUID()}
+                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <input type="hidden" name="applicationId" value={applicationId} />
                 <div className="space-y-1.5 sm:col-span-2">

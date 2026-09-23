@@ -8,12 +8,4 @@ export type {
 } from "./load-admin-home";
 export { loadAnketaDecision } from "./load-anketa";
 export type { AnketaDecisionView } from "./load-anketa";
-export {
-  AccompanimentError,
-  accompanimentAcceptedActivity,
-  acceptStudentToAccompaniment,
-  requestAccompanimentClarification,
-  rejectAccompaniment,
-  updateIntakeSeatLimit,
-  markQuestionnairePending,
-} from "./actions";
+export { accompanimentAcceptedActivity } from "./actions";

@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import path from "path";
 import { contentTypeForFilename } from "@/lib/message-attachments";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -34,10 +34,19 @@ export async function saveDocumentFile(input: {
   documentId: string;
   filename: string;
   data: Buffer;
+  idempotencyKey?: string;
 }) {
   const ext = path.extname(input.filename) || ".bin";
-  const key = `${input.studentId}/${input.documentId}/${randomUUID()}${ext}`;
-  await uploadObject(key, input.data, contentTypeForFilename(input.filename));
+  const objectId = input.idempotencyKey
+    ? createHash("sha256").update(input.idempotencyKey).digest("hex")
+    : randomUUID();
+  const key = `${input.studentId}/${input.documentId}/${objectId}${ext}`;
+  await uploadObject(
+    key,
+    input.data,
+    contentTypeForFilename(input.filename),
+    Boolean(input.idempotencyKey)
+  );
   return {
     storagePath: key,
     fileUrl: `/api/files/${key}`,
@@ -63,12 +72,15 @@ async function uploadObject(
   key: string,
   data: Buffer,
   contentType: string,
+  allowExisting = false,
 ) {
   await ensureBucket();
   const { error } = await supabaseAdmin()
     .storage.from(bucket())
     .upload(key, data, { contentType, upsert: false });
-  if (error) throw new Error(error.message);
+  if (error && !(allowExisting && /already exists|duplicate/i.test(error.message))) {
+    throw new Error(error.message);
+  }
 }
 
 async function downloadObject(storagePath: string) {

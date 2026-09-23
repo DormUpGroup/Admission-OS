@@ -1,15 +1,20 @@
 from datetime import UTC, datetime
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import insert, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentActor, StaffActor
 from app.db.session import get_db_session
-from app.db.tables import activity_table, deadline_table, student_table
+from app.db.tables import deadline_table, student_table
 from app.schemas.deadlines import CreateDeadlineRequest, DeadlineSummary
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
+)
+from app.services.commands.deadlines import create_deadline_command
 
 router = APIRouter(tags=["deadlines"])
 DbSession = Annotated[AsyncSession, Depends(get_db_session)]
@@ -87,50 +92,31 @@ async def list_deadlines(
 
 @router.post("/deadlines", response_model=DeadlineSummary, status_code=status.HTTP_201_CREATED)
 async def create_deadline(
-    actor: StaffActor, db: DbSession, request: CreateDeadlineRequest
+    actor: StaffActor,
+    db: DbSession,
+    request: CreateDeadlineRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> DeadlineSummary:
     student = await _student_for_actor(actor, db, request.student_id)
-    deadline_id = uuid4().hex
-    now = datetime.now(UTC)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            insert(deadline_table).values(
-                id=deadline_id,
-                title=request.title.strip(),
-                date=request.date,
-                type=request.type,
-                studentId=request.student_id,
-                applicationId=request.application_id,
-                requirementId=request.requirement_id,
-                taskId=request.task_id,
-                isHardDeadline=request.is_hard_deadline,
-                isInternal=request.is_internal,
-                riskWeight=request.risk_weight,
-                createdAt=now,
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="deadline.create",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            insert(activity_table).values(
-                id=uuid4().hex,
-                type="DEADLINE_CREATED",
-                studentId=request.student_id,
-                applicationId=request.application_id,
-                userId=actor.id,
-                metadata='{"source":"python-api"}',
-                createdAt=now,
-            )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload=request.model_dump(mode="json"),
+            handler=lambda command: create_deadline_command(
+                db,
+                context=command,
+                request=request,
+                student_name=f"{student.firstName} {student.lastName}",
+            ),
         )
-    return DeadlineSummary(
-        id=deadline_id,
-        title=request.title.strip(),
-        date=request.date,
-        type=request.type,
-        student_id=request.student_id,
-        application_id=request.application_id,
-        is_hard_deadline=request.is_hard_deadline,
-        is_internal=request.is_internal,
-        risk_weight=request.risk_weight,
-        student_name=f"{student.firstName} {student.lastName}",
-    )
+    return DeadlineSummary.model_validate(executed.result.response)

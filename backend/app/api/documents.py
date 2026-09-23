@@ -1,26 +1,32 @@
-import json
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import insert, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import CurrentActor, StaffActor
 from app.db.session import get_db_session
 from app.db.tables import (
-    activity_table,
     document_table,
-    requirement_table,
     student_table,
-    task_table,
 )
 from app.schemas.documents import (
     CreateDocumentRequest,
     DocumentSummary,
     DocumentUploadRequest,
     NeedsChangesRequest,
+)
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
+)
+from app.services.commands.documents import (
+    approve_document_command,
+    create_document_command,
+    needs_changes_document_command,
+    request_document_command,
+    upload_document_command,
 )
 
 router = APIRouter(tags=["documents"])
@@ -44,21 +50,6 @@ async def get_document_for_staff(actor: StaffActor, db: AsyncSession, document_i
     if actor.role == "CURATOR" and row.curatorId not in {actor.id, None}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student access denied")
     return row
-
-
-async def log_document_activity(
-    db: AsyncSession, activity_type: str, document, user_id: str, metadata: str
-) -> None:
-    await db.execute(
-        insert(activity_table).values(
-            id=uuid4().hex,
-            type=activity_type,
-            studentId=document.studentId,
-            userId=user_id,
-            metadata=metadata,
-            createdAt=datetime.now(UTC),
-        )
-    )
 
 
 @router.get("/students/{student_id}/documents", response_model=list[DocumentSummary])
@@ -104,73 +95,58 @@ async def list_student_documents(
 
 
 @router.post("/documents/{document_id}/request", status_code=status.HTTP_204_NO_CONTENT)
-async def request_document(actor: StaffActor, db: DbSession, document_id: str) -> None:
-    document = await get_document_for_staff(actor, db, document_id)
-    now = datetime.now(UTC)
+async def request_document(
+    actor: StaffActor,
+    db: DbSession,
+    document_id: str,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+) -> None:
+    await get_document_for_staff(actor, db, document_id)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(document_table)
-            .where(document_table.c.id == document_id)
-            .values(status="REQUESTED", requestedAt=now, studentFeedback=None, updatedAt=now)
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="document.request",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            insert(task_table).values(
-                id=uuid4().hex,
-                title=f"Upload {document.name}",
-                status="WAITING",
-                priority="HIGH",
-                assigneeId=actor.id,
-                studentId=document.studentId,
-                documentId=document_id,
-                isStudentFacing=True,
-                dueDate=now + timedelta(days=7),
-                createdAt=now,
-                updatedAt=now,
-            )
-        )
-        await log_document_activity(
+        await execute_command(
             db,
-            "DOCUMENT_REQUESTED",
-            document,
-            actor.id,
-            json.dumps({"name": document.name, "source": "python-api"}),
+            context=context,
+            payload={"document_id": document_id},
+            handler=lambda command: request_document_command(
+                db, context=command, document_id=document_id
+            ),
         )
 
 
 @router.post("/documents/{document_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
-async def approve_document(actor: StaffActor, db: DbSession, document_id: str) -> None:
-    document = await get_document_for_staff(actor, db, document_id)
-    now = datetime.now(UTC)
+async def approve_document(
+    actor: StaffActor,
+    db: DbSession,
+    document_id: str,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
+) -> None:
+    await get_document_for_staff(actor, db, document_id)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(document_table)
-            .where(document_table.c.id == document_id)
-            .values(
-                status="APPROVED",
-                reviewedAt=now,
-                reviewedById=actor.id,
-                studentFeedback=None,
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="document.approve",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            update(requirement_table)
-            .where(requirement_table.c.relatedDocumentId == document_id)
-            .values(status="COMPLETED")
-        )
-        await db.execute(
-            update(task_table)
-            .where(task_table.c.documentId == document_id, task_table.c.status != "DONE")
-            .values(status="DONE", completedAt=now)
-        )
-        await log_document_activity(
+        await execute_command(
             db,
-            "DOCUMENT_APPROVED",
-            document,
-            actor.id,
-            json.dumps({"name": document.name, "source": "python-api"}),
+            context=context,
+            payload={"document_id": document_id},
+            handler=lambda command: approve_document_command(
+                db, context=command, document_id=document_id
+            ),
         )
 
 
@@ -180,7 +156,11 @@ async def approve_document(actor: StaffActor, db: DbSession, document_id: str) -
     status_code=status.HTTP_201_CREATED,
 )
 async def create_document(
-    actor: StaffActor, db: DbSession, student_id: str, request: CreateDocumentRequest
+    actor: StaffActor,
+    db: DbSession,
+    student_id: str,
+    request: CreateDocumentRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> DocumentSummary:
     if request.student_id != student_id:
         raise HTTPException(
@@ -199,92 +179,71 @@ async def create_document(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     if actor.role == "CURATOR" and student.curatorId not in {actor.id, None}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student access denied")
-    now = datetime.now(UTC)
-    document_id = uuid4().hex
-    await db.execute(
-        insert(document_table).values(
-            id=document_id,
-            studentId=student_id,
-            name=request.name.strip(),
-            category=request.category,
-            status="MISSING",
-            createdAt=now,
-            updatedAt=now,
+    await db.rollback()
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="document.create",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-    )
-    await db.commit()
-    return DocumentSummary(
-        id=document_id,
-        student_id=student_id,
-        name=request.name.strip(),
-        category=request.category,
-        status="MISSING",
-        storage_path=None,
-        uploaded_at=None,
-        reviewed_at=None,
-        requested_at=None,
-        student_feedback=None,
-        file_url=None,
-    )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload=request.model_dump(mode="json"),
+            handler=lambda command: create_document_command(
+                db, context=command, student_id=student_id, request=request
+            ),
+        )
+    return DocumentSummary.model_validate(executed.result.response)
 
 
 @router.post("/documents/{document_id}/needs-changes", status_code=status.HTTP_204_NO_CONTENT)
 async def needs_changes_document(
-    actor: StaffActor, db: DbSession, document_id: str, request: NeedsChangesRequest
+    actor: StaffActor,
+    db: DbSession,
+    document_id: str,
+    request: NeedsChangesRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> None:
-    document = await get_document_for_staff(actor, db, document_id)
+    await get_document_for_staff(actor, db, document_id)
     reason = request.reason.strip()
     if not reason:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Reason is required"
         )
-    now = datetime.now(UTC)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(document_table)
-            .where(document_table.c.id == document_id)
-            .values(
-                status="NEEDS_CHANGES",
-                reviewedAt=now,
-                reviewedById=actor.id,
-                studentFeedback=reason,
-                requestedAt=now,
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="document.needs_changes",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            update(requirement_table)
-            .where(requirement_table.c.relatedDocumentId == document_id)
-            .values(status="REQUESTED")
-        )
-        await db.execute(
-            insert(task_table).values(
-                id=uuid4().hex,
-                title=f"Fix {document.name}",
-                description=reason,
-                status="TODO",
-                priority="HIGH",
-                assigneeId=actor.id,
-                studentId=document.studentId,
-                documentId=document_id,
-                isStudentFacing=True,
-                createdAt=now,
-                updatedAt=now,
-            )
-        )
-        await log_document_activity(
+        await execute_command(
             db,
-            "DOCUMENT_NEEDS_CHANGES",
-            document,
-            actor.id,
-            json.dumps({"name": document.name, "reason": reason, "source": "python-api"}),
+            context=context,
+            payload={"document_id": document_id, "reason": reason},
+            handler=lambda command: needs_changes_document_command(
+                db,
+                context=command,
+                document_id=document_id,
+                reason=reason,
+            ),
         )
 
 
 @router.post("/portal/documents/{document_id}/uploaded", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_document_uploaded(
-    actor: CurrentActor, db: DbSession, document_id: str, request: DocumentUploadRequest
+    actor: CurrentActor,
+    db: DbSession,
+    document_id: str,
+    request: DocumentUploadRequest,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> None:
     if actor.role != "STUDENT":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student access required")
@@ -303,49 +262,25 @@ async def mark_document_uploaded(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     if document.userId != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Document access denied")
-    now = datetime.now(UTC)
     await db.rollback()
     async with db.begin():
-        await db.execute(
-            update(document_table)
-            .where(document_table.c.id == document_id)
-            .values(
-                storagePath=request.storage_path,
-                fileUrl=request.file_url,
-                status="UPLOADED",
-                uploadedAt=now,
-                reviewedAt=None,
-                reviewedById=None,
-                studentFeedback=None,
-                updatedAt=now,
-            )
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="portal.document.upload",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
         )
-        await db.execute(
-            update(requirement_table)
-            .where(
-                requirement_table.c.relatedDocumentId == document_id,
-                requirement_table.c.status.in_(["MISSING", "REQUESTED"]),
-            )
-            .values(status="UPLOADED")
-        )
-        await db.execute(
-            insert(task_table).values(
-                id=uuid4().hex,
-                title=f"Review {document.name}",
-                status="TODO",
-                priority="HIGH",
-                assigneeId=document.curatorId,
-                studentId=document.studentId,
-                documentId=document_id,
-                isStudentFacing=False,
-                createdAt=now,
-                updatedAt=now,
-            )
-        )
-        await log_document_activity(
+        await execute_command(
             db,
-            "DOCUMENT_UPLOADED",
-            document,
-            actor.id,
-            json.dumps({"name": document.name, "source": "python-api"}),
+            context=context,
+            payload={"document_id": document_id, **request.model_dump(mode="json")},
+            handler=lambda command: upload_document_command(
+                db,
+                context=command,
+                document_id=document_id,
+                request=request,
+                curator_id=document.curatorId,
+            ),
         )

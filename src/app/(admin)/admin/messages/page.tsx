@@ -2,25 +2,11 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { sendCuratorMessageAction } from "@/server/actions";
+import { CommandIdInput } from "@/components/command-id-input";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { fullName, formatDate } from "@/lib/utils";
-
-type MessageMeta = {
-  note?: string;
-  channel?: string;
-  from?: string;
-};
-
-function parseMeta(raw: string | null): MessageMeta {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as MessageMeta;
-  } catch {
-    return {};
-  }
-}
 
 export default async function AdminMessagesPage({
   searchParams,
@@ -31,10 +17,9 @@ export default async function AdminMessagesPage({
   const { studentId } = await searchParams;
   const scope = studentScopeWhere(session.user.id, session.user.role);
 
-  const activities = await prisma.activity.findMany({
+  const portalConversations = await prisma.conversation.findMany({
     where: {
-      type: "NOTE",
-      metadata: { contains: "student-curator" },
+      channel: "PORTAL",
       student: {
         status: { notIn: ["ARCHIVED"] },
         AND: [scope],
@@ -42,10 +27,9 @@ export default async function AdminMessagesPage({
     },
     include: {
       student: { select: { id: true, firstName: true, lastName: true } },
-      user: { select: { name: true } },
+      messages: { orderBy: { createdAt: "asc" }, take: 200 },
     },
-    orderBy: { createdAt: "desc" },
-    take: 200,
+    orderBy: { updatedAt: "desc" },
   });
 
   const conversations = new Map<
@@ -59,24 +43,20 @@ export default async function AdminMessagesPage({
     }
   >();
 
-  for (const activity of [...activities].reverse()) {
-    const meta = parseMeta(activity.metadata);
-    if (meta.channel !== "student-curator" || !meta.note?.trim()) continue;
-    const fromStudent = meta.from === "student";
-    const existing = conversations.get(activity.studentId);
-    conversations.set(activity.studentId, {
-      studentId: activity.studentId,
-      name: fullName(activity.student.firstName, activity.student.lastName),
-      lastText: meta.note.trim(),
-      lastAt: activity.createdAt,
-      unanswered: fromStudent,
+  for (const conversation of portalConversations) {
+    if (!conversation.student) continue;
+    const last = conversation.messages.at(-1);
+    if (!last) continue;
+    conversations.set(conversation.student.id, {
+      studentId: conversation.student.id,
+      name: fullName(
+        conversation.student.firstName,
+        conversation.student.lastName
+      ),
+      lastText: last.body?.trim() || "Вложение",
+      lastAt: last.createdAt,
+      unanswered: last.senderType === "STUDENT",
     });
-    if (existing && !fromStudent) {
-      conversations.set(activity.studentId, {
-        ...conversations.get(activity.studentId)!,
-        unanswered: false,
-      });
-    }
   }
 
   const list = [...conversations.values()].sort((a, b) => {
@@ -93,25 +73,20 @@ export default async function AdminMessagesPage({
     : null;
 
   const thread = selectedId
-    ? activities
-        .filter((a) => a.studentId === selectedId)
-        .map((activity) => {
-          const meta = parseMeta(activity.metadata);
-          if (meta.channel !== "student-curator" || !meta.note?.trim()) {
-            return null;
-          }
-          return {
-            id: activity.id,
-            text: meta.note.trim(),
-            fromStudent: meta.from === "student",
-            author: meta.from === "student"
-              ? fullName(activity.student.firstName, activity.student.lastName)
-              : activity.user?.name || "Куратор",
-            createdAt: activity.createdAt,
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => Boolean(item))
-        .reverse()
+    ? (
+        portalConversations.find(
+          (conversation) => conversation.studentId === selectedId
+        )?.messages ?? []
+      ).map((message) => ({
+        id: message.id,
+        text: message.body?.trim() || "",
+        fromStudent: message.senderType === "STUDENT",
+        author:
+          message.senderType === "STUDENT"
+            ? fullName(selected?.firstName ?? "", selected?.lastName ?? "")
+            : "Куратор",
+        createdAt: message.createdAt,
+      }))
     : [];
 
   return (
@@ -186,7 +161,16 @@ export default async function AdminMessagesPage({
                   </ul>
                 )}
                 <form action={sendCuratorMessageAction} className="space-y-2">
-                  <input type="hidden" name="studentId" value={selected.id} />
+          <input type="hidden" name="studentId" value={selected.id} />
+                  <CommandIdInput
+                    operation="message.staff.send"
+                    entityId={selected.id}
+                    entityVersion={
+                      portalConversations.find((c) => c.studentId === selected.id)
+                        ?.version ?? 0
+                    }
+                    formInstance="compose"
+                  />
                   <textarea
                     name="message"
                     required

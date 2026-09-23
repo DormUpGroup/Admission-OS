@@ -12,8 +12,53 @@ type BackendActor = {
   role: UserRole;
 };
 
+function getBackendApiBaseUrl() {
+  const raw = process.env.INTERNAL_API_URL?.trim() ?? "";
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (
+      process.env.VERCEL &&
+      (parsed.hostname === "localhost" ||
+        parsed.hostname === "127.0.0.1" ||
+        parsed.hostname === "::1")
+    ) {
+      return null;
+    }
+    return raw.replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
 export function isBackendApiConfigured() {
-  return Boolean(process.env.INTERNAL_API_SECRET || process.env.AUTH_SECRET);
+  const secret = process.env.INTERNAL_API_SECRET;
+  return Boolean(getBackendApiBaseUrl() && secret);
+}
+
+export type BackendCapability =
+  | "applications"
+  | "automation"
+  | "documents"
+  | "messages"
+  | "notifications"
+  | "programs"
+  | "reads"
+  | "students"
+  | "questionnaires"
+  | "deadlines"
+  | "tasks";
+
+export function isBackendCapabilityEnabled(capability: BackendCapability) {
+  if (!isBackendApiConfigured()) return false;
+  const configured = new Set(
+    (process.env.BACKEND_CAPABILITIES ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+  return configured.has("*") || configured.has(capability);
 }
 
 function encodeBase64Url(value: string) {
@@ -25,7 +70,7 @@ function encodeBase64Url(value: string) {
  * in server code: browser code never receives INTERNAL_API_SECRET.
  */
 export function createBackendToken(actor: BackendActor) {
-  const secret = process.env.INTERNAL_API_SECRET ?? process.env.AUTH_SECRET;
+  const secret = process.env.INTERNAL_API_SECRET;
   if (!secret) {
     throw new Error("INTERNAL_API_SECRET is not configured");
   }
@@ -55,7 +100,10 @@ export async function backendFetch(
   path: string,
   init: RequestInit = {}
 ) {
-  const baseUrl = process.env.INTERNAL_API_URL ?? "http://127.0.0.1:8000";
+  const baseUrl = getBackendApiBaseUrl();
+  if (!baseUrl) {
+    throw new Error("INTERNAL_API_URL is not configured");
+  }
   if (!path.startsWith("/")) throw new Error("Backend API paths must start with '/'");
 
   const headers = new Headers(init.headers);

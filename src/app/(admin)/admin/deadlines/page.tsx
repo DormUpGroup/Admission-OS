@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
+import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -75,7 +75,7 @@ export default async function AdminDeadlinesPage({
         : undefined;
 
   let deadlines: DeadlineRow[];
-  if (isBackendApiConfigured()) {
+  if (isBackendCapabilityEnabled("reads")) {
     const days = range === "all" ? "" : `?days=${range}`;
     const response = await backendFetch(session.user, `/v1/deadlines${days}`);
     if (!response.ok) throw new Error("Не удалось загрузить дедлайны");

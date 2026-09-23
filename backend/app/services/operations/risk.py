@@ -47,7 +47,7 @@ def calculate_application_risk(
         raise_to("CRITICAL")
     if (
         (days_left is not None and days_left <= 7 and has_blocker)
-        or waiting_days_max > 9
+        or waiting_days_max >= 9
         or has_overdue_urgent
     ):
         raise_to("HIGH")
@@ -56,3 +56,23 @@ def calculate_application_risk(
     if incomplete:
         raise_to("LOW")
     return level
+
+
+def calculate_student_risk_from_signals(
+    application_risks: list[str],
+    waiting_days_max: int,
+    has_overdue_urgent: bool,
+) -> str:
+    waiting_risk = (
+        "HIGH"
+        if waiting_days_max >= 9
+        else "MEDIUM"
+        if waiting_days_max >= 6
+        else "LOW"
+        if waiting_days_max >= 3
+        else "NONE"
+    )
+    levels = [*application_risks, waiting_risk]
+    if has_overdue_urgent:
+        levels.append("HIGH")
+    return max(levels or ["NONE"], key=RISK_RANK.__getitem__)

@@ -28,6 +28,7 @@ const primaryItems: NavItem[] = [
 ];
 
 const serviceLinks = [
+  { label: "Автоматизация", href: "/admin/automation" },
   { label: "Программы", href: "/admin/programs" },
   { label: "Качество данных", href: "/admin/data-quality" },
   { label: "Университеты", href: "/admin/universities" },

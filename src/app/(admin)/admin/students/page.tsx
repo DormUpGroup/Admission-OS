@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { prisma } from "@/lib/db";
-import { backendFetch, isBackendApiConfigured } from "@/lib/backend-api";
+import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { fullName } from "@/lib/utils";
 import { parseNextAction } from "@/server/services/readiness";
 import { PageHeader } from "@/components/page-header";
@@ -118,7 +118,7 @@ export default async function StudentsPage({
   let students: StudentListItem[];
   let curators: { id: string; name: string }[];
   let intakes: { intake: string }[];
-  if (isBackendApiConfigured()) {
+  if (isBackendCapabilityEnabled("reads")) {
     const params = new URLSearchParams({ view });
     if (sp.q) params.set("query", sp.q);
     if (sp.intake) params.set("intake", sp.intake);

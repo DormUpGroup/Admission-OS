@@ -617,6 +617,11 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           </Button>
         ) : match.selectionReady ? (
           <form action={createApplicationAction}>
+            <input
+              type="hidden"
+              name="commandId"
+              value={crypto.randomUUID()}
+            />
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="programId" value={match.programId} />
             <input
