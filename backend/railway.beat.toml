@@ -1,3 +1,4 @@
+# Hobby pilot caps — beat must stay exactly one replica.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
@@ -5,3 +6,9 @@ dockerfilePath = "Dockerfile"
 [deploy]
 startCommand = "celery -A app.workers.celery_app:celery_app beat --loglevel=INFO"
 restartPolicyType = "ON_FAILURE"
+numReplicas = 1
+
+[deploy.limitOverride.containers]
+# 512 MB RAM, 0.5 vCPU
+cpu = 0.5
+memoryBytes = 536870912

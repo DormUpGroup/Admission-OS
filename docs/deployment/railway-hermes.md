@@ -38,6 +38,31 @@ external data platform; all compute runs in this Railway project.
    - Railway Redis plugin
    - Used by Celery as transport only; Postgres outbox remains authoritative.
 
+## Hobby pilot resource limits
+
+Start on Railway **Hobby**. These caps keep a predictable bill for a single
+replica of each service. Raise a limit only after metrics show sustained
+pressure (OOM / CPU throttle), not preemptively.
+
+| Service | Replicas | RAM | vCPU | Where to set |
+| --- | ---: | ---: | ---: | --- |
+| `web` | 1 | 1 GB | 1 | `/railway.toml` → `deploy.limitOverride.containers` |
+| `api` | 1 | 1 GB | 1 | `/backend/railway.toml` |
+| `worker` | 1 | 1 GB | 1 | `/backend/railway.worker.toml` |
+| `beat` | 1 | 512 MB | 0.5 | `/backend/railway.beat.toml` |
+| `hermes` | 1 | 2 GB | 1 | Service settings → Deploy → Replica Limits |
+| `redis` | 1 | 256 MB | 0.5 | Redis plugin / service Replica Limits |
+
+`hermes` and `redis` are not built from this repo’s Dockerfiles, so set their
+replica limits in the Railway dashboard (or IaC) to match the table.
+
+Do not enable Serverless sleep on `worker`, `beat`, `hermes`, or `redis`:
+background leases and schedules must stay awake. Prefer private networking
+between services to avoid egress charges.
+
+Optional workspace soft alert: ~$25/month; hard limit only if you accept
+full shutdown when the cap is hit.
+
 The Hermes image digest is intentionally not hard-coded in this repository:
 the chosen upstream release and digest must be verified against the official
 release during deployment and recorded in Railway deployment metadata.

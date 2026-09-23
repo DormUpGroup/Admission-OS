@@ -1,3 +1,4 @@
+# Hobby pilot caps — keep cost predictable; raise only after metrics show pressure.
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
@@ -6,4 +7,10 @@ dockerfilePath = "Dockerfile"
 healthcheckPath = "/v1/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
+numReplicas = 1
 startCommand = "sh -c \"uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'\""
+
+[deploy.limitOverride.containers]
+# 1 GB RAM, 1 vCPU
+cpu = 1
+memoryBytes = 1073741824

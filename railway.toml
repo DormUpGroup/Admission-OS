@@ -1,3 +1,4 @@
+# Hobby pilot caps — keep cost predictable; raise only after metrics show pressure.
 [build]
 builder = "NIXPACKS"
 buildCommand = "npm ci && npm run build"
@@ -7,3 +8,9 @@ startCommand = "npm start"
 healthcheckPath = "/login"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
+numReplicas = 1
+
+[deploy.limitOverride.containers]
+# 1 GB RAM, 1 vCPU
+cpu = 1
+memoryBytes = 1073741824
