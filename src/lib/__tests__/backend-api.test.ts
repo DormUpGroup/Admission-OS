@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  getBackendApiBaseUrl,
   isBackendApiConfigured,
   isBackendCapabilityEnabled,
 } from "@/lib/backend-api";
@@ -32,6 +33,17 @@ describe("isBackendApiConfigured", () => {
     vi.stubEnv("INTERNAL_API_URL", "https://immigrome-api.up.railway.app");
     vi.stubEnv("VERCEL", "1");
     expect(isBackendApiConfigured()).toBe(true);
+  });
+
+  it("upgrades public Railway http URLs to https", () => {
+    vi.stubEnv(
+      "INTERNAL_API_URL",
+      "http://api-production-c191da.up.railway.app",
+    );
+    vi.stubEnv("VERCEL", "");
+    expect(getBackendApiBaseUrl()).toBe(
+      "https://api-production-c191da.up.railway.app",
+    );
   });
 
   it("enables only explicitly migrated capabilities", () => {

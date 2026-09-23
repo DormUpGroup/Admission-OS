@@ -12,7 +12,7 @@ type BackendActor = {
   role: UserRole;
 };
 
-function getBackendApiBaseUrl() {
+export function getBackendApiBaseUrl() {
   const raw = process.env.INTERNAL_API_URL?.trim() ?? "";
   if (!raw) return null;
   try {
@@ -26,7 +26,15 @@ function getBackendApiBaseUrl() {
     ) {
       return null;
     }
-    return raw.replace(/\/$/, "");
+    // Public Railway domains terminate TLS; http:// 301s to https and strips
+    // Authorization on the followed request (PATCH → 401).
+    if (
+      parsed.protocol === "http:" &&
+      parsed.hostname.endsWith(".up.railway.app")
+    ) {
+      parsed.protocol = "https:";
+    }
+    return parsed.toString().replace(/\/$/, "");
   } catch {
     return null;
   }

@@ -574,7 +574,18 @@ export async function saveProgramsQuestionnaireAction(
         body: JSON.stringify(payload),
       }
     );
-  if (!response.ok) throw new Error("Не удалось сохранить анкету программ");
+  if (!response.ok) {
+    const detail = (await response.text().catch(() => "")).slice(0, 300);
+    console.error("saveProgramsQuestionnaireAction failed", {
+      status: response.status,
+      detail,
+    });
+    throw new Error(
+      detail
+        ? `Не удалось сохранить анкету программ (${response.status}): ${detail}`
+        : `Не удалось сохранить анкету программ (${response.status})`
+    );
+  }
   await refreshStudentAfterBackendMutation(student.id, [
     "/portal",
     "/portal/questionnaire-2",
