@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
+    "db:ensure-critical-columns": "prisma db execute --file prisma/sql/ensure-critical-columns.sql",
     "db:push:local": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
