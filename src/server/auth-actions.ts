@@ -56,11 +56,14 @@ export async function loginAction(formData: FormData) {
   }
 
   try {
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
-      redirectTo: dest,
+      redirect: false,
     });
+    if (result?.error) {
+      return { error: "Неверный email или пароль" };
+    }
   } catch (e) {
     if (isNextRedirect(e)) throw e;
     const message = authErrorMessage(e);
@@ -69,7 +72,7 @@ export async function loginAction(formData: FormData) {
     return { error: "Не удалось войти. Проверьте логи сервера." };
   }
 
-  redirect(dest);
+  return { dest };
 }
 
 export async function logoutAction() {

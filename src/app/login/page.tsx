@@ -13,13 +13,19 @@ export default function LoginPage() {
   async function onSubmit(formData: FormData) {
     setLoading(true);
     setError("");
-    const result = await loginAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await loginAction(formData);
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      // Full navigation so the session cookie is visible to middleware/RSC.
+      window.location.assign(result?.dest || "/");
+    } catch {
+      setError("Не удалось войти. Попробуйте ещё раз.");
       setLoading(false);
-      return;
     }
-    window.location.assign("/");
   }
 
   return (
