@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/ensure-tailwind-oxide.js && prisma generate && next build",
     "start": "next start",
     "worker": "tsx src/worker/index.ts",
     "lint": "eslint",
@@ -80,5 +80,9 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "4.3.3",
+    "@tailwindcss/oxide-linux-x64-musl": "4.3.3"
   }
 }
