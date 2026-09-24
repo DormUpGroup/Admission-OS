@@ -20,9 +20,6 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
      `AUTOMATION_ENABLED=true` and `TELEGRAM_BOT_TOKEN` are set on web (no wait for
      worker poll). The worker remains required for welcome/help, backlog, and
      calendar events.
-   - Do **not** set `NPM_CONFIG_PRODUCTION` on Railway; Nixpacks installs via
-     `npm ci --include=dev` ([`nixpacks.toml`](../../nixpacks.toml)) so the
-     deprecated `npm warn config production` does not appear.
 5. Do **not** redeploy old api / beat / Celery workers.
 
 ## Telegram webhook
