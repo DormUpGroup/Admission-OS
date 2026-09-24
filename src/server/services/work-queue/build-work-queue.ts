@@ -307,7 +307,7 @@ function collectItems(
         group: "NEEDS_DECISION",
         action: "Ответить студенту",
         reason: "есть сообщение без ответа",
-        href: `/admin/messages?studentId=${student.id}`,
+        href: `/admin/messages/site?studentId=${student.id}`,
         entityId: String(student.lastStudentMessageAt.getTime()),
         stage,
       })

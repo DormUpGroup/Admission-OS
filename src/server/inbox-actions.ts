@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/server/auth/guards";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
+import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 
 export async function sendTelegramInboxReplyAction(formData: FormData) {
   const session = await requireStaff();
@@ -13,11 +14,16 @@ export async function sendTelegramInboxReplyAction(formData: FormData) {
     throw new Error("Укажите текст ответа");
   }
 
-  await requestTelegramSend({
+  const { message, duplicate } = await requestTelegramSend({
     conversationId,
     body,
     senderUserId: session.user.id,
     clientRequestId: `admin-inbox:${conversationId}:${Date.now()}`,
   });
-  revalidatePath("/admin/inbox");
+
+  if (!duplicate) {
+    await tryDeliverTelegramSendNow(message.id);
+  }
+
+  revalidatePath("/admin/messages/telegram");
 }

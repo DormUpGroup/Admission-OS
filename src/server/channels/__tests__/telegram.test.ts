@@ -5,6 +5,11 @@ import {
   hashJson,
   normalizeTelegramUpdate,
 } from "@/server/channels/telegram";
+import {
+  parseTelegramBotCommand,
+  TELEGRAM_HELP_TEXT,
+  TELEGRAM_WELCOME_TEXT,
+} from "@/server/channels/telegram-copy";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 import {
   DELIVERY_STATUS,
@@ -54,6 +59,12 @@ describe("telegram normalize (unit)", () => {
 
     const server = Object.assign(new Error("boom"), { status: 502 });
     expect(isAmbiguousTelegramError(server)).toBe(true);
+  });
+
+  it("parseTelegramBotCommand strips @bot suffix", () => {
+    expect(parseTelegramBotCommand("/start@ImmigromeBot")).toBe("start");
+    expect(parseTelegramBotCommand("/help")).toBe("help");
+    expect(parseTelegramBotCommand("hello")).toBeNull();
   });
 });
 
@@ -187,5 +198,171 @@ describeDb("telegram ingest + prepare (db)", () => {
       where: { messageId: outbound.id, provider: "TELEGRAM" },
     });
     expect(attempts).toBe(1);
+  });
+
+  it("/start enqueues one welcome via telegram.send when automation is on", async () => {
+    const prev = process.env.AUTOMATION_ENABLED;
+    process.env.AUTOMATION_ENABLED = "true";
+    try {
+      const updateId = `${prefix}-start-${Date.now()}`;
+      const userId = 555010 + Math.floor(Math.random() * 1000);
+      const payload = {
+        update_id: updateId,
+        message: {
+          message_id: 9101,
+          text: "/start",
+          from: { id: userId, first_name: "Start", username: "tgstart" },
+          chat: { id: userId, type: "private" },
+        },
+      };
+      const message = normalizeTelegramUpdate(payload)!;
+      const first = await ingestTelegramUpdate({
+        rawPayload: payload,
+        message,
+      });
+      expect(first.duplicate).toBe(false);
+      if (first.duplicate) return;
+
+      const welcomeKey = `telegram:welcome:${first.conversationId}`;
+      const welcomeMsg = await prisma.conversationMessage.findUnique({
+        where: { clientRequestId: welcomeKey },
+      });
+      expect(welcomeMsg).not.toBeNull();
+      expect(welcomeMsg!.direction).toBe("OUTBOUND");
+      expect(welcomeMsg!.body).toBe(TELEGRAM_WELCOME_TEXT);
+
+      const sendOutbox = await prisma.outboxEvent.findUnique({
+        where: { idempotencyKey: `telegram.send:${welcomeMsg!.id}` },
+      });
+      expect(sendOutbox).not.toBeNull();
+      expect(sendOutbox!.eventType).toBe("telegram.send");
+
+      const secondPayload = {
+        update_id: `${updateId}-2`,
+        message: {
+          message_id: 9102,
+          text: "/start",
+          from: { id: userId, first_name: "Start", username: "tgstart" },
+          chat: { id: userId, type: "private" },
+        },
+      };
+      const second = await ingestTelegramUpdate({
+        rawPayload: secondPayload,
+        message: normalizeTelegramUpdate(secondPayload)!,
+      });
+      expect(second.duplicate).toBe(false);
+      if (second.duplicate) return;
+      expect(second.conversationId).toBe(first.conversationId);
+
+      const welcomeCount = await prisma.conversationMessage.count({
+        where: {
+          conversationId: first.conversationId,
+          clientRequestId: welcomeKey,
+        },
+      });
+      expect(welcomeCount).toBe(1);
+    } finally {
+      if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
+      else process.env.AUTOMATION_ENABLED = prev;
+    }
+  });
+
+  it("does not enqueue welcome when AUTOMATION_ENABLED=false", async () => {
+    const prev = process.env.AUTOMATION_ENABLED;
+    process.env.AUTOMATION_ENABLED = "false";
+    try {
+      const updateId = `${prefix}-off-${Date.now()}`;
+      const userId = 555020 + Math.floor(Math.random() * 1000);
+      const payload = {
+        update_id: updateId,
+        message: {
+          message_id: 9201,
+          text: "/start",
+          from: { id: userId, first_name: "Off", username: "tgoff" },
+          chat: { id: userId, type: "private" },
+        },
+      };
+      const ingested = await ingestTelegramUpdate({
+        rawPayload: payload,
+        message: normalizeTelegramUpdate(payload)!,
+      });
+      expect(ingested.duplicate).toBe(false);
+      if (ingested.duplicate) return;
+
+      const inbound = await prisma.conversationMessage.count({
+        where: {
+          conversationId: ingested.conversationId,
+          direction: "INBOUND",
+        },
+      });
+      expect(inbound).toBe(1);
+
+      const welcome = await prisma.conversationMessage.findUnique({
+        where: {
+          clientRequestId: `telegram:welcome:${ingested.conversationId}`,
+        },
+      });
+      expect(welcome).toBeNull();
+
+      const sendCount = await prisma.outboxEvent.count({
+        where: {
+          eventType: "telegram.send",
+          aggregateId: {
+            in: (
+              await prisma.conversationMessage.findMany({
+                where: { conversationId: ingested.conversationId },
+                select: { id: true },
+              })
+            ).map((m) => m.id),
+          },
+        },
+      });
+      expect(sendCount).toBe(0);
+    } finally {
+      if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
+      else process.env.AUTOMATION_ENABLED = prev;
+    }
+  });
+
+  it("/help enqueues help text via telegram.send when automation is on", async () => {
+    const prev = process.env.AUTOMATION_ENABLED;
+    process.env.AUTOMATION_ENABLED = "true";
+    try {
+      const updateId = `${prefix}-help-${Date.now()}`;
+      const userId = 555030 + Math.floor(Math.random() * 1000);
+      const payload = {
+        update_id: updateId,
+        message: {
+          message_id: 9301,
+          text: "/help",
+          from: { id: userId, first_name: "Help", username: "tghelp" },
+          chat: { id: userId, type: "private" },
+        },
+      };
+      const ingested = await ingestTelegramUpdate({
+        rawPayload: payload,
+        message: normalizeTelegramUpdate(payload)!,
+      });
+      expect(ingested.duplicate).toBe(false);
+      if (ingested.duplicate) return;
+
+      const helpMsg = await prisma.conversationMessage.findUnique({
+        where: {
+          clientRequestId: `telegram:help:${updateId}`,
+        },
+      });
+      expect(helpMsg).not.toBeNull();
+      expect(helpMsg!.body).toBe(TELEGRAM_HELP_TEXT);
+
+      const welcome = await prisma.conversationMessage.findUnique({
+        where: {
+          clientRequestId: `telegram:welcome:${ingested.conversationId}`,
+        },
+      });
+      expect(welcome).toBeNull();
+    } finally {
+      if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
+      else process.env.AUTOMATION_ENABLED = prev;
+    }
   });
 });

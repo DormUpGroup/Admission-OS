@@ -16,12 +16,19 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
    - `AUTOMATION_ENABLED=true` to process `message.received` / `telegram.send` (noop / `worker.log` always run)
    - Phase 1+: `TELEGRAM_BOT_TOKEN` (outbound send)
 4. Web env (Phase 1): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`
+   - Admin inbox replies may deliver **inline** from the web process when
+     `AUTOMATION_ENABLED=true` and `TELEGRAM_BOT_TOKEN` are set on web (no wait for
+     worker poll). The worker remains required for welcome/help, backlog, and
+     calendar events.
 5. Do **not** redeploy old api / beat / Celery workers.
 
 ## Telegram webhook
 
 Point the bot webhook at `https://<web-host>/api/webhooks/telegram` with
 `secret_token=<TELEGRAM_WEBHOOK_SECRET>` (Telegram sends `X-Telegram-Bot-Api-Secret-Token`).
+
+BotFather profile copy (name, about, description, commands, avatar): see
+[`docs/telegram-botfather.md`](../telegram-botfather.md).
 
 Admin inbox: `/admin/inbox`. Appointments: `/admin/appointments`.
 

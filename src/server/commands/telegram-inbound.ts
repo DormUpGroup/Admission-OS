@@ -4,7 +4,13 @@ import {
   hashJson,
   type NormalizedTelegramMessage,
 } from "@/server/channels/telegram";
-import { enqueueOutbox } from "@/server/commands/outbox";
+import {
+  parseTelegramBotCommand,
+  TELEGRAM_HELP_TEXT,
+  TELEGRAM_WELCOME_TEXT,
+} from "@/server/channels/telegram-copy";
+import { enqueueOutbox, isAutomationEnabled } from "@/server/commands/outbox";
+import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 
 const CHANNEL = "TELEGRAM";
 
@@ -138,6 +144,7 @@ export async function ingestTelegramUpdate(input: {
     });
 
     let messageId: string;
+    let createdInbound = false;
     if (existingMessage) {
       messageId = existingMessage.id;
     } else {
@@ -157,6 +164,7 @@ export async function ingestTelegramUpdate(input: {
         },
       });
       messageId = created.id;
+      createdInbound = true;
     }
 
     const outbox = await enqueueOutbox(tx, {
@@ -171,6 +179,35 @@ export async function ingestTelegramUpdate(input: {
       },
       idempotencyKey: `telegram:update:${message.providerEventId}`,
     });
+
+    if (createdInbound && isAutomationEnabled()) {
+      const command = parseTelegramBotCommand(message.text);
+
+      if (command === "help") {
+        await requestTelegramSend({
+          tx,
+          conversationId: conversation.id,
+          body: TELEGRAM_HELP_TEXT,
+          clientRequestId: `telegram:help:${message.providerEventId}`,
+        });
+      } else {
+        const inboundCount = await tx.conversationMessage.count({
+          where: {
+            conversationId: conversation.id,
+            direction: "INBOUND",
+          },
+        });
+        const shouldWelcome = command === "start" || inboundCount === 1;
+        if (shouldWelcome) {
+          await requestTelegramSend({
+            tx,
+            conversationId: conversation.id,
+            body: TELEGRAM_WELCOME_TEXT,
+            clientRequestId: `telegram:welcome:${conversation.id}`,
+          });
+        }
+      }
+    }
 
     await tx.inboxEvent.update({
       where: { id: inbox.id },
