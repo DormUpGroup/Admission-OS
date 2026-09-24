@@ -4,7 +4,8 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm run build"
+# Force Tailwind Oxide native binding after npm ci (optionalDeps bug on cross-platform lockfiles)
+buildCommand = "npm i --no-save @tailwindcss/oxide-linux-x64-gnu@4.3.3 @tailwindcss/oxide-linux-x64-musl@4.3.3 && npm run build"
 
 [deploy]
 startCommand = "npx prisma migrate deploy && npm start"
