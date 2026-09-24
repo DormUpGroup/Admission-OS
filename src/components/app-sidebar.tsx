@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Calendar,
   ClipboardList,
   LayoutList,
   MessageSquare,
@@ -24,6 +25,8 @@ const primaryItems: NavItem[] = [
   { label: "Ученики", href: "/admin/students", icon: Users },
   { label: "Заявки", href: "/admin/applications", icon: ClipboardList },
   { label: "Сообщения", href: "/admin/messages", icon: MessageSquare },
+  { label: "Telegram", href: "/admin/inbox", icon: MessageSquare },
+  { label: "Консультации", href: "/admin/appointments", icon: Calendar },
   { label: "Настройки", href: "/admin/settings", icon: Settings },
 ];
 

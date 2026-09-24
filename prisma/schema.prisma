@@ -18,13 +18,16 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  curatedStudents  Student[]           @relation("CuratorStudents")
-  acceptedStudents Student[]           @relation("StudentAcceptedBy")
-  studentProfile   Student?            @relation("StudentUser")
-  assignedTasks    Task[]              @relation("TaskAssignee")
-  reviewedDocs     Document[]          @relation("DocumentReviewer")
-  activities       Activity[]
-  notifications    InAppNotification[]
+  curatedStudents       Student[]           @relation("CuratorStudents")
+  acceptedStudents      Student[]           @relation("StudentAcceptedBy")
+  studentProfile        Student?            @relation("StudentUser")
+  assignedTasks         Task[]              @relation("TaskAssignee")
+  reviewedDocs          Document[]          @relation("DocumentReviewer")
+  activities            Activity[]
+  notifications         InAppNotification[]
+  assignedConversations Conversation[]      @relation("ConversationAssignee")
+  assignedAppointments  Appointment[]       @relation("AppointmentAssignee")
+  assignedLeads         Lead[]              @relation("LeadAssignee")
 }
 
 model Student {
@@ -66,7 +69,11 @@ model Student {
   activities     Activity[]
   programMatches ProgramMatch[]
   shortlistItems StudentShortlistItem[]
-  notifications  InAppNotification[]
+  notifications     InAppNotification[]
+  conversations     Conversation[]
+  appointments      Appointment[]
+  channelIdentities ChannelIdentity[]
+  convertedFromLead Lead?                 @relation("ConvertedLead")
 
   @@index([curatorId])
   @@index([acceptedById])
@@ -654,4 +661,207 @@ model InAppNotification {
 
   @@index([userId, readAt])
   @@index([studentId])
+}
+
+// --- Outbox / channels (Phase 0–1) ---
+
+model Lead {
+  id                 String    @id @default(cuid())
+  firstName          String?
+  lastName           String?
+  email              String?
+  phone              String?
+  status             String    @default("NEW")
+  source             String    @default("TELEGRAM")
+  locale             String?
+  consentStatus      String    @default("UNKNOWN")
+  consentAt          DateTime?
+  qualificationJson  Json?
+  assignedCuratorId  String?
+  convertedStudentId String?   @unique
+  convertedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  assignedCurator   User?             @relation("LeadAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
+  convertedStudent  Student?          @relation("ConvertedLead", fields: [convertedStudentId], references: [id], onDelete: SetNull)
+  channelIdentities ChannelIdentity[]
+  conversations     Conversation[]
+  appointments      Appointment[]
+
+  @@index([status, createdAt])
+  @@index([assignedCuratorId, status])
+  @@index([email])
+  @@index([phone])
+}
+
+model ChannelIdentity {
+  id           String    @id @default(cuid())
+  channel      String
+  externalId   String
+  username     String?
+  displayName  String?
+  leadId       String?
+  studentId    String?
+  verifiedAt   DateTime?
+  metadataJson Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, externalId])
+  @@index([leadId])
+  @@index([studentId])
+}
+
+model InboxEvent {
+  id              String    @id @default(cuid())
+  provider        String
+  providerEventId String
+  payloadHash     String
+  payloadJson     Json
+  status          String    @default("RECEIVED")
+  receivedAt      DateTime  @default(now())
+  processedAt     DateTime?
+  errorMessage    String?
+
+  @@unique([provider, providerEventId])
+  @@index([status, receivedAt])
+}
+
+model Conversation {
+  id                    String    @id @default(cuid())
+  channel               String
+  status                String    @default("OPEN")
+  leadId                String?
+  studentId             String?
+  assignedCuratorId     String?
+  hermesSessionId       String?
+  automationPausedAt    DateTime?
+  automationPauseReason String?
+  lastInboundAt         DateTime?
+  lastOutboundAt        DateTime?
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  lead            Lead?                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student         Student?              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignedCurator User?                 @relation("ConversationAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
+  messages        ConversationMessage[]
+  appointments    Appointment[]
+
+  @@index([leadId, status])
+  @@index([studentId, status])
+  @@index([assignedCuratorId, status])
+  @@index([channel, status])
+}
+
+model ConversationMessage {
+  id                String    @id @default(cuid())
+  conversationId    String
+  clientRequestId   String?   @unique
+  legacyActivityId  String?   @unique
+  providerMessageId String?
+  direction         String
+  senderType        String
+  senderUserId      String?
+  body              String?
+  attachmentsJson   Json?
+  deliveryStatus    String    @default("RECEIVED")
+  policyStatus      String    @default("PENDING")
+  replyToMessageId  String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  conversation     Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo          ConversationMessage?  @relation("MessageReplies", fields: [replyToMessageId], references: [id])
+  replies          ConversationMessage[] @relation("MessageReplies")
+  deliveryAttempts DeliveryAttempt[]
+
+  @@unique([conversationId, providerMessageId])
+  @@index([conversationId, createdAt])
+  @@index([deliveryStatus, createdAt])
+}
+
+model Appointment {
+  id                String   @id @default(cuid())
+  clientRequestId   String   @unique
+  leadId            String?
+  studentId         String?
+  conversationId    String?
+  assignedCuratorId String?
+  title             String
+  startsAt          DateTime
+  endsAt            DateTime
+  timezone          String   @default("Europe/Rome")
+  status            String   @default("PENDING")
+  googleEventId     String?  @unique
+  participantsJson  Json?
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student         Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  assignedCurator User?         @relation("AppointmentAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
+
+  @@index([assignedCuratorId, startsAt])
+  @@index([leadId, startsAt])
+  @@index([studentId, startsAt])
+  @@index([status, startsAt])
+}
+
+model OutboxEvent {
+  id             String    @id @default(cuid())
+  aggregateType  String
+  aggregateId    String
+  eventType      String
+  eventVersion   Int       @default(1)
+  payloadJson    Json
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(8)
+  nextAttemptAt  DateTime  @default(now())
+  lockedBy       String?
+  lockedAt       DateTime?
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  processedAt    DateTime?
+  lastError      String?
+  idempotencyKey String    @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  deliveryAttempts DeliveryAttempt[]
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId, createdAt])
+  @@index([lockedAt])
+  @@index([status, leaseExpiresAt])
+}
+
+model DeliveryAttempt {
+  id                 String    @id @default(cuid())
+  messageId          String?
+  outboxEventId      String?
+  provider           String
+  attempt            Int
+  status             String
+  providerResponseId String?
+  errorCode          String?
+  errorMessage       String?
+  nextRetryAt        DateTime?
+  createdAt          DateTime  @default(now())
+
+  message     ConversationMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  outboxEvent OutboxEvent?         @relation(fields: [outboxEventId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, messageId, attempt])
+  @@index([outboxEventId])
+  @@index([status, nextRetryAt])
 }

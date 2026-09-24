@@ -1,0 +1,14 @@
+# Web service (Admission-OS) — same Railway project as the worker.
+# In the Railway dashboard, set this service's Config-as-Code path to /railway.toml
+# (or paste these settings). Run migrations on web deploy so the worker sees new tables.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npx prisma migrate deploy && npm start"
+healthcheckPath = "/login"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+numReplicas = 1

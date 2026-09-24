@@ -1,0 +1,17 @@
+# Node outbox worker — same repo as web, different start command.
+# Railway: add a second service from this repo, set Config-as-Code path to
+# /railway.worker.toml (or copy startCommand below).
+#
+# Required env: DATABASE_URL
+# Optional: AUTOMATION_ENABLED, WORKER_ID, WORKER_POLL_INTERVAL_MS, WORKER_CLAIM_LIMIT
+# Channel secrets (Telegram/Calendar) are not required for Phase 0 noop/log handlers.
+
+[build]
+builder = "NIXPACKS"
+# Worker does not need Next.js build artifacts; generate Prisma client only.
+buildCommand = "npx prisma generate"
+
+[deploy]
+startCommand = "npm run worker"
+restartPolicyType = "ON_FAILURE"
+numReplicas = 1
