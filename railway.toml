@@ -5,8 +5,6 @@
 [build]
 builder = "NIXPACKS"
 buildCommand = "npm run build"
-# Prefer modern npm omit/include flags over deprecated NPM_CONFIG_PRODUCTION.
-# See nixpacks.toml [phases.install].
 
 [deploy]
 startCommand = "npx prisma migrate deploy && npm start"
