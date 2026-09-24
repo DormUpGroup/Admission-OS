@@ -3,8 +3,9 @@
 # /railway.worker.toml (or copy startCommand below).
 #
 # Required env: DATABASE_URL
-# Optional: AUTOMATION_ENABLED, WORKER_ID, WORKER_POLL_INTERVAL_MS, WORKER_CLAIM_LIMIT
-# Channel secrets (Telegram/Calendar) are not required for Phase 0 noop/log handlers.
+# Telegram outbound: TELEGRAM_BOT_TOKEN, AUTOMATION_ENABLED=true
+# Optional: WORKER_ID, WORKER_POLL_INTERVAL_MS, WORKER_CLAIM_LIMIT
+# Calendar (phase 2): GOOGLE_CALENDAR_ID, GOOGLE_SERVICE_ACCOUNT_JSON
 
 [build]
 builder = "NIXPACKS"
