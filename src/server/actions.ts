@@ -1104,7 +1104,7 @@ export async function sendStudentMessageAction(formData: FormData) {
   revalidatePath("/portal/messages");
   revalidatePath("/portal");
   revalidatePath("/admin");
-  revalidatePath("/admin/messages");
+  revalidatePath("/admin/messages/site");
 }
 
 export async function dismissWorkQueueItemAction(formData: FormData) {
@@ -1167,7 +1167,7 @@ export async function sendCuratorMessageAction(formData: FormData) {
 
   revalidatePath("/portal/messages");
   revalidatePath("/admin");
-  revalidatePath("/admin/messages");
+  revalidatePath("/admin/messages/site");
   revalidatePath(`/admin/students/${studentId}`);
 }
 

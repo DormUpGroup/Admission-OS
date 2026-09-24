@@ -108,7 +108,7 @@ export function StudentAdminSummary({
 
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm">
-            <Link href={`/admin/messages?studentId=${studentId}`}>
+            <Link href={`/admin/messages/site?studentId=${studentId}`}>
               Написать студенту
             </Link>
           </Button>
