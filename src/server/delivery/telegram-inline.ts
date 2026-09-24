@@ -7,7 +7,12 @@ import {
   OUTBOX_STATUS,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
-import { handleTelegramSend } from "@/worker/handlers/telegram";
+import {
+  callTelegramDelivery,
+  finalizeTelegramDelivery,
+  prepareTelegramDelivery,
+  TelegramRetryableError,
+} from "@/server/delivery/telegram";
 
 export type InlineDeliverResult =
   | { status: "skipped"; reason: "automation_off" | "no_token" | "not_found" | "lost_lease" }
@@ -63,7 +68,6 @@ export async function tryDeliverTelegramSendNow(
     if (!existing) {
       return { status: "skipped", reason: "not_found" };
     }
-    // Already claimed by worker or completed — leave alone.
     return { status: "skipped", reason: "lost_lease" };
   }
 
@@ -75,7 +79,24 @@ export async function tryDeliverTelegramSendNow(
   }
 
   try {
-    await handleTelegramSend(prisma, event);
+    const prepared = await prepareTelegramDelivery(event);
+
+    if (prepared.action === "skip_success" || prepared.action === "skip_unknown") {
+      await finalizeTelegramDelivery(prepared, {
+        skip: prepared.action === "skip_success" ? "success" : "unknown",
+      });
+    } else {
+      try {
+        const result = await callTelegramDelivery(prepared, env);
+        await finalizeTelegramDelivery(prepared, { result });
+      } catch (error) {
+        const outcome = await finalizeTelegramDelivery(prepared, { error });
+        if (outcome === "retry" || error instanceof TelegramRetryableError) {
+          throw error instanceof Error ? error : new Error(String(error));
+        }
+      }
+    }
+
     await completeOutboxEvent(prisma, event.id, leaseToken, { now: new Date() });
     return { status: "delivered" };
   } catch (error) {
