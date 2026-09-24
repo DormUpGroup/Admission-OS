@@ -1,0 +1,4 @@
+# Install with modern npm flags (avoids deprecated NPM_CONFIG_PRODUCTION warn).
+# --include=dev is required: Next build needs typescript/tailwind/prisma; worker needs tsx.
+[phases.install]
+cmds = ["npm ci --include=dev"]

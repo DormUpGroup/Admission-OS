@@ -11,6 +11,7 @@
 builder = "NIXPACKS"
 # Worker does not need Next.js build artifacts; generate Prisma client only.
 buildCommand = "npx prisma generate"
+# Install uses nixpacks.toml: npm ci --include=dev (tsx lives in devDependencies).
 
 [deploy]
 startCommand = "npm run worker"
