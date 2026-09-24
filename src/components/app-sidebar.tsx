@@ -9,12 +9,12 @@ import {
   ChevronDown,
   ClipboardList,
   Globe,
-  Instagram,
   LayoutList,
   Mail,
   MessageSquare,
   Send,
   Settings,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ const messageChannels: ChannelItem[] = [
   { label: "Сайт", href: "/admin/messages/site", icon: Globe },
   { label: "Telegram", href: "/admin/messages/telegram", icon: Send },
   { label: "Почта", href: "/admin/messages/email", icon: Mail },
-  { label: "Instagram", href: "/admin/messages/instagram", icon: Instagram },
+  { label: "Instagram", href: "/admin/messages/instagram", icon: Sparkles },
 ];
 
 const serviceLinks = [

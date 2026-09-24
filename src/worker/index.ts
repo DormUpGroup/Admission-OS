@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import {
@@ -9,6 +11,29 @@ import {
 } from "@/server/commands/outbox";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
+
+/** Load local `.env` when present (no-op on Railway where vars are injected). */
+function loadLocalEnvFile() {
+  const path = resolve(process.cwd(), ".env");
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let val = trimmed.slice(eq + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+}
+
+loadLocalEnvFile();
 
 const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 2000);
 const CLAIM_LIMIT = Number(process.env.WORKER_CLAIM_LIMIT ?? 25);
