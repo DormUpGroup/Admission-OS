@@ -8,6 +8,7 @@ import {
   createApplicationAction,
   verifyProgramDossierFactsAction,
 } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { MapPin, ExternalLink } from "lucide-react";
 import { UniversityMonogram } from "@/components/university-monogram";
 import type { ProgramFieldStatusMap } from "@/lib/program-matching/field-status";
@@ -403,7 +404,13 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           <summary className="cursor-pointer font-medium text-muted-foreground">
             Подтвердить досье (куратор)
           </summary>
-          <form action={verifyProgramDossierFactsAction} className="mt-2 grid gap-2 sm:grid-cols-2">
+          <CommandForm
+            action={verifyProgramDossierFactsAction}
+            operation="program-dossier.verify"
+            entityId={match.programAcademicYearId}
+            formInstance={`verify-${match.matchId}`}
+            className="mt-2 grid gap-2 sm:grid-cols-2"
+          >
             <input type="hidden" name="studentId" value={match.studentId} />
             <input
               type="hidden"
@@ -517,7 +524,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <Button type="submit" size="sm" className="sm:col-span-2">
               Сохранить подтверждение
             </Button>
-          </form>
+          </CommandForm>
         </details>
 
         {match.reasons.length > 0 ? (
@@ -567,39 +574,59 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         ) : null}
 
         <div className="mt-auto grid grid-cols-2 gap-2 pt-1">
-          <form action={reviewProgramMatchAction}>
+          <CommandForm
+            action={reviewProgramMatchAction}
+            operation="program-match.review"
+            entityId={match.matchId}
+            formInstance="approve"
+          >
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="APPROVED" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
               Одобрить
             </Button>
-          </form>
-          <form action={reviewProgramMatchAction}>
+          </CommandForm>
+          <CommandForm
+            action={reviewProgramMatchAction}
+            operation="program-match.review"
+            entityId={match.matchId}
+            formInstance="reject"
+          >
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="REJECTED" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
               Отклонить
             </Button>
-          </form>
-          <form action={reviewProgramMatchAction}>
+          </CommandForm>
+          <CommandForm
+            action={reviewProgramMatchAction}
+            operation="program-match.review"
+            entityId={match.matchId}
+            formInstance="needs-review"
+          >
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="matchId" value={match.matchId} />
             <input type="hidden" name="status" value="NEEDS_REVIEW" />
             <Button type="submit" size="sm" variant="outline" className="w-full">
               На проверку
             </Button>
-          </form>
+          </CommandForm>
           {match.selectionReady ? (
-            <form action={reviewProgramMatchAction}>
+            <CommandForm
+              action={reviewProgramMatchAction}
+              operation="program-match.review"
+              entityId={match.matchId}
+              formInstance="shortlist"
+            >
               <input type="hidden" name="studentId" value={match.studentId} />
               <input type="hidden" name="matchId" value={match.matchId} />
               <input type="hidden" name="status" value="SHORTLISTED" />
               <Button type="submit" size="sm" className="w-full">
                 В короткий список
               </Button>
-            </form>
+            </CommandForm>
           ) : (
             <p className="col-span-2 text-xs text-muted-foreground">
               Сначала найдите и подтвердите страницу программы.
@@ -616,12 +643,13 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             </Link>
           </Button>
         ) : match.selectionReady ? (
-          <form action={createApplicationAction}>
-            <input
-              type="hidden"
-              name="commandId"
-              value={crypto.randomUUID()}
-            />
+          <CommandForm
+            action={createApplicationAction}
+            operation="application.create"
+            entityId={`${match.studentId}:${match.programId}`}
+            entityVersion={match.matchId}
+            formInstance="from-match"
+          >
             <input type="hidden" name="studentId" value={match.studentId} />
             <input type="hidden" name="programId" value={match.programId} />
             <input
@@ -640,7 +668,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <Button type="submit" size="sm" variant="secondary" className="w-full">
               Создать заявку
             </Button>
-          </form>
+          </CommandForm>
         ) : null}
       </div>
     </article>

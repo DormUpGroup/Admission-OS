@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CommandIdInput } from "@/components/command-id-input";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -55,14 +55,15 @@ export function AnketaDecisionScreen({
 
       <div className="flex flex-col gap-2">
         {view.canAccept || view.acceptBlockedReason ? (
-          <form action={acceptAccompanimentAction}>
+          <CommandForm
+            action={acceptAccompanimentAction}
+            operation="accompaniment.accept"
+            entityId={view.studentId}
+            entityVersion={view.studentVersion}
+            formInstance="accept"
+          >
             <input type="hidden" name="studentId" value={view.studentId} />
-            <CommandIdInput
-              operation="accompaniment.accept"
-              entityId={view.studentId}
-              entityVersion={view.studentVersion}
-              formInstance="accept"
-            />
+            
             <Button
               type="submit"
               size="lg"
@@ -73,21 +74,23 @@ export function AnketaDecisionScreen({
             >
               Принять на сопровождение
             </Button>
-          </form>
+          </CommandForm>
         ) : null}
         {!view.canAccept && view.acceptBlockedReason ? (
           <p className="text-sm text-muted-foreground">{view.acceptBlockedReason}</p>
         ) : null}
 
         {view.canClarify ? (
-          <form action={requestAccompanimentClarificationAction} className="space-y-2">
+          <CommandForm
+            action={requestAccompanimentClarificationAction}
+            operation="accompaniment.request_clarification"
+            entityId={view.studentId}
+            entityVersion={view.studentVersion}
+            formInstance="clarify"
+            className="space-y-2"
+          >
             <input type="hidden" name="studentId" value={view.studentId} />
-            <CommandIdInput
-              operation="accompaniment.request_clarification"
-              entityId={view.studentId}
-              entityVersion={view.studentVersion}
-              formInstance="clarify"
-            />
+            
             <textarea
               name="note"
               rows={2}
@@ -102,7 +105,7 @@ export function AnketaDecisionScreen({
             >
               Запросить уточнение
             </Button>
-          </form>
+          </CommandForm>
         ) : null}
 
         {view.insufficientReason ? (
@@ -110,18 +113,19 @@ export function AnketaDecisionScreen({
         ) : null}
 
         {view.canReject ? (
-          <form action={rejectAccompanimentAction}>
+          <CommandForm
+            action={rejectAccompanimentAction}
+            operation="accompaniment.reject"
+            entityId={view.studentId}
+            entityVersion={view.studentVersion}
+            formInstance="reject"
+          >
             <input type="hidden" name="studentId" value={view.studentId} />
-            <CommandIdInput
-              operation="accompaniment.reject"
-              entityId={view.studentId}
-              entityVersion={view.studentVersion}
-              formInstance="reject"
-            />
+            
             <Button type="submit" size="lg" variant="ghost" className="w-full sm:w-auto">
               Отказать
             </Button>
-          </form>
+          </CommandForm>
         ) : null}
       </div>
 

@@ -5,6 +5,7 @@ import {
   pauseAutomationConversationAction,
   requestLeadConversionAction,
 } from "@/server/automation-actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,12 +79,18 @@ export default async function LeadDetailPage({
                 </Link>
               </Button>
             ) : (
-              <form action={requestLeadConversionAction}>
+              <CommandForm
+                action={requestLeadConversionAction}
+                operation="automation.lead-convert"
+                entityId={leadId}
+                entityVersion={data.lead.status}
+                formInstance="request"
+              >
                 <input type="hidden" name="leadId" value={leadId} />
                 <Button type="submit" size="sm">
                   Запросить конверсию
                 </Button>
-              </form>
+              </CommandForm>
             )}
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/automation">Назад</Link>
@@ -120,7 +127,15 @@ export default async function LeadDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={pauseAutomationConversationAction}>
+                <CommandForm
+                  action={pauseAutomationConversationAction}
+                  operation="automation.conversation-pause"
+                  entityId={conversation.id}
+                  entityVersion={
+                      conversation.automationPausedAt ? "paused" : "active"
+                    }
+                  formInstance="toggle"
+                >
                   <input
                     type="hidden"
                     name="conversationId"
@@ -134,7 +149,7 @@ export default async function LeadDetailPage({
                   <Button type="submit" size="sm" variant="outline">
                     {conversation.automationPausedAt ? "Возобновить" : "Пауза"}
                   </Button>
-                </form>
+                </CommandForm>
               </CardContent>
             </Card>
           ))}

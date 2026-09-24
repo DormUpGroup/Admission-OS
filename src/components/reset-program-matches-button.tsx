@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  clearStableCommandId,
+  getStableCommandId,
+} from "@/components/command-id-input";
 import { resetProgramMatchesAction } from "@/server/actions";
 
 export function ResetProgramMatchesButton({
@@ -22,10 +26,17 @@ export function ResetProgramMatchesButton({
     if (!confirmed) return;
 
     setPending(true);
+    const commandParts = {
+      operation: "program-matches.reset",
+      entityId: studentId,
+      formInstance: "reset-button",
+    };
     try {
       const formData = new FormData();
       formData.set("studentId", studentId);
+      formData.set("commandId", getStableCommandId(commandParts));
       await resetProgramMatchesAction(formData);
+      clearStableCommandId(commandParts);
       router.refresh();
     } finally {
       setPending(false);

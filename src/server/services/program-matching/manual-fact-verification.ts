@@ -1,3 +1,8 @@
+/**
+ * OPERATIONAL: Prisma reference implementation for product-rule unit tests and
+ * offline tooling. User-reachable verification goes through FastAPI
+ * POST /v1/program-facts/verify (server action is a BFF wrapper).
+ */
 import { prisma } from "@/lib/db";
 import type { ApplicantCategory } from "@/lib/program-matching/types";
 import { upsertSourceDocument } from "@/server/services/program-ingestion/snapshot";

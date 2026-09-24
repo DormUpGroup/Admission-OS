@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { sendCuratorMessageAction } from "@/server/actions";
-import { CommandIdInput } from "@/components/command-id-input";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -160,17 +160,19 @@ export default async function AdminMessagesPage({
                     ))}
                   </ul>
                 )}
-                <form action={sendCuratorMessageAction} className="space-y-2">
-          <input type="hidden" name="studentId" value={selected.id} />
-                  <CommandIdInput
-                    operation="message.staff.send"
-                    entityId={selected.id}
-                    entityVersion={
+                <CommandForm
+                  action={sendCuratorMessageAction}
+                  operation="message.staff.send"
+                  entityId={selected.id}
+                  entityVersion={
                       portalConversations.find((c) => c.studentId === selected.id)
                         ?.version ?? 0
                     }
-                    formInstance="compose"
-                  />
+                  formInstance="compose"
+                  className="space-y-2"
+                >
+          <input type="hidden" name="studentId" value={selected.id} />
+                  
                   <textarea
                     name="message"
                     required
@@ -182,7 +184,7 @@ export default async function AdminMessagesPage({
                   <Button type="submit" size="sm">
                     Отправить
                   </Button>
-                </form>
+                </CommandForm>
               </>
             ) : null}
           </div>

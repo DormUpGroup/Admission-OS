@@ -172,3 +172,20 @@ def test_telegram_message_burst_keeps_one_identity_and_conversation(
             ]
 
     assert asyncio.run(counts()) == [1, 1, 30, 30]
+
+
+def test_telegram_webhook_rejects_oversized_body_without_content_length(
+    telegram_client,
+) -> None:
+    from app.api.webhooks import MAX_WEBHOOK_BYTES
+
+    client, _ = telegram_client
+    headers = {
+        "X-Telegram-Bot-Api-Secret-Token": "telegram-test-secret",
+        "Content-Type": "application/json",
+    }
+    # Omit Content-Length by using content= with a generator-like oversized body
+    # via httpx/TestClient raw content that exceeds the byte limit.
+    oversized = b'{"update_id":1,"pad":"' + (b"x" * (MAX_WEBHOOK_BYTES + 10)) + b'"}'
+    response = client.post("/webhooks/telegram", content=oversized, headers=headers)
+    assert response.status_code == 413

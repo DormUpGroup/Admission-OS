@@ -114,6 +114,8 @@ def student_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
                     country="IT",
                     publicPrivate="PUBLIC",
                     website=None,
+                    createdAt=now,
+                    updatedAt=now,
                 )
             )
             await db.execute(
@@ -126,6 +128,8 @@ def student_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
                     field="CS",
                     language="en",
                     active=True,
+                    createdAt=now,
+                    updatedAt=now,
                 )
             )
             await db.execute(

@@ -34,6 +34,7 @@ export type CohortView = {
 
 export type NewAnketaRow = {
   studentId: string;
+  studentVersion: number;
   firstName: string;
   lastName: string;
   fullName: string;
@@ -112,6 +113,7 @@ export async function loadAdminHome(input: {
       where: { status: { not: "ARCHIVED" } },
       select: {
         id: true,
+        version: true,
         firstName: true,
         lastName: true,
         intake: true,
@@ -194,6 +196,7 @@ export async function loadAdminHome(input: {
       const studentDecision = canAcceptToCohort(studentOccupied, studentLimit);
       return {
         studentId: s.id,
+        studentVersion: s.version,
         firstName: s.firstName,
         lastName: s.lastName,
         fullName: `${s.firstName} ${s.lastName}`,

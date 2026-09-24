@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { backendFetch } from "@/lib/backend-api";
 import { prisma } from "@/lib/db";
 import { requireStaff, requireRole, assertStudentAccess, getCurrentStudent } from "@/server/auth/guards";
-import { logActivity } from "@/server/services/activity";
 import { saveDocumentFile } from "@/lib/storage";
 import type { ApplicationStatus } from "@/lib/enums";
 import {
@@ -16,7 +15,6 @@ import {
   isAllowedMessageFilename,
   type MessageAttachment,
 } from "@/lib/message-attachments";
-import { verifyProgramDossierFacts } from "@/server/services/program-matching/manual-fact-verification";
 
 async function refreshStudentAfterBackendMutation(_studentId: string, paths: string[]) {
   for (const path of paths) revalidatePath(path);
@@ -697,79 +695,87 @@ export async function requestApplicationAction(formData: FormData) {
 }
 
 export async function createUniversityAction(formData: FormData) {
-  await requireStaff();
+  const session = await requireStaff();
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   const name = String(formData.get("name") || "");
-  const slugBase = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 80);
-  await prisma.university.create({
-    data: {
+  const response = await backendFetch(session.user, "/v1/universities", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
       name,
-      slug: slugBase || `university-${Date.now()}`,
       city: String(formData.get("city") || "") || null,
       region: String(formData.get("region") || "") || null,
       website: String(formData.get("website") || "") || null,
       notes: String(formData.get("notes") || "") || null,
       country: "IT",
-    },
+    }),
   });
+  if (!response.ok) throw new Error("Не удалось создать университет");
   revalidatePath("/admin/universities");
   revalidatePath("/admin/programs");
 }
 
 export async function createProgramAction(formData: FormData) {
-  await requireStaff();
-  const name = String(formData.get("name") || "");
-  const slug =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 80) || `program-${Date.now()}`;
-  await prisma.program.create({
-    data: {
-      universityId: String(formData.get("universityId") || ""),
-      name,
-      slug,
-      titleOfficial: name,
-      degreeLevel: String(formData.get("degreeLevel") || "BACHELOR"),
+  const session = await requireStaff();
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(session.user, "/v1/programs", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      university_id: String(formData.get("universityId") || ""),
+      name: String(formData.get("name") || ""),
+      degree_level: String(formData.get("degreeLevel") || "BACHELOR"),
       language: String(formData.get("language") || "") || null,
-      teachingLanguagesJson: formData.get("language")
-        ? JSON.stringify([String(formData.get("language"))])
-        : null,
       field: String(formData.get("field") || "") || null,
       notes: String(formData.get("notes") || "") || null,
-      active: true,
-    },
+    }),
   });
+  if (!response.ok) throw new Error("Не удалось создать программу");
   revalidatePath("/admin/programs");
 }
 
 export async function resetProgramMatchesAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
-  const { resetStudentPrograms } = await import(
-    "@/server/services/program-matching/shortlist"
+  const response = await backendFetch(
+    session.user,
+    `/v1/students/${encodeURIComponent(studentId)}/program-matches/reset`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": commandId },
+    }
   );
-  await resetStudentPrograms({
-    studentId,
-    userId: session.user.id,
-  });
+  if (!response.ok) throw new Error("Не удалось сбросить подбор программ");
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/portal/programs");
   revalidatePath("/portal");
   revalidatePath("/admin");
 }
 
-export async function resetUniversitalyCacheAction() {
-  await requireStaff();
-  const { resetUniversitalyCache } = await import(
-    "@/server/services/program-ingestion/reset-universitaly-cache"
+export async function resetUniversitalyCacheAction(formData?: FormData) {
+  const session = await requireRole(["ADMIN"]);
+  const commandId = String(formData?.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
+  const response = await backendFetch(
+    session.user,
+    "/v1/catalog/universitaly-cache/reset",
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": commandId },
+    }
   );
-  await resetUniversitalyCache();
+  if (!response.ok) throw new Error("Не удалось очистить кэш Universitaly");
   revalidatePath("/admin");
   revalidatePath("/admin/programs");
   revalidatePath("/admin/students");
@@ -780,35 +786,30 @@ export async function resetUniversitalyCacheAction() {
 export async function reviewProgramMatchAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
-  const matchId = String(formData.get("matchId") || "");
   const status = String(formData.get("status") || "") as
     | "APPROVED"
     | "REJECTED"
     | "NEEDS_REVIEW"
     | "SHORTLISTED";
-  const notes = String(formData.get("notes") || "") || null;
-  const { updateMatchCuratorStatus, addToShortlist } = await import(
-    "@/server/services/program-matching/shortlist"
-  );
-
-  if (status === "SHORTLISTED") {
-    const match = await prisma.programMatch.findUnique({ where: { id: matchId } });
-    if (!match) throw new Error("Match not found");
-    await addToShortlist({
-      studentId,
-      programAcademicYearId: match.programAcademicYearId,
-      matchId,
-      curatorNote: notes,
-      userId: session.user.id,
-    });
-  } else {
-    await updateMatchCuratorStatus({
-      matchId,
+  const response = await backendFetch(session.user, "/v1/program-matches/review", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: studentId,
+      match_id: String(formData.get("matchId") || ""),
       status,
-      userId: session.user.id,
-      notes,
-    });
+      notes: String(formData.get("notes") || "") || null,
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Не удалось обновить статус программы");
   }
 
   revalidatePath(`/admin/students/${studentId}`);
@@ -818,19 +819,30 @@ export async function reviewProgramMatchAction(formData: FormData) {
 export async function setMonitoringSelectedAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
-  const matchId = String(formData.get("matchId") || "");
   const selected = String(formData.get("selected") || "") === "1";
-  const { setMonitoringSelected } = await import(
-    "@/server/services/program-enrichment/monitor-selected"
+  const response = await backendFetch(
+    session.user,
+    "/v1/program-matches/monitoring-selected",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": commandId,
+      },
+      body: JSON.stringify({
+        student_id: studentId,
+        match_id: String(formData.get("matchId") || ""),
+        selected,
+      }),
+    }
   );
-  const result = await setMonitoringSelected({
-    matchId,
-    studentId,
-    selected,
-    actorUserId: session.user.id,
-  });
-  if (!result.ok) throw new Error(result.error);
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Не удалось обновить мониторинг");
+  }
   revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/portal/programs");
 }
@@ -857,34 +869,57 @@ export async function markNotificationReadAction(formData: FormData) {
 export async function addManualProgramMatchAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
   const programId = String(formData.get("programId") || "");
-  const { evaluateManualProgram, addToShortlist } = await import(
+  const { evaluateManualProgram } = await import(
     "@/server/services/program-matching/shortlist"
   );
+  // Scoring stays in Next; FastAPI is the sole writer for match + shortlist.
   const evaluated = await evaluateManualProgram({
     studentId,
     programId,
     userId: session.user.id,
+    persist: false,
   });
-  if (evaluated) {
-    const match = await prisma.programMatch.findUnique({
-      where: {
-        studentId_programAcademicYearId: {
-          studentId,
-          programAcademicYearId: evaluated.programAcademicYearId,
-        },
+  if (!evaluated) return;
+
+  const { MATCHING_ENGINE_VERSION } = await import(
+    "@/lib/program-matching/config"
+  );
+  const response = await backendFetch(session.user, "/v1/program-matches/manual", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: studentId,
+      program_id: programId,
+      add_to_shortlist: true,
+      curator_note: "Manually added by curator",
+      match: {
+        program_academic_year_id: evaluated.programAcademicYearId,
+        eligibility_status: evaluated.eligibilityStatus,
+        fit_score: evaluated.fitScore,
+        score_breakdown_json: JSON.stringify(evaluated.scoreBreakdown),
+        requirements_summary_json: JSON.stringify(evaluated.evaluations),
+        reasons_json: JSON.stringify(evaluated.reasons),
+        risks_json: JSON.stringify({
+          flags: evaluated.risks,
+          notes: evaluated.riskNotes,
+        }),
+        missing_information_json: JSON.stringify(evaluated.missingInformation),
+        data_confidence: evaluated.dataConfidence,
+        matching_engine_version: MATCHING_ENGINE_VERSION,
+        curator_status: "NEEDS_REVIEW",
       },
-    });
-    if (match) {
-      await addToShortlist({
-        studentId,
-        programAcademicYearId: evaluated.programAcademicYearId,
-        matchId: match.id,
-        curatorNote: "Manually added by curator",
-        userId: session.user.id,
-      });
-    }
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Не удалось добавить программу");
   }
   revalidatePath(`/admin/students/${studentId}`);
 }
@@ -922,22 +957,34 @@ export async function addRequirementAction(formData: FormData) {
 export async function verifyProgramDossierFactsAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
   if (studentId) await assertStudentAccess(studentId);
 
-  await verifyProgramDossierFacts({
-    actorUserId: session.user.id,
-    studentId,
-    programAcademicYearId: String(formData.get("programAcademicYearId") || ""),
-    explicitCategory: String(formData.get("applicantCategory") || ""),
-    deadline: String(formData.get("deadline") || ""),
-    tuitionMin: String(formData.get("tuitionMin") || ""),
-    tuitionMax: String(formData.get("tuitionMax") || ""),
-    accessMode: String(formData.get("accessMode") || ""),
-    nonEuSeats: String(formData.get("nonEuSeats") || ""),
-    examsDisplay: String(formData.get("examsDisplay") || ""),
-    manualSourceUrl: String(formData.get("manualSourceUrl") || ""),
-    evidenceQuote: String(formData.get("evidenceQuote") || ""),
+  const response = await backendFetch(session.user, "/v1/program-facts/verify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: studentId || null,
+      program_academic_year_id: String(formData.get("programAcademicYearId") || ""),
+      applicant_category: String(formData.get("applicantCategory") || ""),
+      deadline: String(formData.get("deadline") || "") || null,
+      tuition_min: String(formData.get("tuitionMin") || "") || null,
+      tuition_max: String(formData.get("tuitionMax") || "") || null,
+      access_mode: String(formData.get("accessMode") || "") || null,
+      non_eu_seats: String(formData.get("nonEuSeats") || "") || null,
+      exams_display: String(formData.get("examsDisplay") || "") || null,
+      manual_source_url: String(formData.get("manualSourceUrl") || ""),
+      evidence_quote: String(formData.get("evidenceQuote") || ""),
+    }),
   });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Не удалось подтвердить факты программы");
+  }
 
   if (studentId) revalidatePath(`/admin/students/${studentId}`);
   revalidatePath("/admin/programs/data");
@@ -1031,15 +1078,23 @@ export async function dismissWorkQueueItemAction(formData: FormData) {
   const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
   const sourceKey = String(formData.get("sourceKey") || "");
+  const commandId = String(formData.get("commandId") || "");
   if (!studentId || !sourceKey) return;
+  if (!commandId) throw new Error("Command id is required");
   await assertStudentAccess(studentId);
 
-  await logActivity({
-    type: "QUEUE_ITEM_DISMISSED",
-    studentId,
-    userId: session.user.id,
-    metadata: { sourceKey },
+  const response = await backendFetch(session.user, "/v1/work-queue/dismiss", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": commandId,
+    },
+    body: JSON.stringify({
+      student_id: studentId,
+      source_key: sourceKey,
+    }),
   });
+  if (!response.ok) throw new Error("Не удалось скрыть элемент очереди");
 
   revalidatePath("/admin");
 }

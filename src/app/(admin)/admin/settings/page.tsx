@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { labelOf } from "@/lib/labels";
 import { updateIntakeSeatLimitAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import {
   formatIntakeLabel,
   occupiedSeatsForIntake,
@@ -76,13 +77,16 @@ export default async function AdminSettingsPage({
               intake
             );
             return (
-              <form
+              <CommandForm
                 key={intake}
                 action={updateIntakeSeatLimitAction}
+                operation="intake.seat-limit"
+                entityId={intake}
+                entityVersion={cohort?.version ?? 0}
+                formInstance="edit"
                 className="space-y-3 border-b border-border pb-4 last:border-b-0 last:pb-0"
               >
                 <input type="hidden" name="intake" value={intake} />
-                <input type="hidden" name="commandId" value={crypto.randomUUID()} />
                 <p className="text-sm font-medium">Набор {formatIntakeLabel(intake)}</p>
                 <p className="text-xs text-muted-foreground">
                   Принято сейчас: {occupied}
@@ -118,13 +122,18 @@ export default async function AdminSettingsPage({
                     Лимит может изменить только администратор.
                   </p>
                 )}
-              </form>
+              </CommandForm>
             );
           })}
 
           {canEditLimit ? (
-            <form action={updateIntakeSeatLimitAction} className="space-y-3">
-              <input type="hidden" name="commandId" value={crypto.randomUUID()} />
+            <CommandForm
+              action={updateIntakeSeatLimitAction}
+              operation="intake.seat-limit"
+              entityId="new"
+              formInstance="create"
+              className="space-y-3"
+            >
               <p className="text-sm font-medium">Добавить набор</p>
               <div className="space-y-1">
                 <Label htmlFor="new-intake">Набор (например 2028/29)</Label>
@@ -143,7 +152,7 @@ export default async function AdminSettingsPage({
               <Button type="submit" size="sm" variant="outline">
                 Добавить набор
               </Button>
-            </form>
+            </CommandForm>
           ) : null}
         </CardContent>
       </Card>

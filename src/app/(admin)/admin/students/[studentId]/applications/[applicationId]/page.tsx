@@ -6,6 +6,7 @@ import { fullName, formatDate, cn } from "@/lib/utils";
 import { criticalIncomplete } from "@/server/services/readiness";
 import { activityLabel } from "@/server/services/activity";
 import { addRequirementAction, createTaskAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { MetricCard } from "@/components/metric-card";
 import { RiskBadge } from "@/components/risk-badge";
@@ -207,15 +208,14 @@ export default async function ApplicationDetailPage({
               <CardTitle>Добавить требование</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={addRequirementAction}
+                operation="requirement.add"
+                entityId={applicationId}
+                entityVersion={app.version}
+                formInstance="add"
                 className="flex flex-wrap items-end gap-2"
               >
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
                 <input type="hidden" name="applicationId" value={applicationId} />
                 <div className="min-w-[160px] flex-1 space-y-1.5">
                   <Label htmlFor="name">Название</Label>
@@ -244,7 +244,7 @@ export default async function ApplicationDetailPage({
                 <Button type="submit" size="sm">
                   Добавить
                 </Button>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
 
@@ -292,15 +292,14 @@ export default async function ApplicationDetailPage({
               <CardTitle>Создать задачу</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={createTaskAction}
+                operation="task.create"
+                entityId={applicationId}
+                entityVersion={app.version}
+                formInstance="create"
                 className="grid gap-3 sm:grid-cols-2"
               >
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <input type="hidden" name="applicationId" value={applicationId} />
                 <div className="space-y-1.5 sm:col-span-2">
@@ -334,7 +333,7 @@ export default async function ApplicationDetailPage({
                     Создать задачу
                   </Button>
                 </div>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
           <TaskList

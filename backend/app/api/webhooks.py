@@ -1,3 +1,4 @@
+import json
 import secrets
 from typing import Annotated, Any
 
@@ -11,6 +12,32 @@ from app.services.commands.telegram import ingest_telegram_message
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 MAX_WEBHOOK_BYTES = 1_000_000
+
+
+async def _read_body_limited(request: Request, max_bytes: int) -> bytes:
+    """Enforce an actual bytes-read limit (Content-Length alone is not enough)."""
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > max_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail="Webhook payload is too large",
+                )
+        except ValueError:
+            pass
+
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Webhook payload is too large",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.post("/telegram", status_code=status.HTTP_202_ACCEPTED)
@@ -33,13 +60,14 @@ async def telegram_webhook(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Telegram webhook secret",
         )
-    content_length = request.headers.get("content-length")
-    if content_length and int(content_length) > MAX_WEBHOOK_BYTES:
+    raw_body = await _read_body_limited(request, MAX_WEBHOOK_BYTES)
+    try:
+        payload = json.loads(raw_body)
+    except json.JSONDecodeError as error:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Webhook payload is too large",
-        )
-    payload = await request.json()
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Webhook payload must be valid JSON",
+        ) from error
     if not isinstance(payload, dict):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

@@ -13,11 +13,37 @@ from app.db.tables import (
     outbox_event_table,
     user_table,
 )
+from app.mcp.principal import McpPrincipal
 from app.mcp.tools import (
     appointment_create,
     message_propose,
     message_request_send,
 )
+
+
+def _lead_principal(lead_id: str = "lead_1") -> McpPrincipal:
+    return McpPrincipal(
+        agent_run_id="run_test",
+        agent_key="scheduling",
+        agent_version="1.0.0",
+        allowed_tools=frozenset({"appointment.create"}),
+        allowed_scopes=frozenset({"appointments:write"}),
+        lead_id=lead_id,
+    )
+
+
+def _conversation_principal(
+    conversation_id: str, agent_key: str = "intake"
+) -> McpPrincipal:
+    return McpPrincipal(
+        agent_run_id="run_test",
+        agent_key=agent_key,
+        agent_version="1.0.0",
+        allowed_tools=frozenset({"message.propose", "message.request_send"}),
+        allowed_scopes=frozenset({"messages:draft", "messages:send"}),
+        conversation_id=conversation_id,
+        lead_id="lead_2",
+    )
 
 
 async def _database():
@@ -60,10 +86,10 @@ async def test_appointment_creation_is_idempotent_and_rejects_overlap() -> None:
     }
     async with factory() as db:
         async with db.begin():
-            first = await appointment_create(db, arguments)
+            first = await appointment_create(db, arguments, _lead_principal())
     async with factory() as db:
         async with db.begin():
-            replay = await appointment_create(db, arguments)
+            replay = await appointment_create(db, arguments, _lead_principal())
     assert replay["appointment_id"] == first["appointment_id"]
 
     async with factory() as db:
@@ -72,6 +98,7 @@ async def test_appointment_creation_is_idempotent_and_rejects_overlap() -> None:
                 await appointment_create(
                     db,
                     {**arguments, "idempotency_key": "appointment_request_2"},
+                    _lead_principal(),
                 )
     async with factory() as db:
         count = (
@@ -114,8 +141,8 @@ async def test_outbound_free_form_requires_approval_but_template_is_queued() -> 
                     "conversation_id": "conversation_2",
                     "text": "Расскажите, пожалуйста, о ваших целях.",
                     "idempotency_key": "draft_1",
-                    "agent_key": "intake",
                 },
+                _conversation_principal("conversation_2", "intake"),
             )
             result = await message_request_send(
                 db,
@@ -123,6 +150,7 @@ async def test_outbound_free_form_requires_approval_but_template_is_queued() -> 
                     "message_id": draft["message_id"],
                     "idempotency_key": "send_1",
                 },
+                _conversation_principal("conversation_2", "intake"),
             )
     assert result["status"] == "APPROVAL_REQUIRED"
 
@@ -134,8 +162,8 @@ async def test_outbound_free_form_requires_approval_but_template_is_queued() -> 
                     "conversation_id": "conversation_2",
                     "text": "Напоминаем о недостающем документе.",
                     "idempotency_key": "draft_2",
-                    "agent_key": "follow_up",
                 },
+                _conversation_principal("conversation_2", "follow_up"),
             )
             queued = await message_request_send(
                 db,
@@ -144,6 +172,7 @@ async def test_outbound_free_form_requires_approval_but_template_is_queued() -> 
                     "idempotency_key": "send_2",
                     "template_key": "document-reminder-v1",
                 },
+                _conversation_principal("conversation_2", "follow_up"),
             )
     assert queued["status"] == "QUEUED"
     async with factory() as db:

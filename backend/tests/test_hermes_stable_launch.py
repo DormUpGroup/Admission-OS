@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -223,7 +224,12 @@ async def test_hermes_finalize_failure_after_success_retries_same_key(
 
 
 async def test_launch_hermes_uses_outbox_idempotency_key(monkeypatch) -> None:
-    seen: dict[str, str] = {}
+    seen: dict[str, object] = {}
+    monkeypatch.setenv(
+        "HERMES_MCP_CAPABILITY_SECRET",
+        "capability-secret-that-is-longer-than-thirty-two-bytes",
+    )
+    get_settings.cache_clear()
 
     class FakeClient:
         def __init__(self, *_args, **_kwargs):
@@ -231,6 +237,8 @@ async def test_launch_hermes_uses_outbox_idempotency_key(monkeypatch) -> None:
 
         async def create_run(self, **kwargs):
             seen["key"] = kwargs["idempotency_key"]
+            seen["mcp_authorization"] = kwargs.get("mcp_authorization")
+            seen["metadata"] = kwargs.get("metadata")
             return HermesRun(id="h1", status="queued", session_id=None)
 
     monkeypatch.setattr(runner_module, "HermesClient", FakeClient)
@@ -239,9 +247,17 @@ async def test_launch_hermes_uses_outbox_idempotency_key(monkeypatch) -> None:
         hermes_idempotency_key="telegram:update:stable-2",
         hermes_session_id=None,
         agent_key="intake",
+        agent_version="1.0.0",
         run_id="run_1",
         conversation_id="conversation_1",
+        lead_id="lead_1",
+        student_id=None,
+        allowed_tools=("lead.get",),
+        timeout_seconds=120,
     )
     run = await runner_module.launch_hermes_run(prepared)  # type: ignore[arg-type]
     assert run.id == "h1"
     assert seen["key"] == "telegram:update:stable-2"
+    assert isinstance(seen["mcp_authorization"], str)
+    assert seen["mcp_authorization"] not in json.dumps(seen["metadata"])
+    get_settings.cache_clear()

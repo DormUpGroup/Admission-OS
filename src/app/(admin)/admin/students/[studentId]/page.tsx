@@ -17,6 +17,7 @@ import {
   needsChangesAction,
   addManualProgramMatchAction,
 } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
@@ -1195,15 +1196,14 @@ export default async function StudentProfilePage({
               <CardTitle>Добавить программу вручную</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={addManualProgramMatchAction}
+                operation="program-match.manual-add"
+                entityId={studentId}
+                entityVersion={student.version}
+                formInstance="manual-add"
                 className="flex flex-wrap items-end gap-2"
               >
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="min-w-[240px] flex-1 space-y-1.5">
                   <Label htmlFor="manualProgramId">Program database</Label>
@@ -1224,7 +1224,7 @@ export default async function StudentProfilePage({
                 <Button type="submit" size="sm">
                   Evaluate & shortlist
                 </Button>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
 
@@ -1347,15 +1347,14 @@ export default async function StudentProfilePage({
               <CardTitle>Новая подача</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={createApplicationAction}
+                operation="application.create"
+                entityId={studentId}
+                entityVersion={student.version}
+                formInstance="create"
                 className="grid gap-3 sm:grid-cols-2"
               >
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="programId">Программа</Label>
@@ -1413,7 +1412,7 @@ export default async function StudentProfilePage({
                     Создать подачу
                   </Button>
                 </div>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
 
@@ -1451,15 +1450,14 @@ export default async function StudentProfilePage({
               <CardTitle>Добавить документ</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={createDocumentAction}
+                operation="document.create"
+                entityId={studentId}
+                entityVersion={student.version}
+                formInstance="create"
                 className="flex flex-wrap items-end gap-2"
               >
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="min-w-[180px] flex-1 space-y-1.5">
                   <Label htmlFor="docName">Название</Label>
@@ -1483,7 +1481,7 @@ export default async function StudentProfilePage({
                 <Button type="submit" size="sm">
                   Добавить
                 </Button>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
 
@@ -1535,15 +1533,14 @@ export default async function StudentProfilePage({
                                 Одобрить
                               </Button>
                             </form>
-                            <form
+                            <CommandForm
                               action={needsChangesAction}
+                              operation="document.needs-changes"
+                              entityId={doc.id}
+                              entityVersion={doc.version}
+                              formInstance="needs-changes"
                               className="flex items-center gap-1"
                             >
-                              <input
-                                type="hidden"
-                                name="commandId"
-                                value={crypto.randomUUID()}
-                              />
                               <input
                                 type="hidden"
                                 name="documentId"
@@ -1557,7 +1554,7 @@ export default async function StudentProfilePage({
                               <Button type="submit" size="sm" variant="outline">
                                 Правки
                               </Button>
-                            </form>
+                            </CommandForm>
                           </>
                         ) : null}
                       </div>
@@ -1577,12 +1574,16 @@ export default async function StudentProfilePage({
               <CardTitle>Создать задачу</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
+              <CommandForm
                 action={createTaskAction}
+                operation="task.create"
+                entityId={studentId}
+                entityVersion={student.version}
+                formInstance="create"
                 className="grid gap-3 sm:grid-cols-2"
               >
                 <input type="hidden" name="studentId" value={studentId} />
-                <input type="hidden" name="commandId" value={crypto.randomUUID()} />
+                
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="title">Название</Label>
                   <Input id="title" name="title" required />
@@ -1629,7 +1630,7 @@ export default async function StudentProfilePage({
                     Создать задачу
                   </Button>
                 </div>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
           <TaskList

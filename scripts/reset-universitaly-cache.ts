@@ -1,6 +1,10 @@
 /**
  * Drop Universitaly-discovered programs; keep the seeded MVP catalog.
  * Run: npx tsx scripts/reset-universitaly-cache.ts
+ *
+ * OPERATIONAL JOB (offline ETL): user-reachable resets go through FastAPI
+ * POST /v1/catalog/universitaly-cache/reset (ADMIN + Idempotency-Key + outbox).
+ * This script may keep using the Prisma helper for local/ops maintenance.
  */
 import { PrismaClient } from "@prisma/client";
 import { resetUniversitalyCache } from "../src/server/services/program-ingestion/reset-universitaly-cache";

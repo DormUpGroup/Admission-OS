@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { requireRole } from "@/server/auth/guards";
 import { createProgramAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -171,7 +172,12 @@ export default async function AdminProgramsPage() {
               <CardTitle>Добавить программу</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={createProgramAction} className="space-y-3">
+              <CommandForm
+                action={createProgramAction}
+                operation="program.create"
+                entityId="new"
+                className="space-y-3"
+              >
                 <div className="space-y-1.5">
                   <Label htmlFor="universityId">Университет</Label>
                   <select
@@ -221,7 +227,7 @@ export default async function AdminProgramsPage() {
                 <Button type="submit" className="w-full" disabled={universities.length === 0}>
                   Создать программу
                 </Button>
-              </form>
+              </CommandForm>
             </CardContent>
           </Card>
 

@@ -23,6 +23,7 @@ _SECRET_MARKERS = (
     "automation_api_secret",
     "telegram_bot_token",
     "hermes_mcp_key",
+    "hermes_mcp_capability_secret",
     "authorization: bearer",
 )
 

@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
 
+/**
+ * Shortlist helpers used by offline/operational jobs (scripts) and as scoring
+ * helpers for the BFF. User-reachable mutations must go through FastAPI
+ * catalog commands — do not call the Prisma writers from server actions.
+ */
+
 export async function updateMatchCuratorStatus(input: {
   matchId: string;
   status: "APPROVED" | "REJECTED" | "NEEDS_REVIEW" | "SHORTLISTED";
@@ -145,6 +151,8 @@ export async function evaluateManualProgram(input: {
   studentId: string;
   programId: string;
   userId: string;
+  /** When false, only scores — FastAPI persists. Default true for operational jobs. */
+  persist?: boolean;
 }) {
   const { generateProgramMatches } = await import("./program-matching");
   const { MATCHING_ENGINE_VERSION } = await import(
@@ -166,6 +174,11 @@ export async function evaluateManualProgram(input: {
   const evaluated = scored.find((m) => m.programId === input.programId);
   if (!evaluated) return null;
 
+  if (input.persist === false) {
+    return evaluated;
+  }
+
+  // OPERATIONAL: Prisma writer for offline scripts / legacy callers only.
   await prisma.programMatch.upsert({
     where: {
       studentId_programAcademicYearId: {

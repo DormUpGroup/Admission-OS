@@ -34,6 +34,7 @@ async def _database():
         await connection.run_sync(metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as db:
+        now = datetime.now(UTC)
         await db.execute(
             insert(university_table).values(
                 id="uni_1",
@@ -43,6 +44,8 @@ async def _database():
                 region="Lazio",
                 country="IT",
                 publicPrivate="PUBLIC",
+                createdAt=now,
+                updatedAt=now,
             )
         )
         await db.execute(
@@ -55,6 +58,8 @@ async def _database():
                 field="CS",
                 language="en",
                 active=True,
+                createdAt=now,
+                updatedAt=now,
             )
         )
         await db.commit()

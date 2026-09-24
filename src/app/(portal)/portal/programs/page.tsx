@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { requestApplicationAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { hasMatchingProfile } from "@/server/services/program-match";
 import { matchProgramsFromShortlist } from "@/server/services/program-match";
 import { EmptyState } from "@/components/empty-state";
@@ -111,12 +112,13 @@ export default async function PortalProgramsPage() {
                       </Link>
                     </Button>
                   ) : (
-                    <form action={requestApplicationAction}>
-                      <input
-                        type="hidden"
-                        name="commandId"
-                        value={crypto.randomUUID()}
-                      />
+                    <CommandForm
+                      action={requestApplicationAction}
+                      operation="application.request"
+                      entityId={`${student.id}:${m.programId}`}
+                      entityVersion={student.version}
+                      formInstance="request"
+                    >
                       <input type="hidden" name="programId" value={m.programId} />
                       <input
                         type="hidden"
@@ -126,7 +128,7 @@ export default async function PortalProgramsPage() {
                       <Button type="submit" className="w-full">
                         Хочу подать
                       </Button>
-                    </form>
+                    </CommandForm>
                   )
                 }
               />

@@ -28,6 +28,7 @@ from app.db.tables import (
     user_table,
 )
 from app.events.outbox import claim_events, mark_processed
+from app.mcp.principal import McpPrincipal
 from app.mcp.tools import lead_update_qualification
 from app.schemas.messages import SendMessageRequest
 from app.services.commands.accompaniment import accept_accompaniment_command
@@ -141,6 +142,14 @@ async def test_mcp_same_key_different_payload_conflicts(pg_engine) -> None:
                     updatedAt=now,
                 )
             )
+    principal = McpPrincipal(
+        agent_run_id="run_conflict",
+        agent_key="intake",
+        agent_version="1.0.0",
+        allowed_tools=frozenset({"lead.update_qualification"}),
+        allowed_scopes=frozenset({"leads:write"}),
+        lead_id="lead_1",
+    )
     async with await pg_engine.begin_session() as db:
         async with db.begin():
             await lead_update_qualification(
@@ -149,8 +158,8 @@ async def test_mcp_same_key_different_payload_conflicts(pg_engine) -> None:
                     "lead_id": "lead_1",
                     "fields": {"country": "IT"},
                     "idempotency_key": key,
-                    "agent_key": "intake",
                 },
+                principal,
             )
     async with await pg_engine.begin_session() as db:
         with pytest.raises(ValueError, match="different request payload"):
@@ -161,8 +170,8 @@ async def test_mcp_same_key_different_payload_conflicts(pg_engine) -> None:
                         "lead_id": "lead_1",
                         "fields": {"country": "FR"},
                         "idempotency_key": key,
-                        "agent_key": "intake",
                     },
+                    principal,
                 )
 
 

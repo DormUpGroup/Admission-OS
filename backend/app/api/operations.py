@@ -1,14 +1,24 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import StaffActor
 from app.db.session import get_db_session
+from app.db.tables import student_table
 from app.schemas.operations import RecalculatePreview, RecalculatePreviewRequest
+from app.services.commands.base import (
+    CommandContext,
+    execute_command,
+    require_idempotency_key,
+)
+from app.services.commands.operations import recalculate_student_command
 from app.services.operations.readiness import calculate_readiness
-from app.services.operations.recalculate import recalculate_student
 from app.services.operations.risk import calculate_application_risk
 
 router = APIRouter(tags=["operations"])
+DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 
 @router.post("/operations/recalculate-preview", response_model=RecalculatePreview)
@@ -30,14 +40,42 @@ async def recalculate_preview(
 
 @router.post("/students/{student_id}/recalculate")
 async def persist_student_recalculation(
-    _: StaffActor,
+    actor: StaffActor,
     student_id: str,
-    db: AsyncSession = Depends(get_db_session),
+    db: DbSession,
+    idempotency_key: Annotated[str, Depends(require_idempotency_key)],
 ) -> dict:
-    result = await recalculate_student(db, student_id)
-    if result is None:
+    student = (
+        await db.execute(
+            select(student_table.c.id, student_table.c.curatorId).where(
+                student_table.c.id == student_id
+            )
+        )
+    ).mappings().first()
+    if student is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
         )
-    await db.commit()
-    return result
+    if actor.role == "CURATOR" and student.curatorId not in {actor.id, None}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Student access denied"
+        )
+    await db.rollback()
+    async with db.begin():
+        context = CommandContext(
+            principal_id=actor.id,
+            operation="student.recalculate",
+            idempotency_key=idempotency_key,
+            correlation_id=idempotency_key,
+            actor_type="USER",
+            actor_id=actor.id,
+        )
+        executed = await execute_command(
+            db,
+            context=context,
+            payload={"student_id": student_id},
+            handler=lambda command: recalculate_student_command(
+                db, context=command, student_id=student_id
+            ),
+        )
+    return executed.result.response

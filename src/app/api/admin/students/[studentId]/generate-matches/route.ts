@@ -1,12 +1,34 @@
 import { revalidatePath } from "next/cache";
+import { createHash } from "crypto";
 import { auth } from "@/server/auth";
 import { canAccessStudent } from "@/server/auth/guards";
+import { backendFetch } from "@/lib/backend-api";
+import { MATCHING_ENGINE_VERSION } from "@/lib/program-matching/config";
 import type { MatchProgressEvent } from "@/server/services/program-matching/program-matching";
 
 type StreamEvent =
   | MatchProgressEvent
   | { stage: "complete"; count: number; engine?: string }
   | { stage: "error"; message: string };
+
+function deterministicReplaceCommandId(
+  studentId: string,
+  programAcademicYearIds: string[]
+): string {
+  // Deterministic Idempotency-Key bound to student + engine + match set (not a
+  // fresh randomUUID per call — retries of the same scored set stay idempotent).
+  const fingerprint = createHash("sha256")
+    .update(
+      [
+        studentId,
+        MATCHING_ENGINE_VERSION,
+        ...[...programAcademicYearIds].sort(),
+      ].join("|")
+    )
+    .digest("hex")
+    .slice(0, 32);
+  return `program-matches-replace:${studentId}:${fingerprint}`;
+}
 
 export async function POST(
   _req: Request,
@@ -43,9 +65,6 @@ export async function POST(
         try {
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
         } catch (error) {
-          // A tab refresh, navigation, or proxy timeout can close the response
-          // while enrichment is still running. Losing progress delivery must
-          // not abort the server-side matching job.
           streamOpen = false;
           console.warn("[program-matching] progress stream disconnected", {
             studentId,
@@ -59,13 +78,57 @@ export async function POST(
         const { persistProgramMatches } = await import(
           "@/server/services/program-matching/program-matching"
         );
-        const { MATCHING_ENGINE_VERSION } = await import(
-          "@/lib/program-matching/config"
-        );
 
         const result = await persistProgramMatches(studentId, {
           onProgress: send,
+          persistMode: "none",
         });
+
+        const commandId = deterministicReplaceCommandId(
+          studentId,
+          result.matches.map((m) => m.programAcademicYearId)
+        );
+        const response = await backendFetch(
+          session.user,
+          `/v1/students/${encodeURIComponent(studentId)}/program-matches/replace`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": commandId,
+            },
+            body: JSON.stringify({
+              matches: result.matches.map((m) => ({
+                program_academic_year_id: m.programAcademicYearId,
+                eligibility_status: m.eligibilityStatus,
+                fit_score: m.fitScore,
+                score_breakdown_json: JSON.stringify(m.scoreBreakdown),
+                requirements_summary_json: JSON.stringify(m.evaluations),
+                reasons_json: JSON.stringify(m.reasons),
+                risks_json: JSON.stringify({
+                  flags: m.risks,
+                  notes: m.riskNotes,
+                }),
+                missing_information_json: JSON.stringify(m.missingInformation),
+                discovery_meta_json: JSON.stringify(m.discoveryMeta),
+                data_confidence: m.dataConfidence,
+                matching_engine_version: MATCHING_ENGINE_VERSION,
+                curator_status:
+                  m.eligibilityStatus === "NEEDS_REVIEW"
+                    ? "NEEDS_REVIEW"
+                    : "AUTO_MATCHED",
+              })),
+              activity_metadata: {
+                engine: MATCHING_ENGINE_VERSION,
+                source: result.liveMeta?.source ?? "local-catalog",
+                count: result.matches.length,
+              },
+            }),
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`FastAPI persist failed: ${response.status}`);
+        }
 
         revalidatePath(`/admin/students/${studentId}`);
         send({
@@ -74,9 +137,6 @@ export async function POST(
           engine: MATCHING_ENGINE_VERSION,
         });
       } catch (error) {
-        // Keep the stack and last completed stage in server logs. The previous
-        // implementation exposed a bare JavaScript message, which made a
-        // production failure impossible to diagnose.
         console.error("[program-matching] generation failed", {
           studentId,
           stage: lastStage,
@@ -98,8 +158,6 @@ export async function POST(
       }
     },
     cancel() {
-      // Do not cancel persistProgramMatches: facts and the final shortlist
-      // must finish even when the browser no longer consumes progress.
       streamOpen = false;
     },
   });

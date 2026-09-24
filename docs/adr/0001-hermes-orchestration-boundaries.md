@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-22
-- Updated: 2026-09-22
+- Updated: 2026-09-23
 
 ## Context
 
@@ -87,6 +87,17 @@ they must not fail open into a Prisma mutation.
 Hermes MCP and the automation admin API are thin adapters: they authorize,
 build a `CommandContext` (USER / AGENT / SYSTEM), and call the same command
 handlers. They must not `insert`/`update`/`delete` domain tables directly.
+
+Hermes MCP write access is run-scoped. `HERMES_MCP_KEY` is bootstrap-only
+(initialize / initialized; no write tool catalog or `tools/call`). Each
+`AgentRun` launch mints a short-lived capability JWT with
+`HERMES_MCP_CAPABILITY_SECRET` (separate from INTERNAL / AUTOMATION / MCP
+bootstrap secrets). Claims bind `agent_run_id`, `agent_key`, tools, scopes,
+and resource ids from the run context. The raw token is delivered only as
+`mcp.headers.Authorization` on Hermes `create_run` and must never appear in
+DB, logs, audit, outbox, prompt, metadata, UI, or exception text. MCP
+handlers take identity from the verified `McpPrincipal`, not from
+model-controlled arguments.
 
 | Capability | Command | Authoritative records |
 | --- | --- | --- |

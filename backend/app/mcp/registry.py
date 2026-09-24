@@ -4,7 +4,11 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-ToolHandler = Callable[[AsyncSession, dict[str, Any]], Awaitable[dict[str, Any]]]
+from app.mcp.principal import McpPrincipal
+
+ToolHandler = Callable[
+    [AsyncSession, dict[str, Any], McpPrincipal], Awaitable[dict[str, Any]]
+]
 
 
 @dataclass(frozen=True)
@@ -68,8 +72,34 @@ def register_tool(definition: ToolDefinition) -> None:
     _tools[definition.name] = definition
 
 
-def list_tools() -> list[ToolDefinition]:
-    return sorted(_tools.values(), key=lambda item: item.name)
+def get_tool(name: str) -> ToolDefinition | None:
+    return _tools.get(name)
+
+
+def scopes_for_tools(tool_names: list[str] | tuple[str, ...] | frozenset[str]) -> frozenset[str]:
+    scopes: set[str] = set()
+    for name in tool_names:
+        definition = _tools.get(name)
+        if definition is not None:
+            scopes.add(definition.scope)
+    return frozenset(scopes)
+
+
+def list_tools(
+    *,
+    principal: McpPrincipal | None = None,
+    allowed_tools: frozenset[str] | None = None,
+    allowed_scopes: frozenset[str] | None = None,
+) -> list[ToolDefinition]:
+    tools = sorted(_tools.values(), key=lambda item: item.name)
+    if principal is not None:
+        allowed_tools = principal.allowed_tools
+        allowed_scopes = principal.allowed_scopes
+    if allowed_tools is not None:
+        tools = [tool for tool in tools if tool.name in allowed_tools]
+    if allowed_scopes is not None:
+        tools = [tool for tool in tools if tool.scope in allowed_scopes]
+    return tools
 
 
 async def invoke_tool(
@@ -77,12 +107,14 @@ async def invoke_tool(
     *,
     name: str,
     arguments: dict[str, Any],
-    scopes: frozenset[str],
+    principal: McpPrincipal,
 ) -> dict[str, Any]:
     definition = _tools.get(name)
     if definition is None:
         raise KeyError(f"Unknown tool: {name}")
-    if definition.scope not in scopes:
+    if name not in principal.allowed_tools:
+        raise PermissionError(f"Tool not allowed: {name}")
+    if definition.scope not in principal.allowed_scopes:
         raise PermissionError(f"Missing scope: {definition.scope}")
     _validate_arguments(arguments, definition.input_schema)
-    return await definition.handler(db, arguments)
+    return await definition.handler(db, arguments, principal)

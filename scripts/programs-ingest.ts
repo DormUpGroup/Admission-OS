@@ -1,3 +1,7 @@
+/**
+ * OPERATIONAL JOB: offline catalogue ingest via Prisma writers.
+ * User-reachable university/program creates go through FastAPI catalog commands.
+ */
 import { PrismaClient } from "@prisma/client";
 import { TARGET_ACADEMIC_YEARS } from "../src/lib/program-matching/config";
 import { ingestAllCatalog } from "../src/server/services/program-ingestion/ingest";

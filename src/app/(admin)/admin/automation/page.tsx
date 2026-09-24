@@ -8,6 +8,7 @@ import {
   setAutomationEnabledAction,
   updateAgentDefinitionAction,
 } from "@/server/automation-actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -125,7 +126,13 @@ export default async function AutomationPage() {
         title="Автоматизация"
         description="Hermes, Telegram, согласования и фоновые события"
         actions={
-          <form action={setAutomationEnabledAction}>
+          <CommandForm
+            action={setAutomationEnabledAction}
+            operation="automation.set-enabled"
+            entityId="global"
+            entityVersion={overview.automation_enabled ? "on" : "off"}
+            formInstance="toggle"
+          >
             <input
               type="hidden"
               name="enabled"
@@ -140,7 +147,7 @@ export default async function AutomationPage() {
                 ? "Остановить автоматизацию"
                 : "Включить автоматизацию"}
             </Button>
-          </form>
+          </CommandForm>
         }
       />
 
@@ -170,9 +177,13 @@ export default async function AutomationPage() {
         </CardHeader>
         <CardContent className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
           {overview.agents.map((agent) => (
-            <form
-              action={updateAgentDefinitionAction}
+            <CommandForm
               key={agent.key}
+              action={updateAgentDefinitionAction}
+              operation="automation.agent-toggle"
+              entityId={agent.key}
+              entityVersion={agent.version}
+              formInstance={agent.enabled ? "disable" : "enable"}
               className="flex items-center justify-between rounded-xl border border-border p-3"
             >
               <input type="hidden" name="agentKey" value={agent.key} />
@@ -190,7 +201,7 @@ export default async function AutomationPage() {
               <Button type="submit" size="sm" variant="outline">
                 {agent.enabled ? "Отключить" : "Включить"}
               </Button>
-            </form>
+            </CommandForm>
           ))}
         </CardContent>
       </Card>
@@ -220,9 +231,12 @@ export default async function AutomationPage() {
                   <DataTableCell>
                     <div className="flex gap-2">
                       {(["APPROVED", "REJECTED"] as const).map((decision) => (
-                        <form
-                          action={decideAutomationApprovalAction}
+                        <CommandForm
                           key={decision}
+                          action={decideAutomationApprovalAction}
+                          operation="automation.approval-decide"
+                          entityId={approval.id}
+                          formInstance={decision}
                         >
                           <input
                             type="hidden"
@@ -240,7 +254,7 @@ export default async function AutomationPage() {
                           >
                             {decision === "APPROVED" ? "Разрешить" : "Отклонить"}
                           </Button>
-                        </form>
+                        </CommandForm>
                       ))}
                     </div>
                   </DataTableCell>
@@ -302,22 +316,34 @@ export default async function AutomationPage() {
                   {["FAILED", "CANCELLED", "TIMED_OUT", "SKIPPED_DISABLED"].includes(
                     run.status
                   ) ? (
-                    <form action={changeAgentRunAction}>
+                    <CommandForm
+                      action={changeAgentRunAction}
+                      operation="automation.run-retry"
+                      entityId={run.id}
+                      entityVersion={run.status}
+                      formInstance="retry"
+                    >
                       <input type="hidden" name="runId" value={run.id} />
                       <input type="hidden" name="operation" value="retry" />
                       <Button size="sm" variant="outline">
                         Повторить
                       </Button>
-                    </form>
+                    </CommandForm>
                   ) : null}
                   {["STARTING", "QUEUED", "RUNNING"].includes(run.status) ? (
-                    <form action={changeAgentRunAction}>
+                    <CommandForm
+                      action={changeAgentRunAction}
+                      operation="automation.run-cancel"
+                      entityId={run.id}
+                      entityVersion={run.status}
+                      formInstance="cancel"
+                    >
                       <input type="hidden" name="runId" value={run.id} />
                       <input type="hidden" name="operation" value="cancel" />
                       <Button size="sm" variant="outline">
                         Отменить
                       </Button>
-                    </form>
+                    </CommandForm>
                   ) : null}
                 </div>
               </CardContent>
@@ -341,12 +367,19 @@ export default async function AutomationPage() {
                   <p className="mt-2 line-clamp-2 text-xs text-[var(--danger-fg)]">
                     {event.last_error ?? "Без описания ошибки"}
                   </p>
-                  <form action={replayDeadLetterAction} className="mt-3">
+                  <CommandForm
+                    action={replayDeadLetterAction}
+                    operation="automation.outbox-replay"
+                    entityId={event.id}
+                    entityVersion={event.attempts}
+                    formInstance="replay"
+                    className="mt-3"
+                  >
                     <input type="hidden" name="eventId" value={event.id} />
                     <Button size="sm" variant="outline">
                       Повторить событие
                     </Button>
-                  </form>
+                  </CommandForm>
                 </CardContent>
               </Card>
             ))}

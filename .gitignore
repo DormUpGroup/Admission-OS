@@ -39,6 +39,7 @@ yarn-error.log*
 /prisma/*.db
 /prisma/*.db-journal
 /storage/
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

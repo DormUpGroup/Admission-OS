@@ -358,6 +358,11 @@ export async function persistProgramMatches(
     forceRefresh?: boolean;
     skipLiveSearch?: boolean;
     onProgress?: (event: MatchProgressEvent) => void;
+    /**
+     * OPERATIONAL: default Prisma persist for offline ETL scripts.
+     * User-reachable generate-matches route must pass "none" and write via FastAPI.
+     */
+    persistMode?: "prisma" | "none";
   }
 ) {
   const report = (
@@ -572,6 +577,17 @@ export async function persistProgramMatches(
       : null;
 
   report("save", "Сохранение результатов", 97);
+  if (options?.persistMode === "none") {
+    report(
+      "done",
+      `Готово: ${generated.length} программ`,
+      100,
+      liveMeta?.source ? `источник: ${liveMeta.source}` : undefined
+    );
+    return { matches: generated, liveMeta };
+  }
+
+  // OPERATIONAL Prisma writer for offline ETL scripts only.
   // Replacing automatic cards must be all-or-nothing. Otherwise a failure
   // after deleteMany leaves the curator with an empty programme selection.
   await prisma.$transaction(async (tx) => {

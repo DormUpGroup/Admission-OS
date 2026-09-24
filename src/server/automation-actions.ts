@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { backendFetch, isBackendCapabilityEnabled } from "@/lib/backend-api";
 import { requireRole, requireStaff } from "@/server/auth/guards";
@@ -9,6 +8,12 @@ function requireBackend() {
   if (!isBackendCapabilityEnabled("automation")) {
     throw new Error("Python automation API is not configured");
   }
+}
+
+function requireCommandId(formData: FormData): string {
+  const commandId = String(formData.get("commandId") || "");
+  if (!commandId) throw new Error("Command id is required");
+  return commandId;
 }
 
 async function expectOk(response: Response, message: string) {
@@ -20,10 +25,10 @@ async function expectOk(response: Response, message: string) {
   }
 }
 
-function commandHeaders(extra?: HeadersInit): HeadersInit {
+function commandHeaders(commandId: string, extra?: HeadersInit): HeadersInit {
   return {
     "Content-Type": "application/json",
-    "Idempotency-Key": randomUUID(),
+    "Idempotency-Key": commandId,
     ...extra,
   };
 }
@@ -31,10 +36,11 @@ function commandHeaders(extra?: HeadersInit): HeadersInit {
 export async function setAutomationEnabledAction(formData: FormData) {
   const session = await requireRole(["ADMIN"]);
   requireBackend();
+  const commandId = requireCommandId(formData);
   const enabled = String(formData.get("enabled") || "") === "true";
   const response = await backendFetch(session.user, "/v1/automation/settings/global", {
     method: "PUT",
-    headers: commandHeaders(),
+    headers: commandHeaders(commandId),
     body: JSON.stringify({
       enabled,
       reason: String(formData.get("reason") || "") || null,
@@ -47,6 +53,7 @@ export async function setAutomationEnabledAction(formData: FormData) {
 export async function decideAutomationApprovalAction(formData: FormData) {
   const session = await requireStaff();
   requireBackend();
+  const commandId = requireCommandId(formData);
   const approvalId = String(formData.get("approvalId") || "");
   const decision = String(formData.get("decision") || "");
   if (!approvalId || !["APPROVED", "REJECTED"].includes(decision)) return;
@@ -55,7 +62,7 @@ export async function decideAutomationApprovalAction(formData: FormData) {
     `/v1/automation/approvals/${encodeURIComponent(approvalId)}/decision`,
     {
       method: "POST",
-      headers: commandHeaders(),
+      headers: commandHeaders(commandId),
       body: JSON.stringify({
         decision,
         note: String(formData.get("note") || "") || null,
@@ -69,6 +76,7 @@ export async function decideAutomationApprovalAction(formData: FormData) {
 export async function pauseAutomationConversationAction(formData: FormData) {
   const session = await requireStaff();
   requireBackend();
+  const commandId = requireCommandId(formData);
   const conversationId = String(formData.get("conversationId") || "");
   if (!conversationId) return;
   const paused = String(formData.get("paused") || "") === "true";
@@ -77,7 +85,7 @@ export async function pauseAutomationConversationAction(formData: FormData) {
     `/v1/automation/conversations/${encodeURIComponent(conversationId)}/pause`,
     {
       method: "PUT",
-      headers: commandHeaders(),
+      headers: commandHeaders(commandId),
       body: JSON.stringify({
         paused,
         reason: String(formData.get("reason") || "") || null,
@@ -91,6 +99,7 @@ export async function pauseAutomationConversationAction(formData: FormData) {
 export async function updateAgentDefinitionAction(formData: FormData) {
   const session = await requireRole(["ADMIN"]);
   requireBackend();
+  const commandId = requireCommandId(formData);
   const agentKey = String(formData.get("agentKey") || "");
   if (!agentKey) return;
   const response = await backendFetch(
@@ -98,7 +107,7 @@ export async function updateAgentDefinitionAction(formData: FormData) {
     `/v1/automation/agents/${encodeURIComponent(agentKey)}`,
     {
       method: "PUT",
-      headers: commandHeaders(),
+      headers: commandHeaders(commandId),
       body: JSON.stringify({
         enabled: String(formData.get("enabled") || "") === "true",
       }),
@@ -111,6 +120,7 @@ export async function updateAgentDefinitionAction(formData: FormData) {
 export async function requestLeadConversionAction(formData: FormData) {
   const session = await requireStaff();
   requireBackend();
+  const commandId = requireCommandId(formData);
   const leadId = String(formData.get("leadId") || "");
   if (!leadId) return;
   const response = await backendFetch(
@@ -118,7 +128,7 @@ export async function requestLeadConversionAction(formData: FormData) {
     `/v1/automation/leads/${encodeURIComponent(leadId)}/request-conversion`,
     {
       method: "POST",
-      headers: { "Idempotency-Key": randomUUID() },
+      headers: { "Idempotency-Key": commandId },
     }
   );
   await expectOk(response, "Не удалось создать согласование конверсии");
@@ -129,6 +139,7 @@ export async function requestLeadConversionAction(formData: FormData) {
 export async function changeAgentRunAction(formData: FormData) {
   const session = await requireStaff();
   requireBackend();
+  const commandId = requireCommandId(formData);
   const runId = String(formData.get("runId") || "");
   const operation = String(formData.get("operation") || "");
   if (!runId || !["retry", "cancel"].includes(operation)) return;
@@ -137,7 +148,7 @@ export async function changeAgentRunAction(formData: FormData) {
     `/v1/automation/runs/${encodeURIComponent(runId)}/${operation}`,
     {
       method: "POST",
-      headers: { "Idempotency-Key": randomUUID() },
+      headers: { "Idempotency-Key": commandId },
     }
   );
   await expectOk(response, "Не удалось изменить agent run");
@@ -147,6 +158,7 @@ export async function changeAgentRunAction(formData: FormData) {
 export async function replayDeadLetterAction(formData: FormData) {
   const session = await requireRole(["ADMIN"]);
   requireBackend();
+  const commandId = requireCommandId(formData);
   const eventId = String(formData.get("eventId") || "");
   if (!eventId) return;
   const response = await backendFetch(
@@ -154,7 +166,7 @@ export async function replayDeadLetterAction(formData: FormData) {
     `/v1/automation/outbox/${encodeURIComponent(eventId)}/replay`,
     {
       method: "POST",
-      headers: { "Idempotency-Key": randomUUID() },
+      headers: { "Idempotency-Key": commandId },
     }
   );
   await expectOk(response, "Не удалось повторить событие");

@@ -31,9 +31,14 @@ external data platform; all compute runs in this Railway project.
    - No public domain. Expose only Railway private networking.
    - Set `API_SERVER_KEY`, model provider credentials, bounded run timeout,
      max iterations, and child concurrency.
-   - Configure only the IMMIGROME MCP endpoint and `HERMES_MCP_KEY`; disable
-     shell, filesystem, browser, direct messaging, memory writes, cron, and
-     unrestricted HTTP tools.
+   - Configure only the IMMIGROME MCP endpoint and `HERMES_MCP_KEY` for
+     connection bootstrap (`initialize` / `notifications/initialized` only).
+     Write tools require a short-lived per-run capability JWT minted by the
+     API/worker with `HERMES_MCP_CAPABILITY_SECRET` and delivered solely as
+     `mcp.headers.Authorization` on `create_run`. If Hermes cannot attach
+     per-run MCP headers, write tools stay denied under the bootstrap key.
+     Disable shell, filesystem, browser, direct messaging, memory writes,
+     cron, and unrestricted HTTP tools.
 6. `redis`
    - Railway Redis plugin
    - Used by Celery as transport only; Postgres outbox remains authoritative.
@@ -77,7 +82,8 @@ release during deployment and recorded in Railway deployment metadata.
 - `AUTOMATION_API_SECRET`
 - `HERMES_API_URL=http://hermes.railway.internal:<port>`
 - `HERMES_API_KEY`
-- `HERMES_MCP_KEY`
+- `HERMES_MCP_KEY` (bootstrap only; empty `tools/list`, no `tools/call`)
+- `HERMES_MCP_CAPABILITY_SECRET` (dedicated; never reuse INTERNAL/AUTOMATION/MCP keys)
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_WEBHOOK_SECRET`
 - `GOOGLE_CALENDAR_ID`

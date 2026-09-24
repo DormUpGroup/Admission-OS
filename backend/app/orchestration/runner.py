@@ -14,6 +14,8 @@ from app.db.tables import (
     conversation_message_table,
     conversation_table,
 )
+from app.mcp.capability import CapabilityError, mint_mcp_capability
+from app.mcp.registry import scopes_for_tools
 from app.orchestration.hermes_client import HermesClient, HermesRun
 from app.orchestration.registry import agent_for_event, sync_agent_definitions
 from app.orchestration.settings import automation_is_enabled
@@ -35,12 +37,50 @@ def _system_prompt(agent_key: str, mission: str, forbidden: tuple[str, ...]) -> 
 class PreparedAgentLaunch:
     run_id: str
     agent_key: str
+    agent_version: str
     conversation_id: str | None
+    lead_id: str | None
+    student_id: str | None
+    allowed_tools: tuple[str, ...]
+    timeout_seconds: int
     hermes_session_id: str | None
     prompt: str | None
     hermes_idempotency_key: str
     already_launched: bool
     skipped: bool
+
+
+def _prepared(
+    *,
+    run_id: str,
+    agent_key: str,
+    agent_version: str = "1.0.0",
+    conversation_id: str | None,
+    lead_id: str | None = None,
+    student_id: str | None = None,
+    allowed_tools: tuple[str, ...] | list[str] = (),
+    timeout_seconds: int = 120,
+    hermes_session_id: str | None,
+    prompt: str | None,
+    hermes_idempotency_key: str,
+    already_launched: bool,
+    skipped: bool,
+) -> PreparedAgentLaunch:
+    return PreparedAgentLaunch(
+        run_id=run_id,
+        agent_key=agent_key,
+        agent_version=agent_version,
+        conversation_id=conversation_id,
+        lead_id=lead_id,
+        student_id=student_id,
+        allowed_tools=tuple(allowed_tools),
+        timeout_seconds=timeout_seconds,
+        hermes_session_id=hermes_session_id,
+        prompt=prompt,
+        hermes_idempotency_key=hermes_idempotency_key,
+        already_launched=already_launched,
+        skipped=skipped,
+    )
 
 
 async def prepare_agent_run(
@@ -71,10 +111,13 @@ async def prepare_agent_run(
     if existing and (
         existing.hermesRunId or existing.status == "SKIPPED_DISABLED"
     ):
-        return PreparedAgentLaunch(
+        return _prepared(
             run_id=existing.id,
             agent_key=existing.agentKey,
+            agent_version=definition.version,
             conversation_id=existing.conversationId,
+            allowed_tools=definition.allowedToolsJson or [],
+            timeout_seconds=int(definition.timeoutSeconds),
             hermes_session_id=existing.hermesSessionId,
             prompt=None,
             hermes_idempotency_key=event["idempotencyKey"],
@@ -87,6 +130,8 @@ async def prepare_agent_run(
     message_id = payload.get("message_id")
     message_text = None
     hermes_session_id = None
+    lead_id = None
+    student_id = None
     if conversation_id:
         conversation = (
             await db.execute(
@@ -97,7 +142,10 @@ async def prepare_agent_run(
         ).mappings().first()
         if conversation and conversation.automationPausedAt is not None:
             return None
-        hermes_session_id = conversation.hermesSessionId if conversation else None
+        if conversation:
+            hermes_session_id = conversation.hermesSessionId
+            lead_id = conversation.leadId
+            student_id = conversation.studentId
     if message_id:
         message_text = (
             await db.execute(
@@ -107,6 +155,7 @@ async def prepare_agent_run(
             )
         ).scalar_one_or_none()
 
+    allowed_tools = tuple(definition.allowedToolsJson or [])
     prompt = (
         _system_prompt(spec.key, spec.mission, spec.forbidden)
         + "\nEvent:\n"
@@ -116,7 +165,7 @@ async def prepare_agent_run(
                 "conversation_id": conversation_id,
                 "message_id": message_id,
                 "message_text": message_text,
-                "allowed_tools": definition.allowedToolsJson,
+                "allowed_tools": list(allowed_tools),
                 "output_schema": spec.output_schema,
             },
             ensure_ascii=False,
@@ -125,10 +174,15 @@ async def prepare_agent_run(
     )
 
     if existing:
-        return PreparedAgentLaunch(
+        return _prepared(
             run_id=existing.id,
             agent_key=existing.agentKey,
+            agent_version=definition.version,
             conversation_id=existing.conversationId or conversation_id,
+            lead_id=lead_id,
+            student_id=student_id,
+            allowed_tools=allowed_tools,
+            timeout_seconds=int(definition.timeoutSeconds),
             hermes_session_id=existing.hermesSessionId or hermes_session_id,
             prompt=prompt,
             hermes_idempotency_key=event["idempotencyKey"],
@@ -163,10 +217,15 @@ async def prepare_agent_run(
         )
     )
     if not enabled:
-        return PreparedAgentLaunch(
+        return _prepared(
             run_id=run_id,
             agent_key=spec.key,
+            agent_version=definition.version,
             conversation_id=conversation_id,
+            lead_id=lead_id,
+            student_id=student_id,
+            allowed_tools=allowed_tools,
+            timeout_seconds=int(definition.timeoutSeconds),
             hermes_session_id=hermes_session_id,
             prompt=None,
             hermes_idempotency_key=event["idempotencyKey"],
@@ -174,10 +233,15 @@ async def prepare_agent_run(
             skipped=True,
         )
 
-    return PreparedAgentLaunch(
+    return _prepared(
         run_id=run_id,
         agent_key=spec.key,
+        agent_version=definition.version,
         conversation_id=conversation_id,
+        lead_id=lead_id,
+        student_id=student_id,
+        allowed_tools=allowed_tools,
+        timeout_seconds=int(definition.timeoutSeconds),
         hermes_session_id=hermes_session_id,
         prompt=prompt,
         hermes_idempotency_key=event["idempotencyKey"],
@@ -186,9 +250,32 @@ async def prepare_agent_run(
     )
 
 
+def _mint_run_capability(prepared: PreparedAgentLaunch) -> str:
+    settings = get_settings()
+    if not settings.hermes_mcp_capability_secret:
+        raise CapabilityError("HERMES_MCP_CAPABILITY_SECRET is not configured")
+    # Import tools so registry scopes resolve for allowed tools.
+    from app.mcp import tools as _tools  # noqa: F401
+
+    return mint_mcp_capability(
+        secret=settings.hermes_mcp_capability_secret,
+        agent_run_id=prepared.run_id,
+        agent_key=prepared.agent_key,
+        agent_version=prepared.agent_version,
+        allowed_tools=prepared.allowed_tools,
+        allowed_scopes=scopes_for_tools(prepared.allowed_tools),
+        timeout_seconds=prepared.timeout_seconds,
+        student_id=prepared.student_id,
+        lead_id=prepared.lead_id,
+        conversation_id=prepared.conversation_id,
+        correlation_id=prepared.hermes_idempotency_key,
+    )
+
+
 async def launch_hermes_run(prepared: PreparedAgentLaunch) -> HermesRun:
     if prepared.prompt is None:
         raise RuntimeError("Prepared launch has no prompt")
+    mcp_authorization = _mint_run_capability(prepared)
     return await HermesClient(get_settings()).create_run(
         prompt=prepared.prompt,
         idempotency_key=prepared.hermes_idempotency_key,
@@ -198,6 +285,7 @@ async def launch_hermes_run(prepared: PreparedAgentLaunch) -> HermesRun:
             "immigrome_agent_run_id": prepared.run_id,
             "conversation_id": prepared.conversation_id,
         },
+        mcp_authorization=mcp_authorization,
     )
 
 

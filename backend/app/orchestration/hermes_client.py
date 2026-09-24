@@ -36,8 +36,20 @@ class HermesClient:
         idempotency_key: str,
         session_id: str | None,
         metadata: dict[str, Any],
+        mcp_authorization: str | None = None,
     ) -> HermesRun:
         base_url, api_key = self._configuration()
+        body: dict[str, Any] = {
+            "input": prompt,
+            "session_id": session_id,
+            "metadata": metadata,
+        }
+        if mcp_authorization:
+            # Per-run MCP credential only. Never put the raw token in metadata,
+            # prompt, or logs.
+            body["mcp"] = {
+                "headers": {"Authorization": f"Bearer {mcp_authorization}"},
+            }
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(180.0, connect=10.0),
             transport=self.transport,
@@ -49,11 +61,7 @@ class HermesClient:
                     "Idempotency-Key": idempotency_key,
                     "Content-Type": "application/json",
                 },
-                json={
-                    "input": prompt,
-                    "session_id": session_id,
-                    "metadata": metadata,
-                },
+                json=body,
             )
         response.raise_for_status()
         payload = response.json()

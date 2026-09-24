@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { portalUploadAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -74,15 +75,14 @@ export default async function PortalDocumentsPage() {
                 ) : null}
 
                 {canUpload ? (
-                  <form
+                  <CommandForm
                     action={portalUploadAction}
+                    operation="document.portal-upload"
+                    entityId={doc.id}
+                    entityVersion={doc.version}
+                    formInstance="upload"
                     className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
                   >
-                    <input
-                      type="hidden"
-                      name="commandId"
-                      value={crypto.randomUUID()}
-                    />
                     <input type="hidden" name="documentId" value={doc.id} />
                     <Input
                       type="file"
@@ -93,7 +93,7 @@ export default async function PortalDocumentsPage() {
                     <Button type="submit" size="sm" className="shrink-0">
                       Загрузить
                     </Button>
-                  </form>
+                  </CommandForm>
                 ) : null}
               </li>
             );

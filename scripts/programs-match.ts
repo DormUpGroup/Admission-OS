@@ -1,3 +1,7 @@
+/**
+ * OPERATIONAL JOB: offline match persistence via Prisma persistProgramMatches.
+ * User-reachable generate-matches persists through FastAPI program_match.replace.
+ */
 import { PrismaClient } from "@prisma/client";
 import { buildMatchingProfile } from "../src/server/services/program-matching/program-matching";
 import {

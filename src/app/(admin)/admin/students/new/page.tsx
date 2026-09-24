@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/server/auth/guards";
 import { prisma } from "@/lib/db";
 import { createStudentAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,12 +33,13 @@ export default async function NewStudentPage() {
 
       <Card>
         <CardContent className="pt-4">
-          <form action={createStudentAction} className="grid gap-3 sm:grid-cols-2">
-            <input
-              type="hidden"
-              name="commandId"
-              value={crypto.randomUUID()}
-            />
+          <CommandForm
+            action={createStudentAction}
+            operation="student.create"
+            entityId="new"
+            formInstance="create"
+            className="grid gap-3 sm:grid-cols-2"
+          >
             <div className="space-y-1.5">
               <Label htmlFor="firstName">Имя</Label>
               <Input id="firstName" name="firstName" required />
@@ -111,7 +113,7 @@ export default async function NewStudentPage() {
               </Button>
               <Button type="submit">Создать студента</Button>
             </div>
-          </form>
+          </CommandForm>
         </CardContent>
       </Card>
     </div>

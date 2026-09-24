@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -221,9 +222,15 @@ function NewAnketasBlock({
                   <Link href={`/admin/students/${row.studentId}/anketa`}>Открыть анкету</Link>
                 </Button>
                 {view.canAccept ? (
-                  <form action={acceptAccompanimentAction}>
+                  <CommandForm
+                    action={acceptAccompanimentAction}
+                    operation="accompaniment.accept"
+                    entityId={row.studentId}
+                    entityVersion={row.studentVersion}
+                    formInstance="accept"
+                  >
                     <input type="hidden" name="studentId" value={row.studentId} />
-                    <input type="hidden" name="commandId" value={crypto.randomUUID()} />
+                    
                     <input type="hidden" name="redirectTo" value="/admin" />
                     <Button
                       type="submit"
@@ -234,7 +241,7 @@ function NewAnketasBlock({
                     >
                       Принять на сопровождение
                     </Button>
-                  </form>
+                  </CommandForm>
                 ) : null}
                 {!row.canAccept && row.acceptBlockedReason ? (
                   <p className="text-xs text-muted-foreground">{row.acceptBlockedReason}</p>

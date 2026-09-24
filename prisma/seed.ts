@@ -79,8 +79,6 @@ async function main() {
     },
   });
 
-  const curators = [anna, marco, elena];
-
   await ingestAllCatalog();
 
   const programs = await prisma.program.findMany({

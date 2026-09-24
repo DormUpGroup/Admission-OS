@@ -26,6 +26,7 @@ import {
   verifyProgramDossierFactsAction,
   setMonitoringSelectedAction,
 } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 
 const SHORTLIST_LABELS: Record<string, string> = {
   SHORTLISTED: "В коротком списке",
@@ -328,8 +329,11 @@ function DecisionRow({
           <summary className="cursor-pointer text-xs text-[var(--brand)]">
             Подтвердить вручную
           </summary>
-          <form
+          <CommandForm
             action={verifyProgramDossierFactsAction}
+            operation="program-dossier.verify"
+            entityId={programAcademicYearId}
+            formInstance={`field-${confirmField}`}
             className="mt-2 flex flex-wrap items-end gap-2"
           >
             <input type="hidden" name="studentId" value={studentId} />
@@ -401,7 +405,7 @@ function DecisionRow({
             <Button type="submit" size="sm">
               Сохранить
             </Button>
-          </form>
+          </CommandForm>
           </details>
         ) : null}
       </div>
@@ -701,20 +705,31 @@ export function CuratorProgramLevelsCard({
           {catalog ? null : (
             <div className="flex flex-wrap gap-2 pt-1">
             {match.selectionReady ? (
-              <form action={reviewProgramMatchAction}>
+              <CommandForm
+                action={reviewProgramMatchAction}
+                operation="program-match.review"
+                entityId={match.matchId}
+                formInstance="levels-shortlist"
+              >
                 <input type="hidden" name="studentId" value={match.studentId} />
                 <input type="hidden" name="matchId" value={match.matchId} />
                 <input type="hidden" name="status" value="SHORTLISTED" />
                 <Button type="submit" size="sm">
                   В короткий список
                 </Button>
-              </form>
+              </CommandForm>
             ) : (
               <span className="text-xs text-muted-foreground">
                 Shortlist недоступен: нет подтверждённых условий поступления.
               </span>
             )}
-            <form action={setMonitoringSelectedAction}>
+            <CommandForm
+              action={setMonitoringSelectedAction}
+              operation="program-match.monitoring"
+              entityId={match.matchId}
+              entityVersion={match.monitoringSelected ? "1" : "0"}
+              formInstance="toggle"
+            >
               <input type="hidden" name="studentId" value={match.studentId} />
               <input type="hidden" name="matchId" value={match.matchId} />
               <input
@@ -727,7 +742,7 @@ export function CuratorProgramLevelsCard({
                   ? "Снять с мониторинга"
                   : "Мониторинг (до 5)"}
               </Button>
-            </form>
+            </CommandForm>
             {match.alreadyApplied && match.applicationId ? (
               <Button asChild size="sm" variant="outline">
                 <Link
@@ -737,12 +752,13 @@ export function CuratorProgramLevelsCard({
                 </Link>
               </Button>
             ) : match.selectionReady ? (
-              <form action={createApplicationAction}>
-                <input
-                  type="hidden"
-                  name="commandId"
-                  value={crypto.randomUUID()}
-                />
+              <CommandForm
+                action={createApplicationAction}
+                operation="application.create"
+                entityId={`${match.studentId}:${match.programId}`}
+                entityVersion={match.matchId}
+                formInstance="from-match"
+              >
                 <input type="hidden" name="studentId" value={match.studentId} />
                 <input type="hidden" name="programId" value={match.programId} />
                 <input
@@ -754,7 +770,7 @@ export function CuratorProgramLevelsCard({
                 <Button type="submit" size="sm" variant="outline">
                   Создать заявку
                 </Button>
-              </form>
+              </CommandForm>
             ) : null}
             </div>
           )}

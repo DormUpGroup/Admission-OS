@@ -5,6 +5,7 @@ import {
   approveDocumentAction,
   needsChangesAction,
 } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
@@ -172,12 +173,14 @@ export default async function AdminDocumentsPage({
                             Одобрить
                           </Button>
                         </form>
-                        <form action={needsChangesAction} className="flex gap-1">
-                          <input
-                            type="hidden"
-                            name="commandId"
-                            value={crypto.randomUUID()}
-                          />
+                        <CommandForm
+                          action={needsChangesAction}
+                          operation="document.needs-changes"
+                          entityId={doc.id}
+                          entityVersion={doc.version}
+                          formInstance="needs-changes"
+                          className="flex gap-1"
+                        >
                           <input type="hidden" name="documentId" value={doc.id} />
                           <Input
                             name="reason"
@@ -188,7 +191,7 @@ export default async function AdminDocumentsPage({
                           <Button type="submit" size="sm" variant="outline">
                             Нужны правки
                           </Button>
-                        </form>
+                        </CommandForm>
                       </div>
                     ) : (
                       <Link

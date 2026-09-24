@@ -4,11 +4,19 @@ from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.tables import outbox_event_table
 
 OutboxHandler = Callable[[AsyncSession, dict[str, Any]], Awaitable[None]]
+
+# Default lease must exceed Hermes create_run HTTP timeout (180s) with margin.
+# Heartbeats renew during long external calls (~1/3 of this interval).
+DEFAULT_LEASE_TIMEOUT = timedelta(minutes=5)
+
+
+class LostLease(Exception):
+    """Raised when this worker no longer holds the outbox fencing token."""
 
 
 def retry_delay(attempt: int) -> timedelta:
@@ -22,7 +30,7 @@ async def claim_events(
     *,
     worker_id: str,
     limit: int = 25,
-    lease_timeout: timedelta = timedelta(minutes=5),
+    lease_timeout: timedelta = DEFAULT_LEASE_TIMEOUT,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
     now = now or datetime.now(UTC)
@@ -90,7 +98,7 @@ async def renew_lease(
     event_id: str,
     lease_token: str,
     *,
-    extend_by: timedelta = timedelta(minutes=5),
+    extend_by: timedelta = DEFAULT_LEASE_TIMEOUT,
     now: datetime | None = None,
 ) -> bool:
     now = now or datetime.now(UTC)
@@ -175,6 +183,72 @@ async def mark_failed(
         return None
     event["attempts"] = attempts
     return status
+
+
+async def run_with_lease_heartbeat[T](
+    factory: async_sessionmaker[AsyncSession],
+    *,
+    event_id: str,
+    lease_token: str,
+    awaitable: Awaitable[T],
+    lease_timeout: timedelta = DEFAULT_LEASE_TIMEOUT,
+) -> T:
+    """Run an external call while renewing the lease in a separate session.
+
+    Heartbeat interval is ~1/3 of ``lease_timeout``. Lease is checked before and
+    after the call. If a heartbeat loses the fencing token, raises ``LostLease``
+    and must not be treated as success (do not stale-finalize).
+    """
+    import asyncio
+
+    from app.observability.metrics import incr
+
+    async def _renew() -> bool:
+        async with factory() as db:
+            async with db.begin():
+                return await renew_lease(
+                    db, event_id, lease_token, extend_by=lease_timeout
+                )
+
+    if not await _renew():
+        incr("lost_lease_heartbeats")
+        close = getattr(awaitable, "close", None)
+        if callable(close):
+            close()
+        raise LostLease(event_id)
+
+    stop = asyncio.Event()
+    lost = asyncio.Event()
+    interval = max(1.0, lease_timeout.total_seconds() / 3)
+
+    async def _heartbeat() -> None:
+        while not stop.is_set():
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=interval)
+                return
+            except TimeoutError:
+                pass
+            if not await _renew():
+                incr("lost_lease_heartbeats")
+                lost.set()
+                return
+
+    heartbeat_task = asyncio.create_task(_heartbeat())
+    try:
+        result = await awaitable
+        if lost.is_set():
+            raise LostLease(event_id)
+        if not await _renew():
+            incr("lost_lease_heartbeats")
+            raise LostLease(event_id)
+        return result
+    finally:
+        stop.set()
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
 
 
 async def dispatch_claimed_event(

@@ -37,6 +37,8 @@ export async function saveDocumentFile(input: {
   idempotencyKey?: string;
 }) {
   const ext = path.extname(input.filename) || ".bin";
+  // randomUUID here is only a unique storage object path when no idempotency
+  // key was provided — not an Idempotency-Key for command replay.
   const objectId = input.idempotencyKey
     ? createHash("sha256").update(input.idempotencyKey).digest("hex")
     : randomUUID();

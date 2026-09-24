@@ -16,6 +16,15 @@ from app.db.tables import (
     student_table,
     task_table,
 )
+from app.mcp.authz import (
+    assert_conversation_access,
+    assert_document_access,
+    assert_lead_access,
+    assert_message_access,
+    assert_optional_bindings,
+    assert_student_access,
+)
+from app.mcp.principal import McpPrincipal
 from app.mcp.registry import ToolDefinition, register_tool
 from app.services.commands.appointments import (
     create_appointment_command,
@@ -47,17 +56,10 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
-def _agent_run_id(arguments: dict[str, Any]) -> str:
-    return (
-        str(arguments.get("agent_run_id") or "").strip()
-        or str(arguments.get("agent_key") or "").strip()
-        or "mcp"
-    )
-
-
 async def _run_agent_command(
     db: AsyncSession,
     *,
+    principal: McpPrincipal,
     arguments: dict[str, Any],
     operation: str,
     payload: dict[str, Any],
@@ -65,10 +67,11 @@ async def _run_agent_command(
 ) -> dict[str, Any]:
     idempotency_key = _required(arguments, "idempotency_key")
     context = agent_context(
-        agent_run_id=_agent_run_id(arguments),
+        agent_run_id=principal.agent_run_id,
         operation=operation,
         idempotency_key=idempotency_key,
-        actor_id=str(arguments.get("agent_key") or _agent_run_id(arguments)),
+        actor_id=principal.agent_key,
+        correlation_id=principal.correlation_id,
     )
     try:
         executed = await execute_command(
@@ -82,8 +85,11 @@ async def _run_agent_command(
     return executed.result.response
 
 
-async def lead_get(db: AsyncSession, arguments: dict[str, Any]) -> dict[str, Any]:
+async def lead_get(
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
+) -> dict[str, Any]:
     lead_id = _required(arguments, "lead_id")
+    await assert_lead_access(db, principal, lead_id)
     row = (
         await db.execute(select(lead_table).where(lead_table.c.id == lead_id))
     ).mappings().first()
@@ -104,14 +110,16 @@ async def lead_get(db: AsyncSession, arguments: dict[str, Any]) -> dict[str, Any
 
 
 async def lead_update_qualification(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     lead_id = _required(arguments, "lead_id")
+    await assert_lead_access(db, principal, lead_id)
     fields = arguments.get("fields")
     if not isinstance(fields, dict):
         raise ValueError("fields must be an object")
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="lead.qualification.update",
         payload={"lead_id": lead_id, "fields": fields},
@@ -122,9 +130,10 @@ async def lead_update_qualification(
 
 
 async def conversation_recent(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     conversation_id = _required(arguments, "conversation_id")
+    await assert_conversation_access(db, principal, conversation_id)
     limit = max(1, min(int(arguments.get("limit") or 20), 50))
     conversation = (
         await db.execute(
@@ -161,12 +170,14 @@ async def conversation_recent(
 
 
 async def message_propose(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     conversation_id = _required(arguments, "conversation_id")
+    await assert_conversation_access(db, principal, conversation_id)
     text = _required(arguments, "text")
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="message.propose",
         payload={"conversation_id": conversation_id, "text": text},
@@ -177,12 +188,14 @@ async def message_propose(
 
 
 async def message_request_send(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     message_id = _required(arguments, "message_id")
+    await assert_message_access(db, principal, message_id)
     template_key = str(arguments.get("template_key") or "").strip() or None
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="message.request_send",
         payload={"message_id": message_id, "template_key": template_key},
@@ -195,16 +208,24 @@ async def message_request_send(
     )
 
 
-async def task_create(db: AsyncSession, arguments: dict[str, Any]) -> dict[str, Any]:
+async def task_create(
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
+) -> dict[str, Any]:
     student_id = _required(arguments, "student_id")
+    await assert_student_access(db, principal, student_id)
     title = _required(arguments, "title")
     description = str(arguments.get("description") or "") or None
     priority = str(arguments.get("priority") or "MEDIUM")
     assignee_id = str(arguments.get("assignee_id") or "") or None
     application_id = str(arguments.get("application_id") or "") or None
+    if application_id:
+        await assert_optional_bindings(
+            db, principal, application_id=application_id, student_id=student_id
+        )
     is_student_facing = bool(arguments.get("is_student_facing", False))
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="task.create",
         payload={
@@ -230,8 +251,11 @@ async def task_create(db: AsyncSession, arguments: dict[str, Any]) -> dict[str, 
     )
 
 
-async def case_snapshot(db: AsyncSession, arguments: dict[str, Any]) -> dict[str, Any]:
+async def case_snapshot(
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
+) -> dict[str, Any]:
     student_id = _required(arguments, "student_id")
+    await assert_student_access(db, principal, student_id)
     student = (
         await db.execute(select(student_table).where(student_table.c.id == student_id))
     ).mappings().first()
@@ -292,8 +316,9 @@ async def case_snapshot(db: AsyncSession, arguments: dict[str, Any]) -> dict[str
 
 
 async def appointment_list_slots(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
+    del principal  # curator availability is not case-bound
     curator_id = _required(arguments, "curator_id")
     timezone_name = str(arguments.get("timezone") or "Europe/Rome")
     timezone = ZoneInfo(timezone_name)
@@ -341,7 +366,7 @@ async def appointment_list_slots(
 
 
 async def appointment_create(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     curator_id = _required(arguments, "curator_id")
     starts_at = datetime.fromisoformat(_required(arguments, "starts_at"))
@@ -349,11 +374,19 @@ async def appointment_create(
     lead_id = str(arguments.get("lead_id") or "") or None
     student_id = str(arguments.get("student_id") or "") or None
     conversation_id = str(arguments.get("conversation_id") or "") or None
+    await assert_optional_bindings(
+        db,
+        principal,
+        lead_id=lead_id,
+        student_id=student_id,
+        conversation_id=conversation_id,
+    )
     title = str(arguments.get("title") or "Консультация")
     timezone = str(arguments.get("timezone") or "Europe/Rome")
     participants = arguments.get("participants")
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="appointment.create",
         payload={
@@ -384,12 +417,14 @@ async def appointment_create(
 
 
 async def onboarding_prepare(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     lead_id = _required(arguments, "lead_id")
+    await assert_lead_access(db, principal, lead_id)
     approval_id = _required(arguments, "approval_id")
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="onboarding.prepare",
         payload={"lead_id": lead_id, "approval_id": approval_id},
@@ -400,9 +435,10 @@ async def onboarding_prepare(
 
 
 async def document_list_gaps(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     student_id = _required(arguments, "student_id")
+    await assert_student_access(db, principal, student_id)
     rows = (
         await db.execute(
             select(document_table).where(
@@ -431,9 +467,10 @@ async def document_list_gaps(
 
 
 async def document_request(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     document_id = _required(arguments, "document_id")
+    await assert_document_access(db, principal, document_id)
 
     async def handler(context):
         from fastapi import HTTPException
@@ -447,6 +484,7 @@ async def document_request(
 
     response = await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="document.request",
         payload={"document_id": document_id},
@@ -459,11 +497,13 @@ async def document_request(
 
 
 async def scheduling_request(
-    db: AsyncSession, arguments: dict[str, Any]
+    db: AsyncSession, arguments: dict[str, Any], principal: McpPrincipal
 ) -> dict[str, Any]:
     conversation_id = _required(arguments, "conversation_id")
+    await assert_conversation_access(db, principal, conversation_id)
     return await _run_agent_command(
         db,
+        principal=principal,
         arguments=arguments,
         operation="scheduling.request",
         payload={"conversation_id": conversation_id},
@@ -530,12 +570,11 @@ register_tool(
         "message.propose",
         "Create an outbound draft; this does not send it.",
         _object_schema(
-            ["conversation_id", "text", "idempotency_key", "agent_key"],
+            ["conversation_id", "text", "idempotency_key"],
             {
                 "conversation_id": {"type": "string"},
                 "text": {"type": "string", "minLength": 1, "maxLength": 5000},
                 "idempotency_key": {"type": "string"},
-                "agent_key": {"type": "string"},
             },
         ),
         "messages:draft",
@@ -565,7 +604,7 @@ register_tool(
         "task.create",
         "Create an idempotent task for a student or staff member.",
         _object_schema(
-            ["student_id", "title", "idempotency_key", "agent_key"],
+            ["student_id", "title", "idempotency_key"],
             {
                 "student_id": {"type": "string"},
                 "title": {"type": "string"},
@@ -575,7 +614,6 @@ register_tool(
                 "application_id": {"type": "string"},
                 "is_student_facing": {"type": "boolean"},
                 "idempotency_key": {"type": "string"},
-                "agent_key": {"type": "string"},
             },
         ),
         "tasks:create",

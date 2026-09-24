@@ -1,5 +1,5 @@
 import { Paperclip } from "lucide-react";
-import { CommandIdInput } from "@/components/command-id-input";
+import { CommandForm } from "@/components/command-form";
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { sendStudentMessageAction } from "@/server/actions";
@@ -112,17 +112,15 @@ export default async function PortalMessagesPage() {
       )}
 
       {curator ? (
-        <form
+        <CommandForm
           action={sendStudentMessageAction}
-          encType="multipart/form-data"
+          operation="message.student.send"
+          entityId={student.id}
+          entityVersion={conversation?.version ?? student.version}
+          formInstance="compose"
           className="space-y-4"
+          encType="multipart/form-data"
         >
-          <CommandIdInput
-            operation="message.student.send"
-            entityId={student.id}
-            entityVersion={conversation?.version ?? student.version}
-            formInstance="compose"
-          />
           <label className="block">
             <span className="sr-only">Сообщение куратору</span>
             <textarea
@@ -178,7 +176,7 @@ export default async function PortalMessagesPage() {
           <Button type="submit" size="lg" className="w-full sm:w-auto">
             Отправить
           </Button>
-        </form>
+        </CommandForm>
       ) : null}
     </div>
   );

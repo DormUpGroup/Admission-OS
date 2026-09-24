@@ -210,3 +210,77 @@ async def test_stale_worker_cannot_finalize_after_reclaim() -> None:
     assert row.status == "PROCESSED"
     assert row.leaseToken is None
     await engine.dispose()
+
+
+async def test_lease_heartbeat_renews_in_separate_session() -> None:
+    from app.events.outbox import run_with_lease_heartbeat
+
+    engine, factory = await _database()
+    now = datetime.now(UTC)
+    async with factory() as db:
+        await db.execute(
+            insert(outbox_event_table).values(
+                id="event_hb",
+                aggregateType="Task",
+                aggregateId="task_hb",
+                eventType="task.created.v1",
+                eventVersion=1,
+                payloadJson={},
+                status="PENDING",
+                attempts=0,
+                maxAttempts=3,
+                nextAttemptAt=now,
+                idempotencyKey="hb_1",
+                createdAt=now,
+                updatedAt=now,
+            )
+        )
+        await db.commit()
+
+    lease = timedelta(seconds=3)
+    async with factory() as db:
+        async with db.begin():
+            claimed = await claim_events(
+                db, worker_id="hb-worker", now=now, lease_timeout=lease
+            )
+    token = claimed[0]["leaseToken"]
+    original_expiry = claimed[0]["leaseExpiresAt"]
+
+    async def slow() -> str:
+        import asyncio
+
+        await asyncio.sleep(4)
+        return "ok"
+
+    assert (
+        await run_with_lease_heartbeat(
+            factory,
+            event_id="event_hb",
+            lease_token=token,
+            awaitable=slow(),
+            lease_timeout=lease,
+        )
+        == "ok"
+    )
+
+    async with factory() as db:
+        row = (
+            await db.execute(
+                select(outbox_event_table).where(outbox_event_table.c.id == "event_hb")
+            )
+        ).mappings().one()
+    assert row.leaseExpiresAt.replace(tzinfo=UTC) > original_expiry.replace(tzinfo=UTC)
+    await engine.dispose()
+
+
+async def test_provider_ambiguous_semantics_are_documented() -> None:
+    from app.services.delivery import google_calendar, telegram
+
+    module_doc = (telegram.__doc__ or "").lower()
+    assert "at-most-once" in module_doc
+    assert "unknown_requires_review" in module_doc
+    assert "auto-resend" in module_doc or "automatically resend" in module_doc
+    cal_doc = (google_calendar.__doc__ or "").lower()
+    assert "idempotent" in cal_doc
+    assert "immigromeappointmentid" in cal_doc
+    assert "deterministic" in cal_doc

@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
 
+/**
+ * OPERATIONAL: Prisma helper for offline/ETL scripts (scripts/reset-universitaly-cache.ts).
+ * User-reachable resets must use FastAPI catalog.universitaly_cache.reset command.
+ */
 function isLiveExternalId(id: string | null) {
   return /^\d+$/.test(id || "");
 }

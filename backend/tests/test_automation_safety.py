@@ -30,20 +30,40 @@ def test_safety_requires_approval_for_free_form_and_allows_template() -> None:
 
 
 async def test_mcp_rejects_tool_without_required_scope() -> None:
+    from app.mcp.principal import McpPrincipal
+
+    principal = McpPrincipal(
+        agent_run_id="run_1",
+        agent_key="intake",
+        agent_version="1.0.0",
+        allowed_tools=frozenset({"lead.get"}),
+        allowed_scopes=frozenset(),
+        lead_id="lead_1",
+    )
     with pytest.raises(PermissionError, match="leads:read"):
         await invoke_tool(  # type: ignore[arg-type]
             None,
             name="lead.get",
             arguments={"lead_id": "lead_1"},
-            scopes=frozenset(),
+            principal=principal,
         )
 
 
 async def test_mcp_contract_rejects_unknown_arguments_before_handler() -> None:
+    from app.mcp.principal import McpPrincipal
+
+    principal = McpPrincipal(
+        agent_run_id="run_1",
+        agent_key="intake",
+        agent_version="1.0.0",
+        allowed_tools=frozenset({"lead.get"}),
+        allowed_scopes=frozenset({"leads:read"}),
+        lead_id="lead_1",
+    )
     with pytest.raises(ValueError, match="Unknown arguments"):
         await invoke_tool(  # type: ignore[arg-type]
             None,
             name="lead.get",
             arguments={"lead_id": "lead_1", "sql": "drop table Lead"},
-            scopes=frozenset({"leads:read"}),
+            principal=principal,
         )

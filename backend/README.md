@@ -45,8 +45,23 @@ service topology, variables, activation sequence, and rollback steps are in
 [`docs/deployment/railway-hermes.md`](../docs/deployment/railway-hermes.md).
 
 Human bridge tokens use `INTERNAL_API_SECRET`. Machine credentials use the
-separate `AUTOMATION_API_SECRET` or private `HERMES_MCP_KEY`; there is no
+separate `AUTOMATION_API_SECRET`. Hermes MCP bootstrap uses `HERMES_MCP_KEY`;
+per-run write access uses `HERMES_MCP_CAPABILITY_SECRET`. There is no
 fallback to `AUTH_SECRET`.
+
+### Hermes MCP smoke (opt-in)
+
+Local checklist for capability binding (requires `--confirm`; does not call
+external Hermes unless `--ping-hermes` and `HERMES_API_URL`/`HERMES_API_KEY`
+are also set):
+
+```powershell
+cd backend
+python scripts/hermes_mcp_smoke.py --confirm --base-url http://127.0.0.1:8000
+```
+
+See `scripts/hermes_mcp_smoke.py` docstring for the full checklist (bootstrap
+zero tools, binding mismatches → 401, token only in `mcp.headers.Authorization`).
 
 Local API Docker equivalent (from `backend/`):
 

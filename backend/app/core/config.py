@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     hermes_api_url: str | None = Field(default=None, validation_alias="HERMES_API_URL")
     hermes_api_key: str | None = Field(default=None, validation_alias="HERMES_API_KEY")
     hermes_mcp_key: str | None = Field(default=None, validation_alias="HERMES_MCP_KEY")
+    hermes_mcp_capability_secret: str | None = Field(
+        default=None, validation_alias="HERMES_MCP_CAPABILITY_SECRET"
+    )
     hermes_mcp_scopes: str = Field(
         default=(
             "leads:read,leads:write,cases:read,tasks:create,"

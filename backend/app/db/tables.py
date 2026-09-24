@@ -35,6 +35,10 @@ university_table = Table(
     Column("country", String, nullable=False),
     Column("publicPrivate", String),
     Column("website", String),
+    Column("universitalyExternalId", String),
+    Column("notes", String),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
 )
 
 program_table = Table(
@@ -44,10 +48,17 @@ program_table = Table(
     Column("universityId", String, ForeignKey("University.id"), nullable=False),
     Column("name", String, nullable=False),
     Column("slug", String, nullable=False),
+    Column("titleOfficial", String),
     Column("degreeLevel", String, nullable=False),
     Column("field", String),
     Column("language", String),
+    Column("teachingLanguagesJson", String),
+    Column("officialUrl", String),
+    Column("universitalyExternalId", String),
     Column("active", Boolean, nullable=False),
+    Column("notes", String),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
 )
 
 application_template_table = Table(
@@ -255,6 +266,147 @@ program_academic_year_table = Table(
     Column("id", String, primary_key=True),
     Column("programId", String, ForeignKey("Program.id"), nullable=False),
     Column("academicYear", String, nullable=False),
+)
+
+program_match_table = Table(
+    "ProgramMatch",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("studentId", String, ForeignKey("Student.id"), nullable=False),
+    Column("programAcademicYearId", String, nullable=False),
+    Column("eligibilityStatus", String, nullable=False),
+    Column("fitScore", Integer, nullable=False),
+    Column("scoreBreakdownJson", String),
+    Column("requirementsSummaryJson", String),
+    Column("reasonsJson", String),
+    Column("risksJson", String),
+    Column("missingInformationJson", String),
+    Column("discoveryMetaJson", String),
+    Column("dataConfidence", String, nullable=False),
+    Column("generatedAt", DateTime(timezone=True), nullable=False),
+    Column("matchingEngineVersion", String, nullable=False),
+    Column("curatorStatus", String, nullable=False),
+    Column("curatorNotes", String),
+    Column("reviewedById", String),
+    Column("reviewedAt", DateTime(timezone=True)),
+    Column("monitoringSelected", Boolean, nullable=False),
+    Column("monitoringSelectedAt", DateTime(timezone=True)),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+    UniqueConstraint(
+        "studentId",
+        "programAcademicYearId",
+        name="ProgramMatch_studentId_programAcademicYearId_key",
+    ),
+)
+
+student_shortlist_item_table = Table(
+    "StudentShortlistItem",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("studentId", String, ForeignKey("Student.id"), nullable=False),
+    Column("programAcademicYearId", String, nullable=False),
+    Column("programMatchId", String),
+    Column("curatorNote", String),
+    Column("studentStatus", String, nullable=False),
+    Column("visibleToStudent", Boolean, nullable=False),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+    UniqueConstraint(
+        "studentId",
+        "programAcademicYearId",
+        name="StudentShortlistItem_studentId_programAcademicYearId_key",
+    ),
+)
+
+program_fact_table = Table(
+    "ProgramFact",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("programId", String, ForeignKey("Program.id"), nullable=False),
+    Column("programAcademicYearId", String),
+    Column("field", String, nullable=False),
+    Column("normalizedValueJson", String, nullable=False),
+    Column("rawValue", String),
+    Column("evidenceQuote", String),
+    Column("applicantCategoryScope", String),
+    Column("freshness", String),
+    Column("origin", String, nullable=False),
+    Column("dimensionKey", String),
+    Column("decisionStatus", String, nullable=False),
+    Column("sourceDocumentId", String),
+    Column("sourceUrl", String),
+    Column("sourceType", String, nullable=False),
+    Column("academicYear", String),
+    Column("retrievedAt", DateTime(timezone=True), nullable=False),
+    Column("confidence", String, nullable=False),
+    Column("extractionMethod", String, nullable=False),
+    Column("verificationStatus", String, nullable=False),
+    Column("verifiedById", String),
+    Column("verifiedAt", DateTime(timezone=True)),
+    Column("evidenceValidatedAt", DateTime(timezone=True)),
+    Column("resolverVersion", String),
+    Column("superseded", Boolean, nullable=False),
+)
+
+source_document_table = Table(
+    "SourceDocument",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("sourceType", String, nullable=False),
+    Column("sourceAuthority", String),
+    Column("url", String, nullable=False),
+    Column("title", String),
+    Column("academicYear", String),
+    Column("universityId", String),
+    Column("programId", String),
+    Column("programAcademicYearId", String),
+    Column("contentType", String, nullable=False),
+    Column("retrievedAt", DateTime(timezone=True), nullable=False),
+    Column("contentHash", String, nullable=False),
+    Column("rawText", String),
+    Column("parserVersion", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("extractionQuality", String),
+    Column("createdAt", DateTime(timezone=True), nullable=False),
+    Column("updatedAt", DateTime(timezone=True), nullable=False),
+)
+
+source_document_section_table = Table(
+    "SourceDocumentSection",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("sourceDocumentId", String, nullable=False),
+)
+
+admission_requirement_table = Table(
+    "AdmissionRequirement",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("programAcademicYearId", String, nullable=False),
+    Column("sourceFactId", String),
+)
+
+tuition_info_table = Table(
+    "TuitionInfo",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("programAcademicYearId", String, nullable=False),
+)
+
+admission_cycle_table = Table(
+    "AdmissionCycle",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("programAcademicYearId", String, nullable=False),
+)
+
+program_change_event_table = Table(
+    "ProgramChangeEvent",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("programId", String),
+    Column("programAcademicYearId", String),
 )
 
 lead_table = Table(

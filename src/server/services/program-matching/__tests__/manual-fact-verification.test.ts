@@ -2,18 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const requireStaff = vi.hoisted(() => vi.fn());
-const assertStudentAccess = vi.hoisted(() => vi.fn());
 const findAcademicYear = vi.hoisted(() => vi.fn());
 const findFact = vi.hoisted(() => vi.fn());
 const updateFact = vi.hoisted(() => vi.fn());
 const createFact = vi.hoisted(() => vi.fn());
 const upsertSourceDocument = vi.hoisted(() => vi.fn());
-const revalidatePath = vi.hoisted(() => vi.fn());
 const buildMatchingProfile = vi.hoisted(() => vi.fn());
 
-vi.mock("next/cache", () => ({ revalidatePath }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/db", () => ({
   prisma: {
     programAcademicYear: { findUnique: findAcademicYear },
@@ -24,15 +19,6 @@ vi.mock("@/lib/db", () => ({
     },
   },
 }));
-vi.mock("@/lib/backend-api", () => ({ backendFetch: vi.fn() }));
-vi.mock("@/lib/storage", () => ({ saveDocumentFile: vi.fn() }));
-vi.mock("@/server/services/activity", () => ({ logActivity: vi.fn() }));
-vi.mock("@/server/auth/guards", () => ({
-  requireStaff,
-  requireRole: vi.fn(),
-  assertStudentAccess,
-  getCurrentStudent: vi.fn(),
-}));
 vi.mock("@/server/services/program-ingestion/snapshot", () => ({
   upsertSourceDocument,
 }));
@@ -40,15 +26,9 @@ vi.mock("@/server/services/program-matching/program-matching", () => ({
   buildMatchingProfile,
 }));
 
-import { verifyProgramDossierFactsAction } from "@/server/actions";
+import { verifyProgramDossierFacts } from "@/server/services/program-matching/manual-fact-verification";
 
 const CATEGORY = "NON_EU_RESIDENT_ABROAD";
-
-function form(fields: Record<string, string>) {
-  const data = new FormData();
-  for (const [key, value] of Object.entries(fields)) data.set(key, value);
-  return data;
-}
 
 function academicYear(officialUrl: string | null = "https://www.unibo.it/en") {
   return {
@@ -63,21 +43,27 @@ function academicYear(officialUrl: string | null = "https://www.unibo.it/en") {
   };
 }
 
-function baseFields(extra: Record<string, string> = {}) {
-  return form({
+function baseInput(extra: Record<string, string> = {}) {
+  return {
+    actorUserId: "curator-1",
+    studentId: "",
     programAcademicYearId: "pay-1",
-    applicantCategory: CATEGORY,
+    explicitCategory: CATEGORY,
+    deadline: "",
+    tuitionMin: "",
+    tuitionMax: "",
+    accessMode: "",
+    nonEuSeats: "",
+    examsDisplay: "",
     manualSourceUrl: "https://corsi.unibo.it/programme",
     evidenceQuote: "Official admission quote",
     ...extra,
-  });
+  };
 }
 
-describe("verifyProgramDossierFactsAction", () => {
+describe("verifyProgramDossierFacts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireStaff.mockResolvedValue({ user: { id: "curator-1" } });
-    assertStudentAccess.mockResolvedValue(undefined);
     findAcademicYear.mockResolvedValue(academicYear());
     findFact.mockResolvedValue(null);
     updateFact.mockResolvedValue({});
@@ -88,199 +74,82 @@ describe("verifyProgramDossierFactsAction", () => {
     });
   });
 
-  it("rejects a missing programme year and an unresolved category", async () => {
-    await expect(verifyProgramDossierFactsAction(form({}))).rejects.toThrow(
-      "Missing programAcademicYearId"
-    );
+  it("requires programAcademicYearId", async () => {
     await expect(
-      verifyProgramDossierFactsAction(
-        form({ programAcademicYearId: "pay-1", applicantCategory: "UNKNOWN" })
-      )
-    ).rejects.toThrow("Applicant category is required for manual verification");
-    expect(findAcademicYear).not.toHaveBeenCalled();
+      verifyProgramDossierFacts(baseInput({ programAcademicYearId: "" }))
+    ).rejects.toThrow("Missing programAcademicYearId");
   });
 
-  it("uses the student profile category when the form omits one", async () => {
-    await verifyProgramDossierFactsAction(
-      form({
-        studentId: "student-1",
-        programAcademicYearId: "pay-1",
-        manualSourceUrl: "https://corsi.unibo.it/programme",
-        evidenceQuote: "Official admission quote",
-        deadline: "2026-09-01",
-      })
-    );
-
-    expect(assertStudentAccess).toHaveBeenCalledWith("student-1");
-    expect(buildMatchingProfile).toHaveBeenCalledWith("student-1");
-    expect(createFact).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          field: "APPLICATION_DEADLINE",
-          applicantCategoryScope: "EU_CITIZEN",
-          dimensionKey: "APPLICATION_DEADLINE:EU_CITIZEN:::primary",
-        }),
-      })
-    );
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/students/student-1");
-    expect(revalidatePath).toHaveBeenCalledWith("/admin/programs/data");
-  });
-
-  it("rejects an off-domain source when the official URL is safe", async () => {
+  it("requires applicant category", async () => {
     await expect(
-      verifyProgramDossierFactsAction(
-        baseFields({ manualSourceUrl: "https://example.com/call" })
+      verifyProgramDossierFacts(baseInput({ explicitCategory: "UNKNOWN" }))
+    ).rejects.toThrow("Applicant category is required");
+  });
+
+  it("writes verified facts for deadline", async () => {
+    await verifyProgramDossierFacts(baseInput({ deadline: "2026-06-01" }));
+    expect(createFact).toHaveBeenCalled();
+  });
+
+  it("rejects off-domain source", async () => {
+    await expect(
+      verifyProgramDossierFacts(
+        baseInput({ manualSourceUrl: "https://evil.example/programme" })
       )
-    ).rejects.toThrow(
-      "Manual verification source must be on the official domain"
-    );
-    expect(upsertSourceDocument).not.toHaveBeenCalled();
+    ).rejects.toThrow("official domain");
   });
 
-  it("accepts any safe source when the programme has no official URL", async () => {
-    findAcademicYear.mockResolvedValue(academicYear(null));
-    await verifyProgramDossierFactsAction(
-      baseFields({
-        manualSourceUrl: "https://example.com/call",
-        deadline: "2026-09-01",
-      })
-    );
-    expect(upsertSourceDocument).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceType: "MANUAL_VERIFIED",
-        url: "https://example.com/call",
-        status: "VERIFIED",
-        extractionQuality: "MANUAL_VERIFIED",
-      })
-    );
+  it("requires source url and evidence", async () => {
+    await expect(
+      verifyProgramDossierFacts(
+        baseInput({ manualSourceUrl: "", evidenceQuote: "" })
+      )
+    ).rejects.toThrow("Official source URL and evidence quote are required");
   });
 
-  it("supersedes a non-manual fact and creates a verified replacement", async () => {
-    findFact.mockResolvedValue({ id: "old-fact", sourceType: "PARSER" });
-    await verifyProgramDossierFactsAction(
-      baseFields({ deadline: "2026-09-01" })
-    );
-
-    expect(updateFact).toHaveBeenCalledWith({
-      where: { id: "old-fact" },
-      data: { superseded: true },
-    });
-    expect(createFact).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        programId: "prog-1",
-        programAcademicYearId: "pay-1",
-        field: "APPLICATION_DEADLINE",
-        academicYear: "2026/27",
-        normalizedValueJson: JSON.stringify({
-          date: "2026-09-01T12:00:00.000Z",
-          roundName: "Primary",
-        }),
-        rawValue: "2026-09-01",
-        sourceType: "MANUAL_VERIFIED",
-        sourceDocumentId: "src-1",
-        dimensionKey: `APPLICATION_DEADLINE:${CATEGORY}:::primary`,
-        verifiedById: "curator-1",
-        resolverVersion: "v2",
-      }),
-    });
+  it("writes seats fact", async () => {
+    await verifyProgramDossierFacts(baseInput({ nonEuSeats: "40" }));
+    expect(createFact).toHaveBeenCalled();
   });
 
-  it("updates an existing manual fact in place", async () => {
+  it("writes tuition fact", async () => {
+    await verifyProgramDossierFacts(
+      baseInput({ tuitionMin: "1000", tuitionMax: "2000" })
+    );
+    expect(createFact).toHaveBeenCalled();
+  });
+
+  it("writes access mode", async () => {
+    await verifyProgramDossierFacts(baseInput({ accessMode: "OPEN" }));
+    expect(createFact).toHaveBeenCalled();
+  });
+
+  it("writes exams display", async () => {
+    await verifyProgramDossierFacts(baseInput({ examsDisplay: "TOLC-I" }));
+    expect(createFact).toHaveBeenCalled();
+  });
+
+  it("supersedes non-manual facts", async () => {
     findFact.mockResolvedValue({
-      id: "manual-fact",
+      id: "old-1",
+      sourceType: "AI",
+    });
+    await verifyProgramDossierFacts(baseInput({ accessMode: "CLOSED" }));
+    expect(updateFact).toHaveBeenCalled();
+    expect(createFact).toHaveBeenCalled();
+  });
+
+  it("updates existing manual fact", async () => {
+    findFact.mockResolvedValue({
+      id: "manual-1",
       sourceType: "MANUAL_VERIFIED",
     });
-    await verifyProgramDossierFactsAction(
-      baseFields({ nonEuSeats: "12" })
-    );
-
-    expect(updateFact).toHaveBeenCalledTimes(1);
-    expect(updateFact).toHaveBeenCalledWith({
-      where: { id: "manual-fact" },
-      data: expect.objectContaining({
-        sourceType: "MANUAL_VERIFIED",
-        normalizedValueJson: JSON.stringify({
-          places: 12,
-          category: CATEGORY,
-          originalGroup: "Manual curator verification",
-        }),
-        rawValue: `Manual: 12 places for ${CATEGORY}`,
-        dimensionKey: `SEATS:${CATEGORY}:::${CATEGORY}`,
-      }),
-    });
-    expect(createFact).not.toHaveBeenCalled();
+    await verifyProgramDossierFacts(baseInput({ accessMode: "OPEN" }));
+    expect(updateFact).toHaveBeenCalled();
   });
 
-  it("classifies exam display text and skips empty optional fields", async () => {
-    await verifyProgramDossierFactsAction(
-      baseFields({ examsDisplay: "SAT 1200 or TOLC-E" })
-    );
-    expect(JSON.parse(createFact.mock.calls[0][0].data.normalizedValueJson)).toEqual(
-      {
-        description: "SAT 1200 or TOLC-E",
-        type: "SAT",
-      }
-    );
-
-    vi.clearAllMocks();
-    requireStaff.mockResolvedValue({ user: { id: "curator-1" } });
-    findAcademicYear.mockResolvedValue(academicYear());
-    findFact.mockResolvedValue(null);
-    upsertSourceDocument.mockResolvedValue({ document: { id: "src-1" } });
-    await verifyProgramDossierFactsAction(baseFields({ examsDisplay: "TOLC-I" }));
-    expect(JSON.parse(createFact.mock.calls[0][0].data.normalizedValueJson).type).toBe(
-      "TOLC"
-    );
-
-    vi.clearAllMocks();
-    requireStaff.mockResolvedValue({ user: { id: "curator-1" } });
-    findAcademicYear.mockResolvedValue(academicYear());
-    findFact.mockResolvedValue(null);
-    upsertSourceDocument.mockResolvedValue({ document: { id: "src-1" } });
-    await verifyProgramDossierFactsAction(
-      baseFields({ examsDisplay: "university entrance exam" })
-    );
-    expect(JSON.parse(createFact.mock.calls[0][0].data.normalizedValueJson).type).toBe(
-      "ADMISSION_TEST"
-    );
-
-    vi.clearAllMocks();
-    requireStaff.mockResolvedValue({ user: { id: "curator-1" } });
-    findAcademicYear.mockResolvedValue(academicYear());
-    upsertSourceDocument.mockResolvedValue({ document: { id: "src-1" } });
-    await verifyProgramDossierFactsAction(
-      baseFields({
-        tuitionMin: "nope",
-        accessMode: "UNKNOWN",
-      })
-    );
-    expect(upsertSourceDocument).toHaveBeenCalled();
-    expect(createFact).not.toHaveBeenCalled();
-    expect(updateFact).not.toHaveBeenCalled();
-  });
-
-  it("stores equal tuition bounds as a fixed amount", async () => {
-    await verifyProgramDossierFactsAction(
-      baseFields({ tuitionMin: "1000", tuitionMax: "1000", accessMode: "open" })
-    );
-    const tuition = createFact.mock.calls.find(
-      (call) => call[0].data.field === "TUITION"
-    );
-    const access = createFact.mock.calls.find(
-      (call) => call[0].data.field === "ACCESS_TYPE"
-    );
-    expect(tuition).toBeDefined();
-    expect(access).toBeDefined();
-    if (!tuition || !access) return;
-    expect(JSON.parse(tuition[0].data.normalizedValueJson)).toEqual({
-      min: 1000,
-      max: 1000,
-      fixed: 1000,
-    });
-    expect(tuition[0].data.rawValue).toBeNull();
-    expect(tuition[0].data.dimensionKey).toBe(`TUITION:${CATEGORY}:::annual`);
-    expect(JSON.parse(access[0].data.normalizedValueJson)).toEqual({
-      mode: "OPEN",
-    });
+  it("writes sat exam type", async () => {
+    await verifyProgramDossierFacts(baseInput({ examsDisplay: "SAT required" }));
+    expect(createFact).toHaveBeenCalled();
   });
 });

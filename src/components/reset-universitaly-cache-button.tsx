@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  clearStableCommandId,
+  getStableCommandId,
+} from "@/components/command-id-input";
 import { resetUniversitalyCacheAction } from "@/server/actions";
 
 export function ResetUniversitalyCacheButton({
@@ -20,8 +24,16 @@ export function ResetUniversitalyCacheButton({
     if (!confirmed) return;
 
     setPending(true);
+    const commandParts = {
+      operation: "catalog.universitaly-cache.reset",
+      entityId: "global",
+      formInstance: "reset-button",
+    };
     try {
-      await resetUniversitalyCacheAction();
+      const formData = new FormData();
+      formData.set("commandId", getStableCommandId(commandParts));
+      await resetUniversitalyCacheAction(formData);
+      clearStableCommandId(commandParts);
       router.refresh();
     } finally {
       setPending(false);

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/server/auth/guards";
 import { createUniversityAction } from "@/server/actions";
+import { CommandForm } from "@/components/command-form";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,12 @@ export default async function AdminUniversitiesPage() {
             <CardTitle>Добавить университет</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={createUniversityAction} className="space-y-3">
+            <CommandForm
+              action={createUniversityAction}
+              operation="university.create"
+              entityId="new"
+              className="space-y-3"
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="name">Название</Label>
                 <Input id="name" name="name" required />
@@ -117,7 +123,7 @@ export default async function AdminUniversitiesPage() {
               <Button type="submit" className="w-full">
                 Создать университет
               </Button>
-            </form>
+            </CommandForm>
           </CardContent>
         </Card>
       </div>
