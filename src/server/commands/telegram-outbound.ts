@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
-import { enqueueOutbox } from "@/server/commands/outbox";
+import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
 
 export type RequestTelegramSendInput = {
   conversationId: string;
   body: string;
   senderUserId?: string | null;
   clientRequestId?: string;
+  /** When set, run inside this transaction (caller already holds conversation). */
+  tx?: DbClient;
 };
 
 export async function requestTelegramSend(input: RequestTelegramSendInput) {
@@ -14,7 +16,9 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
     throw new Error("Message body is required");
   }
 
-  const conversation = await prisma.conversation.findUnique({
+  const db: DbClient = input.tx ?? prisma;
+
+  const conversation = await db.conversation.findUnique({
     where: { id: input.conversationId },
   });
   if (!conversation) {
@@ -28,7 +32,7 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
     input.clientRequestId ??
     `telegram-send:${input.conversationId}:${Date.now()}`;
 
-  return prisma.$transaction(async (tx) => {
+  const run = async (tx: DbClient) => {
     const existing = input.clientRequestId
       ? await tx.conversationMessage.findUnique({
           where: { clientRequestId: input.clientRequestId },
@@ -68,5 +72,11 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
     });
 
     return { message, duplicate: false as const };
-  });
+  };
+
+  if (input.tx) {
+    return run(input.tx);
+  }
+
+  return prisma.$transaction(async (tx) => run(tx));
 }

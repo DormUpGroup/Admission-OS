@@ -23,6 +23,9 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
 Point the bot webhook at `https://<web-host>/api/webhooks/telegram` with
 `secret_token=<TELEGRAM_WEBHOOK_SECRET>` (Telegram sends `X-Telegram-Bot-Api-Secret-Token`).
 
+BotFather profile copy (name, about, description, commands, avatar): see
+[`docs/telegram-botfather.md`](../telegram-botfather.md).
+
 Admin inbox: `/admin/inbox`. Appointments: `/admin/appointments`.
 
 ## Google Calendar (Phase 2)
