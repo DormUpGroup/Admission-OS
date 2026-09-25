@@ -8,6 +8,7 @@ export type TelegramAttachment = {
 };
 
 export type NormalizedTelegramMessage = {
+  kind: "message";
   providerEventId: string;
   providerMessageId: string;
   externalUserId: string;
@@ -18,24 +19,45 @@ export type NormalizedTelegramMessage = {
   attachments: TelegramAttachment[];
 };
 
+export type NormalizedTelegramCallback = {
+  kind: "callback";
+  providerEventId: string;
+  callbackQueryId: string;
+  providerMessageId: string | null;
+  externalUserId: string;
+  externalChatId: string;
+  username: string | null;
+  displayName: string | null;
+  data: string;
+};
+
+export type NormalizedTelegramUpdate =
+  | NormalizedTelegramMessage
+  | NormalizedTelegramCallback;
+
 /**
- * Normalize a Telegram Bot API Update into a channel-agnostic inbound message.
- * Returns null for updates we ignore (no message, missing ids, etc.).
+ * Normalize a Telegram Bot API Update into a channel-agnostic inbound message
+ * or appointment callback. Returns null for updates we ignore.
  */
 export function normalizeTelegramUpdate(
   payload: unknown,
-): NormalizedTelegramMessage | null {
+): NormalizedTelegramUpdate | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
   }
   const update = payload as Record<string, unknown>;
   const updateId = update.update_id;
+  if (updateId == null) return null;
+
+  const callback = update.callback_query as Record<string, unknown> | undefined;
+  if (callback && typeof callback === "object") {
+    return normalizeCallback(updateId, callback);
+  }
+
   const message =
     (update.message as Record<string, unknown> | undefined) ??
     (update.edited_message as Record<string, unknown> | undefined);
-  if (updateId == null || !message || typeof message !== "object") {
-    return null;
-  }
+  if (!message || typeof message !== "object") return null;
 
   const sender = message.from;
   const chat = message.chat;
@@ -75,6 +97,7 @@ export function normalizeTelegramUpdate(
   }
 
   return {
+    kind: "message",
     providerEventId: String(updateId),
     providerMessageId: String(messageId),
     externalUserId: String(senderId),
@@ -83,6 +106,44 @@ export function normalizeTelegramUpdate(
     displayName,
     text: String(message.text ?? message.caption ?? "").trim(),
     attachments,
+  };
+}
+
+function normalizeCallback(
+  updateId: unknown,
+  callback: Record<string, unknown>,
+): NormalizedTelegramCallback | null {
+  const callbackId = callback.id;
+  const data = String(callback.data ?? "").trim();
+  if (callbackId == null || !data) return null;
+
+  const sender = callback.from;
+  if (!sender || typeof sender !== "object" || Array.isArray(sender)) return null;
+  const senderObj = sender as Record<string, unknown>;
+  const senderId = senderObj.id;
+  if (senderId == null) return null;
+
+  const message = callback.message as Record<string, unknown> | undefined;
+  const chat = message?.chat as Record<string, unknown> | undefined;
+  const chatId = chat?.id ?? null;
+  if (chatId == null) return null;
+
+  const firstName = String(senderObj.first_name ?? "").trim();
+  const lastName = String(senderObj.last_name ?? "").trim();
+  const displayName =
+    [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+
+  return {
+    kind: "callback",
+    providerEventId: String(updateId),
+    callbackQueryId: String(callbackId),
+    providerMessageId:
+      message?.message_id != null ? String(message.message_id) : null,
+    externalUserId: String(senderId),
+    externalChatId: String(chatId),
+    username: senderObj.username != null ? String(senderObj.username) : null,
+    displayName,
+    data,
   };
 }
 
@@ -103,4 +164,26 @@ function stableStringify(value: unknown): string {
 /** Canonical hash with sorted keys for InboxEvent.payloadHash. */
 export function hashJson(value: unknown): string {
   return createHash("sha256").update(stableStringify(value)).digest("hex");
+}
+
+/** Parse appointment callback_data: a:{id}:{token}:{action}[:slotKey] */
+export function parseAppointmentCallbackData(data: string): {
+  appointmentId: string;
+  token: string;
+  action: "ok" | "alt" | "x" | "s";
+  slotKey?: string;
+} | null {
+  const parts = data.split(":");
+  if (parts[0] !== "a" || parts.length < 4) return null;
+  const appointmentId = parts[1];
+  const token = parts[2];
+  const action = parts[3];
+  if (!appointmentId || !token) return null;
+  if (action === "ok" || action === "alt" || action === "x") {
+    return { appointmentId, token, action };
+  }
+  if (action === "s" && parts[4]) {
+    return { appointmentId, token, action: "s", slotKey: parts.slice(4).join(":") };
+  }
+  return null;
 }

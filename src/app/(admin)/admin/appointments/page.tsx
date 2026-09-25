@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/server/auth/guards";
-import { cancelAppointmentAction } from "@/server/appointment-actions";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
-import { AppointmentCreateForm } from "@/components/admin/appointment-create-form";
-import { isFixtureContact } from "@/lib/telegram-conversation-kind";
-import { formatDate } from "@/lib/utils";
+import { AppointmentsWorkspace } from "@/components/admin/appointments/workspace";
+import {
+  APPOINTMENT_TIMEZONE,
+  listOpenSlots,
+  weekRangeContaining,
+  zonedParts,
+  zonedWallTimeToUtc,
+} from "@/server/services/appointments/slots";
 
 function personLabel(
   firstName: string | null | undefined,
@@ -17,247 +19,214 @@ function personLabel(
   return name || fallback;
 }
 
-function subjectLabel(a: {
-  lead?: { firstName: string | null; lastName: string | null; id: string } | null;
-  student?: { firstName: string; lastName: string } | null;
-}) {
-  if (a.lead) {
-    return personLabel(
-      a.lead.firstName,
-      a.lead.lastName,
-      `Клиент ${a.lead.id.slice(0, 8)}`,
-    );
-  }
-  if (a.student) return `${a.student.firstName} ${a.student.lastName}`;
-  return "—";
-}
-
 function sortByLabel<T extends { label: string }>(items: T[]): T[] {
   return [...items].sort((a, b) =>
     a.label.localeCompare(b.label, "ru", { sensitivity: "base" }),
   );
 }
 
-/** Keep first occurrence per key (inputs should be newest-first). */
-function uniqueByKey<T>(items: T[], keyOf: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  const out: T[] = [];
-  for (const item of items) {
-    const key = keyOf(item);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
-  }
-  return out;
+function parseWeekParam(raw: string | undefined): Date {
+  if (!raw) return new Date();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!m) return new Date();
+  return zonedWallTimeToUtc(
+    Number(m[1]),
+    Number(m[2]),
+    Number(m[3]),
+    12,
+    0,
+    APPOINTMENT_TIMEZONE,
+  );
 }
 
-export default async function AdminAppointmentsPage() {
-  await requireStaff();
+function ymdInRome(date: Date): string {
+  const p = zonedParts(date, APPOINTMENT_TIMEZONE);
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
 
-  const [appointments, leads, students, conversations] = await Promise.all([
-    prisma.appointment.findMany({
-      where: {
-        startsAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      },
-      include: {
-        lead: { select: { id: true, firstName: true, lastName: true } },
-        student: { select: { id: true, firstName: true, lastName: true } },
-        conversation: { select: { id: true, channel: true } },
-      },
-      orderBy: { startsAt: "asc" },
-      take: 50,
-    }),
-    prisma.lead.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 120,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        channelIdentities: {
-          where: { channel: "TELEGRAM" },
-          select: { username: true, displayName: true, externalId: true },
-          take: 1,
+export default async function AdminAppointmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const session = await requireStaff();
+  const query = await searchParams;
+  const anchor = parseWeekParam(query.week);
+  const { from, to } = weekRangeContaining(anchor, APPOINTMENT_TIMEZONE);
+  const curatorId = session.user.id;
+
+  const weekDays: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    const day = new Date(from.getTime() + i * 24 * 60 * 60 * 1000);
+    weekDays.push(ymdInRome(day));
+  }
+
+  const prevWeek = ymdInRome(new Date(from.getTime() - 7 * 24 * 60 * 60 * 1000));
+  const nextWeek = ymdInRome(new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000));
+  const weekLabel = `${weekDays[0]} — ${weekDays[4]} · Europe/Rome`;
+
+  const openSlotsPromise = listOpenSlots({
+    curatorId,
+    from: new Date(),
+    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+  });
+
+  const [appointments, leads, students, conversations, openSlots] =
+    await Promise.all([
+      prisma.appointment.findMany({
+        where: {
+          assignedCuratorId: curatorId,
+          status: { not: "CANCELLED" },
+          OR: [
+            { startsAt: { gte: from, lt: to } },
+            { pendingStartsAt: { gte: from, lt: to } },
+          ],
         },
-      },
-    }),
-    prisma.student.findMany({
-      where: { status: { notIn: ["ARCHIVED"] } },
-      orderBy: { updatedAt: "desc" },
-      take: 80,
-      select: { id: true, firstName: true, lastName: true },
-    }),
-    prisma.conversation.findMany({
-      where: { channel: "TELEGRAM", status: "OPEN" },
-      orderBy: { updatedAt: "desc" },
-      take: 120,
-      select: {
-        id: true,
-        leadId: true,
-        studentId: true,
-        lead: {
-          select: {
-            firstName: true,
-            lastName: true,
-            channelIdentities: {
-              where: { channel: "TELEGRAM" },
-              select: { username: true, displayName: true, externalId: true },
-              take: 1,
-            },
+        include: {
+          lead: { select: { id: true, firstName: true, lastName: true } },
+          student: { select: { id: true, firstName: true, lastName: true } },
+          conversation: { select: { id: true, channel: true } },
+        },
+        orderBy: { startsAt: "asc" },
+      }),
+      prisma.lead.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 80,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          channelIdentities: {
+            where: { channel: "TELEGRAM" },
+            select: { username: true, displayName: true },
+            take: 1,
           },
         },
-        student: { select: { firstName: true, lastName: true } },
-      },
-    }),
-  ]);
+      }),
+      prisma.student.findMany({
+        where: { status: { notIn: ["ARCHIVED"] } },
+        orderBy: { updatedAt: "desc" },
+        take: 80,
+        select: { id: true, firstName: true, lastName: true },
+      }),
+      prisma.conversation.findMany({
+        where: { channel: "TELEGRAM", status: "OPEN" },
+        orderBy: { updatedAt: "desc" },
+        take: 80,
+        select: {
+          id: true,
+          leadId: true,
+          studentId: true,
+          lead: {
+            select: {
+              firstName: true,
+              lastName: true,
+              channelIdentities: {
+                where: { channel: "TELEGRAM" },
+                select: { username: true, displayName: true },
+                take: 1,
+              },
+            },
+          },
+          student: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      openSlotsPromise,
+    ]);
 
   const leadOptions = sortByLabel(
-    uniqueByKey(
-      leads
-        .map((l) => {
-          const identity = l.channelIdentities[0];
-          const base =
-            personLabel(l.firstName, l.lastName, "") ||
-            identity?.displayName?.trim() ||
-            `Клиент ${l.id.slice(0, 8)}`;
-          const username = identity?.username?.trim() || null;
-          if (isFixtureContact({ title: base, username })) return null;
-          return {
-            id: l.id,
-            label: username
-              ? `${base} · @${username.replace(/^@/, "")}`
-              : base,
-            dedupeKey:
-              identity?.externalId?.trim() ||
-              (username ? `u:${username.toLowerCase()}` : `id:${l.id}`),
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => x != null),
-      (x) => x.dedupeKey,
-    ).map(({ id, label }) => ({ id, label })),
+    leads.map((l) => {
+      const identity = l.channelIdentities[0];
+      const base =
+        personLabel(l.firstName, l.lastName, "") ||
+        identity?.displayName?.trim() ||
+        `Клиент ${l.id.slice(0, 8)}`;
+      const username = identity?.username?.trim();
+      return {
+        id: l.id,
+        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
+      };
+    }),
   );
 
   const studentOptions = sortByLabel(
-    uniqueByKey(
-      students.map((s) => ({
-        id: s.id,
-        label: `${s.firstName} ${s.lastName}`.trim(),
-        dedupeKey: s.id,
-      })),
-      (x) => x.dedupeKey,
-    ).map(({ id, label }) => ({ id, label })),
+    students.map((s) => ({
+      id: s.id,
+      label: `${s.firstName} ${s.lastName}`.trim(),
+    })),
   );
 
   const conversationOptions = sortByLabel(
-    uniqueByKey(
-      conversations
-        .map((c) => {
-          const identity = c.lead?.channelIdentities[0];
-          let base = "";
-          if (c.student) {
-            base = `${c.student.firstName} ${c.student.lastName}`.trim();
-          } else if (c.lead) {
-            base =
-              personLabel(c.lead.firstName, c.lead.lastName, "") ||
-              identity?.displayName?.trim() ||
-              "Чат";
-          } else {
-            base = identity?.displayName?.trim() || "Чат";
-          }
-          const username = identity?.username?.trim() || null;
-          if (isFixtureContact({ title: base, username })) return null;
-          const label = username
-            ? `${base} · @${username.replace(/^@/, "")}`
-            : base;
-          return {
-            id: c.id,
-            leadId: c.leadId,
-            studentId: c.studentId,
-            label,
-            dedupeKey:
-              identity?.externalId?.trim() ||
-              (c.leadId ? `lead:${c.leadId}` : null) ||
-              (c.studentId ? `student:${c.studentId}` : null) ||
-              c.id,
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => x != null),
-      (x) => x.dedupeKey,
-    ).map(({ id, leadId, studentId, label }) => ({
-      id,
-      leadId,
-      studentId,
-      label,
-    })),
+    conversations.map((c) => {
+      const identity = c.lead?.channelIdentities[0];
+      let base = "";
+      if (c.student) {
+        base = `${c.student.firstName} ${c.student.lastName}`.trim();
+      } else if (c.lead) {
+        base =
+          personLabel(c.lead.firstName, c.lead.lastName, "") ||
+          identity?.displayName?.trim() ||
+          "Чат";
+      } else {
+        base = identity?.displayName?.trim() || "Чат";
+      }
+      const username = identity?.username?.trim();
+      return {
+        id: c.id,
+        leadId: c.leadId,
+        studentId: c.studentId,
+        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
+      };
+    }),
   );
+
+  const calendarAppointments = appointments.map((a) => {
+    let subjectLabel = "—";
+    if (a.lead) {
+      subjectLabel = personLabel(
+        a.lead.firstName,
+        a.lead.lastName,
+        `Клиент ${a.lead.id.slice(0, 8)}`,
+      );
+    } else if (a.student) {
+      subjectLabel = `${a.student.firstName} ${a.student.lastName}`;
+    }
+    return {
+      id: a.id,
+      title: a.title,
+      status: a.status,
+      startsAt: a.startsAt.toISOString(),
+      endsAt: a.endsAt.toISOString(),
+      pendingStartsAt: a.pendingStartsAt?.toISOString() ?? null,
+      pendingEndsAt: a.pendingEndsAt?.toISOString() ?? null,
+      subjectLabel,
+      hasTelegram: a.conversation?.channel === "TELEGRAM",
+      googleEventId: a.googleEventId,
+    };
+  });
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Консультации"
-        description="Слоты → Google Calendar (outbox) → опционально Telegram"
+        description="Недельная сетка · слоты 9:00–16:00 Rome · подтверждение в Telegram"
       />
 
-      <section className="rounded-lg border border-black/5 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Новая консультация</h2>
-        <AppointmentCreateForm
-          leads={leadOptions}
-          students={studentOptions}
-          conversations={conversationOptions}
-        />
-      </section>
-
-      {appointments.length === 0 ? (
-        <EmptyState
-          title="Нет консультаций"
-          description="Создайте слот выше — worker синхронизирует Google Calendar."
-        />
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-black/5 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-black/5 text-[12px] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Когда</th>
-                <th className="px-3 py-2 font-medium">Кто</th>
-                <th className="px-3 py-2 font-medium">Статус</th>
-                <th className="px-3 py-2 font-medium">Google</th>
-                <th className="px-3 py-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((a) => (
-                <tr key={a.id} className="border-b border-black/5 last:border-0">
-                  <td className="px-3 py-2">
-                    <div className="font-medium">{a.title}</div>
-                    <div className="text-[12px] text-muted-foreground">
-                      {formatDate(a.startsAt)} → {formatDate(a.endsAt)}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">{subjectLabel(a)}</td>
-                  <td className="px-3 py-2">{a.status}</td>
-                  <td className="px-3 py-2 font-mono text-[11px]">
-                    {a.googleEventId ? a.googleEventId.slice(0, 12) + "…" : "—"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {a.status !== "CANCELLED" ? (
-                      <form action={cancelAppointmentAction}>
-                        <input
-                          type="hidden"
-                          name="appointmentId"
-                          value={a.id}
-                        />
-                        <Button type="submit" size="sm" variant="outline">
-                          Отменить
-                        </Button>
-                      </form>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <AppointmentsWorkspace
+        weekLabel={weekLabel}
+        weekDays={weekDays}
+        prevWeekHref={`/admin/appointments?week=${prevWeek}`}
+        nextWeekHref={`/admin/appointments?week=${nextWeek}`}
+        appointments={calendarAppointments}
+        openSlots={openSlots.map((s) => ({
+          key: s.key,
+          startsAt: s.startsAt.toISOString(),
+          endsAt: s.endsAt.toISOString(),
+        }))}
+        leads={leadOptions}
+        students={studentOptions}
+        conversations={conversationOptions}
+      />
     </div>
   );
 }

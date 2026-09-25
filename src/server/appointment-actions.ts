@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/server/auth/guards";
 import {
   appointmentCancel,
+  appointmentConfirmManual,
   appointmentCreate,
-  appointmentReschedule,
+  appointmentProposeReschedule,
 } from "@/server/commands/appointments";
+import { endsAtFromStart } from "@/server/services/appointments/slots";
 
-export type CreateAppointmentState = { error: string } | null;
+export type AppointmentActionState = { error: string } | { ok: true } | null;
 
 function isNextRedirect(error: unknown) {
   return (
@@ -33,15 +35,18 @@ function appointmentFailureMessage(error: unknown): string {
     message === "Invalid endsAt" ||
     message === "endsAt must be after startsAt"
   ) {
-    return "Укажите интервал: конец должен быть позже начала.";
+    return "Укажите корректный слот.";
   }
-  return "Не удалось создать консультацию.";
+  if (message.startsWith("Cannot confirm")) {
+    return "Не удалось подтвердить запись.";
+  }
+  return "Не удалось сохранить консультацию.";
 }
 
 export async function createAppointmentAction(
-  _prev: CreateAppointmentState,
+  _prev: AppointmentActionState,
   formData: FormData,
-): Promise<CreateAppointmentState> {
+): Promise<AppointmentActionState> {
   const session = await requireStaff();
   const leadId = String(formData.get("leadId") ?? "").trim() || null;
   const studentId = String(formData.get("studentId") ?? "").trim() || null;
@@ -51,7 +56,6 @@ export async function createAppointmentAction(
   const timezone =
     String(formData.get("timezone") ?? "").trim() || "Europe/Rome";
   const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
-  const endsAtRaw = String(formData.get("endsAt") ?? "").trim();
   const clientRequestId =
     String(formData.get("clientRequestId") ?? "").trim() ||
     `admin-appt:${session.user.id}:${Date.now()}`;
@@ -63,16 +67,10 @@ export async function createAppointmentAction(
   }
 
   const startsAt = new Date(startsAtRaw);
-  const endsAt = new Date(endsAtRaw);
-  if (
-    !startsAtRaw ||
-    !endsAtRaw ||
-    Number.isNaN(startsAt.getTime()) ||
-    Number.isNaN(endsAt.getTime()) ||
-    endsAt <= startsAt
-  ) {
-    return { error: "Укажите интервал: конец должен быть позже начала." };
+  if (!startsAtRaw || Number.isNaN(startsAt.getTime())) {
+    return { error: "Выберите день и время." };
   }
+  const endsAt = endsAtFromStart(startsAt);
 
   try {
     await appointmentCreate({
@@ -89,32 +87,47 @@ export async function createAppointmentAction(
   } catch (error) {
     if (isNextRedirect(error)) throw error;
     const errorMessage = appointmentFailureMessage(error);
-    if (errorMessage === "Не удалось создать консультацию.") {
+    if (errorMessage === "Не удалось сохранить консультацию.") {
       console.error(error);
     }
     return { error: errorMessage };
   }
 
   revalidatePath("/admin/appointments");
-  return null;
+  return { ok: true };
 }
 
-export async function rescheduleAppointmentAction(formData: FormData) {
+export async function proposeRescheduleAppointmentAction(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
   await requireStaff();
   const appointmentId = String(formData.get("appointmentId") ?? "").trim();
-  const startsAt = new Date(String(formData.get("startsAt") ?? "").trim());
-  const endsAt = new Date(String(formData.get("endsAt") ?? "").trim());
-  const timezone =
-    String(formData.get("timezone") ?? "").trim() || undefined;
-  const title = String(formData.get("title") ?? "").trim() || undefined;
+  const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
+  const startsAt = new Date(startsAtRaw);
+  if (!appointmentId || !startsAtRaw || Number.isNaN(startsAt.getTime())) {
+    return { error: "Выберите новое время." };
+  }
 
-  await appointmentReschedule({
-    appointmentId,
-    startsAt,
-    endsAt,
-    timezone,
-    title,
-  });
+  try {
+    await appointmentProposeReschedule({
+      appointmentId,
+      startsAt,
+      endsAt: endsAtFromStart(startsAt),
+    });
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    return { error: appointmentFailureMessage(error) };
+  }
+
+  revalidatePath("/admin/appointments");
+  return { ok: true };
+}
+
+export async function confirmAppointmentManualAction(formData: FormData) {
+  await requireStaff();
+  const appointmentId = String(formData.get("appointmentId") ?? "").trim();
+  await appointmentConfirmManual(appointmentId);
   revalidatePath("/admin/appointments");
 }
 

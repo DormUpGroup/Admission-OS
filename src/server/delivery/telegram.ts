@@ -17,6 +17,7 @@ export type PreparedTelegramDelivery = {
   conversationId: string;
   chatId: string | null;
   body: string | null;
+  replyMarkup: Record<string, unknown> | null;
   attemptId: string | null;
   idempotencyKey: string;
 };
@@ -38,6 +39,30 @@ function metaChatId(metadata: Prisma.JsonValue | null | undefined): string | nul
   }
   const chatId = (metadata as { chat_id?: unknown }).chat_id;
   return chatId != null ? String(chatId) : null;
+}
+
+function extractReplyMarkup(
+  attachments: Prisma.JsonValue | null | undefined,
+  payload: Record<string, unknown>,
+): Record<string, unknown> | null {
+  if (
+    payload.replyMarkup &&
+    typeof payload.replyMarkup === "object" &&
+    !Array.isArray(payload.replyMarkup)
+  ) {
+    return payload.replyMarkup as Record<string, unknown>;
+  }
+  if (
+    attachments &&
+    typeof attachments === "object" &&
+    !Array.isArray(attachments) &&
+    "reply_markup" in attachments &&
+    attachments.reply_markup &&
+    typeof attachments.reply_markup === "object"
+  ) {
+    return attachments.reply_markup as Record<string, unknown>;
+  }
+  return null;
 }
 
 export function isAmbiguousTelegramError(error: unknown): boolean {
@@ -84,6 +109,10 @@ export async function prepareTelegramDelivery(
     }
 
     const idempotencyKey = event.idempotencyKey;
+    const replyMarkup = extractReplyMarkup(
+      message.attachmentsJson,
+      payload as Record<string, unknown>,
+    );
 
     if (
       message.deliveryStatus === DELIVERY_STATUS.SENT ||
@@ -95,6 +124,7 @@ export async function prepareTelegramDelivery(
         conversationId: message.conversationId,
         chatId: null,
         body: message.body,
+        replyMarkup,
         attemptId: null,
         idempotencyKey,
       };
@@ -115,6 +145,7 @@ export async function prepareTelegramDelivery(
         conversationId: message.conversationId,
         chatId: null,
         body: message.body,
+        replyMarkup,
         attemptId: null,
         idempotencyKey,
       };
@@ -147,6 +178,7 @@ export async function prepareTelegramDelivery(
         conversationId: message.conversationId,
         chatId: null,
         body: message.body,
+        replyMarkup,
         attemptId: blocking.id,
         idempotencyKey,
       };
@@ -198,6 +230,7 @@ export async function prepareTelegramDelivery(
       conversationId: message.conversationId,
       chatId,
       body: message.body,
+      replyMarkup,
       attemptId: attempt.id,
       idempotencyKey,
     };
@@ -231,6 +264,9 @@ export async function callTelegramDelivery(
           chat_id: prepared.chatId,
           text: prepared.body,
           disable_web_page_preview: true,
+          ...(prepared.replyMarkup
+            ? { reply_markup: prepared.replyMarkup }
+            : {}),
         }),
         signal: controller.signal,
       },

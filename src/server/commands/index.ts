@@ -41,8 +41,15 @@ export {
 
 export {
   appointmentCancel,
+  appointmentConfirmByClient,
+  appointmentConfirmManual,
   appointmentCreate,
+  appointmentOfferAltSlots,
+  appointmentProposeReschedule,
   appointmentReschedule,
+  appointmentSelectAltSlot,
+  APPOINTMENT_STATUS,
   type AppointmentCreateInput,
+  type AppointmentProposeRescheduleInput,
   type AppointmentRescheduleInput,
 } from "./appointments";

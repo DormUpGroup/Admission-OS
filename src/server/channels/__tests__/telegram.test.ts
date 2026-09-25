@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   hashJson,
   normalizeTelegramUpdate,
+  type NormalizedTelegramMessage,
 } from "@/server/channels/telegram";
 import {
   parseTelegramBotCommand,
@@ -18,6 +19,15 @@ import {
 } from "@/server/delivery/telegram";
 import { enqueueOutbox, GLOBAL_AUTOMATION_SETTING_KEY, OUTBOX_STATUS, setGlobalAutomationEnabled } from "@/server/commands/outbox";
 
+function asMessage(
+  update: ReturnType<typeof normalizeTelegramUpdate>,
+): NormalizedTelegramMessage {
+  if (!update || update.kind !== "message") {
+    throw new Error("expected message update");
+  }
+  return update;
+}
+
 describe("telegram normalize (unit)", () => {
   it("normalizes a text message update", () => {
     const normalized = normalizeTelegramUpdate({
@@ -30,6 +40,7 @@ describe("telegram normalize (unit)", () => {
       },
     });
     expect(normalized).toEqual({
+      kind: "message",
       providerEventId: "42",
       providerMessageId: "7",
       externalUserId: "100",
@@ -41,7 +52,25 @@ describe("telegram normalize (unit)", () => {
     });
   });
 
-  it("returns null for non-message updates", () => {
+  it("normalizes callback_query for appointments", () => {
+    const normalized = normalizeTelegramUpdate({
+      update_id: 99,
+      callback_query: {
+        id: "cb1",
+        data: "a:appt1:tok:ok",
+        from: { id: 100, first_name: "Ada" },
+        message: { message_id: 8, chat: { id: 100, type: "private" } },
+      },
+    });
+    expect(normalized).toMatchObject({
+      kind: "callback",
+      callbackQueryId: "cb1",
+      data: "a:appt1:tok:ok",
+      externalChatId: "100",
+    });
+  });
+
+  it("returns null for empty updates", () => {
     expect(normalizeTelegramUpdate({ update_id: 1 })).toBeNull();
   });
 
@@ -131,14 +160,14 @@ describeDb("telegram ingest + prepare (db)", () => {
 
     const first = await ingestTelegramUpdate({
       rawPayload: payload,
-      message: message!,
+      message: asMessage(message),
     });
     expect(first.duplicate).toBe(false);
     if (first.duplicate) return;
 
     const second = await ingestTelegramUpdate({
       rawPayload: payload,
-      message: message!,
+      message: asMessage(message),
     });
     expect(second.duplicate).toBe(true);
 
@@ -170,7 +199,7 @@ describeDb("telegram ingest + prepare (db)", () => {
     const inbound = normalizeTelegramUpdate(payload)!;
     const ingested = await ingestTelegramUpdate({
       rawPayload: payload,
-      message: inbound,
+      message: asMessage(inbound),
     });
     expect(ingested.duplicate).toBe(false);
     if (ingested.duplicate) return;
@@ -252,7 +281,7 @@ describeDb("telegram ingest + prepare (db)", () => {
       const message = normalizeTelegramUpdate(payload)!;
       const first = await ingestTelegramUpdate({
         rawPayload: payload,
-        message,
+        message: asMessage(message),
       });
       expect(first.duplicate).toBe(false);
       if (first.duplicate) return;
@@ -282,7 +311,7 @@ describeDb("telegram ingest + prepare (db)", () => {
       };
       const second = await ingestTelegramUpdate({
         rawPayload: secondPayload,
-        message: normalizeTelegramUpdate(secondPayload)!,
+        message: asMessage(normalizeTelegramUpdate(secondPayload)),
       });
       expect(second.duplicate).toBe(false);
       if (second.duplicate) return;
@@ -318,7 +347,7 @@ describeDb("telegram ingest + prepare (db)", () => {
       };
       const ingested = await ingestTelegramUpdate({
         rawPayload: payload,
-        message: normalizeTelegramUpdate(payload)!,
+        message: asMessage(normalizeTelegramUpdate(payload)),
       });
       expect(ingested.duplicate).toBe(false);
       if (ingested.duplicate) return;
@@ -380,7 +409,7 @@ describeDb("telegram ingest + prepare (db)", () => {
       };
       const ingested = await ingestTelegramUpdate({
         rawPayload: payload,
-        message: normalizeTelegramUpdate(payload)!,
+        message: asMessage(normalizeTelegramUpdate(payload)),
       });
       expect(ingested.duplicate).toBe(false);
       if (ingested.duplicate) return;

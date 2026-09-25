@@ -1,7 +1,6 @@
 import { createHash, createSign, randomUUID } from "crypto";
 import type { Appointment, OutboxEvent } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 
 const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 const GOOGLE_EVENT_ID_RE = /^[a-v0-9]{5,1024}$/;
@@ -293,32 +292,14 @@ export async function finalizeCalendarUpsert(
   appointmentId: string,
   googleEventId: string,
 ): Promise<Appointment> {
-  const appointment = await prisma.appointment.update({
+  // Client already confirmed via Telegram/admin; calendar sync marks CONFIRMED.
+  return prisma.appointment.update({
     where: { id: appointmentId },
     data: {
       googleEventId,
       status: "CONFIRMED",
     },
   });
-
-  if (appointment.conversationId) {
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: appointment.conversationId },
-      select: { channel: true },
-    });
-    if (conversation?.channel === "TELEGRAM") {
-      const when = appointment.startsAt.toLocaleString("ru-RU", {
-        timeZone: appointment.timezone,
-      });
-      await requestTelegramSend({
-        conversationId: appointment.conversationId,
-        body: `Консультация подтверждена: ${appointment.title}\n${when} (${appointment.timezone})`,
-        clientRequestId: `appointment-confirm:${appointment.id}:v${appointment.version}`,
-      });
-    }
-  }
-
-  return appointment;
 }
 
 export async function prepareCalendarDelete(

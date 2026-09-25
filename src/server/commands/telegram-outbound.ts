@@ -1,11 +1,19 @@
 import { prisma } from "@/lib/db";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
+import type { Prisma } from "@prisma/client";
+
+export type TelegramInlineKeyboard = {
+  inline_keyboard: Array<
+    Array<{ text: string; callback_data: string }>
+  >;
+};
 
 export type RequestTelegramSendInput = {
   conversationId: string;
   body: string;
   senderUserId?: string | null;
   clientRequestId?: string;
+  replyMarkup?: TelegramInlineKeyboard | null;
   /** When set, run inside this transaction (caller already holds conversation). */
   tx?: DbClient;
 };
@@ -42,6 +50,10 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
       return { message: existing, duplicate: true as const };
     }
 
+    const attachmentsJson = input.replyMarkup
+      ? ({ reply_markup: input.replyMarkup } as Prisma.InputJsonValue)
+      : undefined;
+
     const message = await tx.conversationMessage.create({
       data: {
         conversationId: input.conversationId,
@@ -50,6 +62,7 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
         senderType: "STAFF",
         senderUserId: input.senderUserId ?? null,
         body,
+        attachmentsJson,
         deliveryStatus: "PENDING",
         policyStatus: "APPROVED",
       },
@@ -67,6 +80,7 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
       payload: {
         messageId: message.id,
         conversationId: input.conversationId,
+        ...(input.replyMarkup ? { replyMarkup: input.replyMarkup } : {}),
       },
       idempotencyKey: `telegram.send:${message.id}`,
     });

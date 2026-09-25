@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { normalizeTelegramUpdate } from "@/server/channels/telegram";
+import { handleAppointmentCallback } from "@/server/commands/appointment-callbacks";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 
 export const runtime = "nodejs";
@@ -23,16 +24,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const message = normalizeTelegramUpdate(payload);
-  if (!message) {
-    // Acknowledge ignored update types so Telegram does not retry.
+  const update = normalizeTelegramUpdate(payload);
+  if (!update) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
   try {
+    if (update.kind === "callback") {
+      const result = await handleAppointmentCallback({
+        callbackQueryId: update.callbackQueryId,
+        data: update.data,
+      });
+      return NextResponse.json({ ok: true, callback: true, ...result });
+    }
+
     const result = await ingestTelegramUpdate({
       rawPayload: payload,
-      message,
+      message: update,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {

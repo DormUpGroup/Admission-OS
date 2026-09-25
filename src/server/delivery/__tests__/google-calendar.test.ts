@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import {
   appointmentCancel,
+  appointmentConfirmByClient,
   appointmentCreate,
 } from "@/server/commands/appointments";
 import {
@@ -52,6 +53,12 @@ describe("google calendar helpers (unit)", () => {
       googleEventId: null,
       participantsJson: null,
       version: 1,
+      pendingStartsAt: null,
+      pendingEndsAt: null,
+      confirmationToken: null,
+      confirmationRequestedAt: null,
+      lastClientNudgeAt: null,
+      curatorNudgeSentAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     } satisfies Appointment;
@@ -141,10 +148,10 @@ describeDb("appointments commands (db)", () => {
     await prisma.$disconnect();
   });
 
-  it("create is idempotent on clientRequestId", async () => {
+  it("create is idempotent and awaits client before calendar.upsert", async () => {
     const clientRequestId = `${prefix}:create`;
     const startsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-    const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 50 * 60 * 1000);
 
     const first = await appointmentCreate({
       clientRequestId,
@@ -155,6 +162,7 @@ describeDb("appointments commands (db)", () => {
       title: "Test consult",
     });
     expect(first.created).toBe(true);
+    expect(first.appointment.status).toBe("AWAITING_CLIENT");
 
     const second = await appointmentCreate({
       clientRequestId,
@@ -173,13 +181,28 @@ describeDb("appointments commands (db)", () => {
         eventType: "calendar.upsert",
       },
     });
-    expect(outbox.length).toBe(1);
+    expect(outbox.length).toBe(0);
+
+    const token = first.appointment.confirmationToken!;
+    const confirmed = await appointmentConfirmByClient(
+      first.appointment.id,
+      token,
+    );
+    expect(confirmed.ok).toBe(true);
+
+    const after = await prisma.outboxEvent.findMany({
+      where: {
+        aggregateId: first.appointment.id,
+        eventType: "calendar.upsert",
+      },
+    });
+    expect(after.length).toBe(1);
   });
 
-  it("cancel enqueues calendar.delete", async () => {
+  it("cancel without google event skips calendar.delete", async () => {
     const clientRequestId = `${prefix}:cancel`;
     const startsAt = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
-    const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 50 * 60 * 1000);
     const { appointment } = await appointmentCreate({
       clientRequestId,
       leadId,
@@ -197,13 +220,13 @@ describeDb("appointments commands (db)", () => {
         eventType: "calendar.delete",
       },
     });
-    expect(del).toBeTruthy();
+    expect(del).toBeNull();
   });
 
   it("finalizeCalendarUpsert stores googleEventId", async () => {
     const clientRequestId = `${prefix}:finalize`;
     const startsAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-    const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 50 * 60 * 1000);
     const { appointment } = await appointmentCreate({
       clientRequestId,
       leadId,
@@ -213,7 +236,6 @@ describeDb("appointments commands (db)", () => {
     });
 
     const eventId = deterministicGoogleEventId(appointment.id);
-    // Avoid Telegram side-effect: no conversationId on this appointment.
     const updated = await finalizeCalendarUpsert(appointment.id, eventId);
     expect(updated.googleEventId).toBe(eventId);
     expect(updated.status).toBe("CONFIRMED");
