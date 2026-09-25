@@ -34,6 +34,20 @@ describe("google calendar helpers (unit)", () => {
     expect(parsed.client_email).toContain("@");
   });
 
+  it("parseServiceAccountJson restores compacted one-line PEM", () => {
+    const parsed = parseServiceAccountJson(
+      JSON.stringify({
+        client_email: "bot@example.iam.gserviceaccount.com",
+        private_key:
+          "-----BEGIN PRIVATE KEY-----" +
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghij" +
+          "-----END PRIVATE KEY-----",
+      }),
+    );
+    expect(parsed.private_key).toContain("-----BEGIN PRIVATE KEY-----\n");
+    expect(parsed.private_key).toContain("\n-----END PRIVATE KEY-----\n");
+  });
+
   it("callCalendarUpsert inserts and returns event id (mocked fetch)", async () => {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();

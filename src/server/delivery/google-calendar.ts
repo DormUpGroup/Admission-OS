@@ -62,12 +62,26 @@ export function parseServiceAccountJson(
   }
   return {
     client_email: clientEmail,
-    private_key: privateKey.replace(/\\n/g, "\n"),
+    private_key: normalizePemPrivateKey(privateKey),
     token_uri:
       typeof obj.token_uri === "string"
         ? obj.token_uri
         : "https://oauth2.googleapis.com/token",
   };
+}
+
+/** Accept escaped \\n, real newlines, or a compacted one-line PEM. */
+export function normalizePemPrivateKey(raw: string): string {
+  let key = raw.replace(/\\n/g, "\n").trim();
+  if (key.includes("\n")) return key.endsWith("\n") ? key : `${key}\n`;
+  const begin = "-----BEGIN PRIVATE KEY-----";
+  const end = "-----END PRIVATE KEY-----";
+  if (!key.startsWith(begin) || !key.endsWith(end)) {
+    return key;
+  }
+  const body = key.slice(begin.length, key.length - end.length).replace(/\s+/g, "");
+  const lines = body.match(/.{1,64}/g) ?? [];
+  return `${begin}\n${lines.join("\n")}\n${end}\n`;
 }
 
 function base64url(input: Buffer | string): string {
@@ -170,10 +184,19 @@ export async function prepareCalendarUpsert(
     throw new Error(`Appointment ${appointmentId} not found`);
   }
   if (appointment.status === "CANCELLED") {
-    throw new Error("Cannot upsert a cancelled appointment");
+    return {
+      action: "skip",
+      appointment,
+      providerEventId: appointment.googleEventId ?? "",
+      calendarId: "",
+      credentials: {
+        client_email: "",
+        private_key: "",
+      },
+    };
   }
 
-  const calendarId = env.GOOGLE_CALENDAR_ID?.trim();
+  const calendarId = env.GOOGLE_CALENDAR_ID?.trim().replace(/\r/g, "");
   if (!calendarId) {
     throw new Error("GOOGLE_CALENDAR_ID is not configured");
   }
@@ -231,13 +254,13 @@ export async function callCalendarUpsert(
       const data = (await response.json()) as { id?: string };
       return { googleEventId: String(data.id ?? prepared.appointment.googleEventId) };
     }
-    if (response.status !== 404) {
+    if (response.status !== 404 && response.status !== 410) {
       throw new Error(`Google Calendar PATCH failed (${response.status})`);
     }
-    // Fall through to create if patch target missing.
+    // Fall through to create if patch target missing / gone.
   }
 
-  const insertResponse = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
+  const insertWithId = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -246,7 +269,7 @@ export async function callCalendarUpsert(
     body: JSON.stringify(body),
   });
 
-  if (insertResponse.status === 409) {
+  if (insertWithId.status === 409) {
     const getResponse = await fetchImpl(
       calendarEventsUrl(prepared.calendarId, prepared.providerEventId),
       {
@@ -278,14 +301,38 @@ export async function callCalendarUpsert(
     throw new Error("Google Calendar 409 conflict and recovery failed");
   }
 
-  if (!insertResponse.ok) {
-    throw new Error(`Google Calendar INSERT failed (${insertResponse.status})`);
+  if (insertWithId.ok) {
+    const data = (await insertWithId.json()) as { id?: string };
+    if (!data.id) {
+      throw new Error("Google Calendar INSERT returned no event id");
+    }
+    return { googleEventId: String(data.id) };
   }
-  const data = (await insertResponse.json()) as { id?: string };
-  if (!data.id) {
-    throw new Error("Google Calendar INSERT returned no event id");
+
+  // Deleted deterministic ids return 404/410 and cannot be reused — insert without id.
+  if (insertWithId.status === 404 || insertWithId.status === 410) {
+    const { id: _omit, ...bodyWithoutId } = body;
+    const retry = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bodyWithoutId),
+    });
+    if (!retry.ok) {
+      throw new Error(
+        `Google Calendar INSERT failed (${insertWithId.status}, retry ${retry.status})`,
+      );
+    }
+    const data = (await retry.json()) as { id?: string };
+    if (!data.id) {
+      throw new Error("Google Calendar INSERT retry returned no event id");
+    }
+    return { googleEventId: String(data.id) };
   }
-  return { googleEventId: String(data.id) };
+
+  throw new Error(`Google Calendar INSERT failed (${insertWithId.status})`);
 }
 
 export async function finalizeCalendarUpsert(
@@ -346,7 +393,7 @@ export async function prepareCalendarDelete(
     };
   }
 
-  const calendarId = env.GOOGLE_CALENDAR_ID?.trim() ?? null;
+  const calendarId = env.GOOGLE_CALENDAR_ID?.trim().replace(/\r/g, "") ?? null;
   if (!calendarId) {
     throw new Error("GOOGLE_CALENDAR_ID is not configured");
   }

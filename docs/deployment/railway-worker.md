@@ -37,9 +37,14 @@ Automation ops (kill-switch + dead-letter replay): `/admin/automation`.
 
 Worker env:
 - `GOOGLE_CALENDAR_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON` (full service-account JSON as a single-line or escaped string)
+- `GOOGLE_SERVICE_ACCOUNT_JSON` — **one line** of full service-account JSON in Railway
+  (Dashboard → Variables). Multiline paste often truncates to `{` and breaks upserts.
 
 Share the target calendar with the service account email (`client_email`) as editor.
+
+Outbox `calendar.upsert` runs only after the client confirms (Telegram) or admin
+manual confirm. Staff Telegram replies can complete without the worker; calendar
+sync **requires the worker service** to be running.
 
 
 ```bash

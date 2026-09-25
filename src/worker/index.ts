@@ -18,13 +18,34 @@ import { registerBuiltinHandlers } from "./handlers";
 function loadLocalEnvFile() {
   const path = resolve(process.cwd(), ".env");
   if (!existsSync(path)) return;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+  const text = readFileSync(path, "utf8");
+  let i = 0;
+  const lines = text.split(/\r?\n/);
+  while (i < lines.length) {
+    const line = lines[i];
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (!trimmed || trimmed.startsWith("#")) {
+      i += 1;
+      continue;
+    }
     const eq = trimmed.indexOf("=");
-    if (eq <= 0) continue;
+    if (eq <= 0) {
+      i += 1;
+      continue;
+    }
     const key = trimmed.slice(0, eq).trim();
     let val = trimmed.slice(eq + 1).trim();
+    // Multiline JSON object: GOOGLE_SERVICE_ACCOUNT_JSON={\n ... \n}
+    if (val === "{" || (val.startsWith("{") && !val.endsWith("}"))) {
+      const chunks = [val];
+      i += 1;
+      while (i < lines.length) {
+        chunks.push(lines[i]);
+        if (lines[i].trim().endsWith("}")) break;
+        i += 1;
+      }
+      val = chunks.join("\n");
+    }
     if (
       (val.startsWith('"') && val.endsWith('"')) ||
       (val.startsWith("'") && val.endsWith("'"))
@@ -32,6 +53,7 @@ function loadLocalEnvFile() {
       val = val.slice(1, -1);
     }
     if (process.env[key] === undefined) process.env[key] = val;
+    i += 1;
   }
 }
 

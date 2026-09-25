@@ -300,8 +300,10 @@ export async function claimOutboxEvents(
         OR (
           status = ${OUTBOX_STATUS.PROCESSING}
           AND "leaseExpiresAt" IS NULL
-          AND "lockedAt" IS NOT NULL
-          AND "lockedAt" < ${new Date(now.getTime() - leaseMs)}
+          AND (
+            "lockedAt" IS NULL
+            OR "lockedAt" < ${new Date(now.getTime() - leaseMs)}
+          )
         )
       ORDER BY "createdAt" ASC
       LIMIT ${limit}
