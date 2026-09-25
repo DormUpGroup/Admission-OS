@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Users,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/labels";
@@ -37,6 +38,7 @@ const primaryItems: NavItem[] = [
   { label: "Ученики", href: "/admin/students", icon: Users },
   { label: "Заявки", href: "/admin/applications", icon: ClipboardList },
   { label: "Консультации", href: "/admin/appointments", icon: Calendar },
+  { label: "Автоматика", href: "/admin/automation", icon: Zap },
   { label: "Настройки", href: "/admin/settings", icon: Settings },
 ];
 

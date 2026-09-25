@@ -31,6 +31,7 @@ BotFather profile copy (name, about, description, commands, avatar): see
 [`docs/telegram-botfather.md`](../telegram-botfather.md).
 
 Admin inbox: `/admin/inbox`. Appointments: `/admin/appointments`.
+Automation ops (kill-switch + dead-letter replay): `/admin/automation`.
 
 ## Google Calendar (Phase 2)
 
@@ -48,5 +49,13 @@ npm run worker
 
 ## Kill-switch
 
-When `AUTOMATION_ENABLED` is not true, the worker defers agent/outbound automation event types.
-Diagnostic types `noop` and `worker.log` always run. Webhook ingest still persists to Postgres.
+Automation runs only when **both** are true:
+
+1. Env `AUTOMATION_ENABLED=true` (hard floor — UI cannot override `false`)
+2. DB `AutomationSetting` key `global_enabled` with `{ "enabled": true }`
+
+Missing DB row = off (safe default after deploy). Toggle from `/admin/automation`
+(ADMIN). When effective automation is off, the worker defers agent/outbound
+event types without burning attempts. Diagnostic types `noop` and `worker.log`
+always run. Webhook ingest still persists to Postgres. Dead-letter replay is on
+the same admin page.

@@ -5,8 +5,14 @@ import {
   claimOutboxEvents,
   completeOutboxEvent,
   enqueueOutbox,
+  GLOBAL_AUTOMATION_SETTING_KEY,
+  isEventTypeAllowed,
+  KILL_SWITCH_DEFER_MS,
   OUTBOX_STATUS,
+  deferOutboxForKillSwitch,
+  replayDeadOutboxEvent,
   retryOutboxEvent,
+  setGlobalAutomationEnabled,
 } from "@/server/commands/outbox";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
@@ -143,19 +149,205 @@ describeDb("outbox enqueue + claim", () => {
     expect(afterRetry.lastError).toBe("boom");
     expect(afterRetry.leaseToken).toBeNull();
   });
+
+  it("replayDeadOutboxEvent resets DEAD to PENDING", async () => {
+    const key = `${prefix}:replay-${randomUUID()}`;
+    const event = await enqueueOutbox(prisma, {
+      aggregateType: "Test",
+      aggregateId: "e",
+      eventType: "noop",
+      payload: {},
+      idempotencyKey: key,
+      maxAttempts: 1,
+    });
+    const claimed = (
+      await claimOutboxEvents(prisma, {
+        workerId: `${prefix}-replay`,
+        limit: 25,
+      })
+    ).find((row) => row.id === event.id);
+    expect(claimed?.leaseToken).toBeTruthy();
+    const outcome = await retryOutboxEvent(
+      prisma,
+      claimed!.id,
+      claimed!.leaseToken!,
+      "fatal",
+    );
+    expect(outcome).toBe("dead");
+
+    const ok = await replayDeadOutboxEvent(prisma, event.id);
+    expect(ok).toBe(true);
+    const after = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+    expect(after.status).toBe(OUTBOX_STATUS.PENDING);
+    expect(after.attempts).toBe(0);
+    expect(after.lastError).toBeNull();
+    expect(after.leaseToken).toBeNull();
+
+    const again = await replayDeadOutboxEvent(prisma, event.id);
+    expect(again).toBe(false);
+  });
+
+  it("deferOutboxForKillSwitch parks without burning attempts", async () => {
+    const key = `${prefix}:defer-${randomUUID()}`;
+    const event = await enqueueOutbox(prisma, {
+      aggregateType: "Test",
+      aggregateId: "f",
+      eventType: "telegram.send",
+      payload: {},
+      idempotencyKey: key,
+    });
+    const claimed = (
+      await claimOutboxEvents(prisma, {
+        workerId: `${prefix}-defer`,
+        limit: 25,
+      })
+    ).find((row) => row.id === event.id);
+    expect(claimed?.leaseToken).toBeTruthy();
+    expect(claimed!.attempts).toBe(0);
+
+    const now = new Date("2026-09-25T10:00:00.000Z");
+    const ok = await deferOutboxForKillSwitch(
+      prisma,
+      claimed!.id,
+      claimed!.leaseToken!,
+      `Event type "${claimed!.eventType}" blocked by automation kill-switch`,
+      { now },
+    );
+    expect(ok).toBe(true);
+
+    const after = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+    expect(after.status).toBe(OUTBOX_STATUS.PENDING);
+    expect(after.attempts).toBe(0);
+    expect(after.leaseToken).toBeNull();
+    expect(after.lockedBy).toBeNull();
+    expect(after.nextAttemptAt.toISOString()).toBe(
+      new Date(now.getTime() + KILL_SWITCH_DEFER_MS).toISOString(),
+    );
+    expect(after.lastError).toContain("blocked by automation kill-switch");
+
+    // Lost lease / wrong token → no-op
+    const lost = await deferOutboxForKillSwitch(
+      prisma,
+      event.id,
+      "not-the-lease",
+      "should not apply",
+      { now },
+    );
+    expect(lost).toBe(false);
+  });
 });
 
-describe("outbox helpers (unit)", () => {
-  it("isEventTypeAllowed respects kill-switch for automation types", async () => {
-    const { isEventTypeAllowed } = await import("@/server/commands/outbox");
-    expect(isEventTypeAllowed("noop", { AUTOMATION_ENABLED: "false" })).toBe(
-      true,
-    );
+describe("automation kill-switch resolve (unit)", () => {
+  it("resolveAutomationEnabled is env AND db (missing row = false)", async () => {
+    const { resolveAutomationEnabled } = await import("@/server/commands/outbox");
+
+    const missingRow = {
+      automationSetting: {
+        findUnique: async () => null,
+      },
+    } as unknown as import("@/server/commands/outbox").DbClient;
+
     expect(
-      isEventTypeAllowed("telegram.send", { AUTOMATION_ENABLED: "false" }),
+      await resolveAutomationEnabled(missingRow, { AUTOMATION_ENABLED: "true" }),
     ).toBe(false);
     expect(
-      isEventTypeAllowed("telegram.send", { AUTOMATION_ENABLED: "true" }),
+      await resolveAutomationEnabled(missingRow, { AUTOMATION_ENABLED: "false" }),
+    ).toBe(false);
+
+    const enabledRow = {
+      automationSetting: {
+        findUnique: async () => ({
+          key: "global_enabled",
+          valueJson: { enabled: true },
+        }),
+      },
+    } as unknown as import("@/server/commands/outbox").DbClient;
+
+    expect(
+      await resolveAutomationEnabled(enabledRow, { AUTOMATION_ENABLED: "true" }),
     ).toBe(true);
+    expect(
+      await resolveAutomationEnabled(enabledRow, { AUTOMATION_ENABLED: "false" }),
+    ).toBe(false);
+
+    const disabledRow = {
+      automationSetting: {
+        findUnique: async () => ({
+          key: "global_enabled",
+          valueJson: { enabled: false },
+        }),
+      },
+    } as unknown as import("@/server/commands/outbox").DbClient;
+
+    expect(
+      await resolveAutomationEnabled(disabledRow, { AUTOMATION_ENABLED: "true" }),
+    ).toBe(false);
+  });
+});
+
+describeDb("automation setting upsert (db)", () => {
+  const prisma = new PrismaClient();
+  const actorId = `test-actor-${randomUUID()}`;
+  let previous: { valueJson: unknown; description: string | null } | null = null;
+
+  beforeAll(async () => {
+    const row = await prisma.automationSetting.findUnique({
+      where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+    });
+    previous = row
+      ? { valueJson: row.valueJson, description: row.description }
+      : null;
+  });
+
+  afterAll(async () => {
+    if (previous) {
+      await prisma.automationSetting.upsert({
+        where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+        create: {
+          key: GLOBAL_AUTOMATION_SETTING_KEY,
+          valueJson: previous.valueJson as object,
+          description: previous.description,
+        },
+        update: {
+          valueJson: previous.valueJson as object,
+          description: previous.description,
+        },
+      });
+    }
+    // If there was no prior row, leave whatever the suite wrote — do not delete
+    // (other parallel test files may rely on global_enabled existing).
+    await prisma.$disconnect();
+  });
+
+  it("setGlobalAutomationEnabled upserts global_enabled", async () => {
+    const value = await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId,
+      reason: "upsert-test",
+    });
+    expect(value.enabled).toBe(true);
+    const row = await prisma.automationSetting.findUniqueOrThrow({
+      where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+    });
+    expect(parseGlobalEnabledForTest(row.valueJson)).toBe(true);
+  });
+});
+
+function parseGlobalEnabledForTest(valueJson: unknown): boolean {
+  if (!valueJson || typeof valueJson !== "object" || Array.isArray(valueJson)) {
+    return false;
+  }
+  return (valueJson as { enabled?: unknown }).enabled === true;
+}
+
+describe("outbox helpers (unit)", () => {
+  it("isEventTypeAllowed respects kill-switch for automation types", () => {
+    expect(isEventTypeAllowed("noop", false)).toBe(true);
+    expect(isEventTypeAllowed("telegram.send", false)).toBe(false);
+    expect(isEventTypeAllowed("telegram.send", true)).toBe(true);
   });
 });

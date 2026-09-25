@@ -25,11 +25,12 @@ export function getOutboxHandler(eventType: string): OutboxHandler | undefined {
 export async function dispatchOutboxEvent(
   db: DbClient,
   event: OutboxEvent,
-  env: NodeJS.ProcessEnv = process.env,
+  options?: { automationEnabled?: boolean },
 ): Promise<void> {
-  if (!isEventTypeAllowed(event.eventType, env)) {
+  const automationEnabled = options?.automationEnabled ?? false;
+  if (!isEventTypeAllowed(event.eventType, automationEnabled)) {
     throw new Error(
-      `Event type "${event.eventType}" blocked by AUTOMATION_ENABLED=false`,
+      `Event type "${event.eventType}" blocked by automation kill-switch`,
     );
   }
 

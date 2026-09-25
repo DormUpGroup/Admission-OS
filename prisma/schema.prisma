@@ -816,6 +816,13 @@ model Appointment {
   @@index([status, startsAt])
 }
 
+model AutomationSetting {
+  key         String   @id
+  valueJson   Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
 model OutboxEvent {
   id             String    @id @default(cuid())
   aggregateType  String

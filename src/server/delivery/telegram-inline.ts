@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import {
   completeOutboxEvent,
   DEFAULT_LEASE_MS,
-  isAutomationEnabled,
   OUTBOX_STATUS,
+  resolveAutomationEnabled,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
 import {
@@ -28,7 +28,7 @@ export async function tryDeliverTelegramSendNow(
   messageId: string,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<InlineDeliverResult> {
-  if (!isAutomationEnabled(env)) {
+  if (!(await resolveAutomationEnabled(prisma, env))) {
     return { status: "skipped", reason: "automation_off" };
   }
   if (!env.TELEGRAM_BOT_TOKEN?.trim()) {

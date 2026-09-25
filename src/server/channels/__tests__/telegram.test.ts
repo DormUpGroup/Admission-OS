@@ -16,7 +16,7 @@ import {
   isAmbiguousTelegramError,
   prepareTelegramDelivery,
 } from "@/server/delivery/telegram";
-import { enqueueOutbox, OUTBOX_STATUS } from "@/server/commands/outbox";
+import { enqueueOutbox, GLOBAL_AUTOMATION_SETTING_KEY, OUTBOX_STATUS, setGlobalAutomationEnabled } from "@/server/commands/outbox";
 
 describe("telegram normalize (unit)", () => {
   it("normalizes a text message update", () => {
@@ -74,15 +74,44 @@ const describeDb = hasDatabase ? describe : describe.skip;
 describeDb("telegram ingest + prepare (db)", () => {
   const prisma = new PrismaClient();
   const prefix = `tg-test-${randomUUID()}`;
+  let previousAutomation:
+    | { valueJson: unknown; description: string | null }
+    | null
+    | undefined;
 
   beforeAll(async () => {
     await prisma.$queryRaw`SELECT 1 FROM "InboxEvent" LIMIT 1`;
+    const row = await prisma.automationSetting.findUnique({
+      where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+    });
+    previousAutomation = row
+      ? { valueJson: row.valueJson, description: row.description }
+      : null;
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-telegram",
+      reason: "test suite enable",
+    });
   });
 
   afterAll(async () => {
     await prisma.inboxEvent.deleteMany({
       where: { providerEventId: { startsWith: prefix } },
     });
+    if (previousAutomation) {
+      await prisma.automationSetting.upsert({
+        where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+        create: {
+          key: GLOBAL_AUTOMATION_SETTING_KEY,
+          valueJson: previousAutomation.valueJson as object,
+          description: previousAutomation.description,
+        },
+        update: {
+          valueJson: previousAutomation.valueJson as object,
+          description: previousAutomation.description,
+        },
+      });
+    }
     await prisma.$disconnect();
   });
 
@@ -203,6 +232,11 @@ describeDb("telegram ingest + prepare (db)", () => {
   it("/start enqueues one welcome via telegram.send when automation is on", async () => {
     const prev = process.env.AUTOMATION_ENABLED;
     process.env.AUTOMATION_ENABLED = "true";
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-telegram",
+      reason: "per-test enable",
+    });
     try {
       const updateId = `${prefix}-start-${Date.now()}`;
       const userId = 555010 + Math.floor(Math.random() * 1000);
@@ -327,6 +361,11 @@ describeDb("telegram ingest + prepare (db)", () => {
   it("/help enqueues help text via telegram.send when automation is on", async () => {
     const prev = process.env.AUTOMATION_ENABLED;
     process.env.AUTOMATION_ENABLED = "true";
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-telegram",
+      reason: "per-test enable",
+    });
     try {
       const updateId = `${prefix}-help-${Date.now()}`;
       const userId = 555030 + Math.floor(Math.random() * 1000);

@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/__tests__/**/*.test.ts"],
+    // Shared Postgres + singleton AutomationSetting — avoid cross-file races.
+    fileParallelism: false,
   },
   resolve: {
     alias: {

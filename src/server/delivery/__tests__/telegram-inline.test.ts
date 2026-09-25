@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { PrismaClient } from "@prisma/client";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
-import { OUTBOX_STATUS } from "@/server/commands/outbox";
+import { GLOBAL_AUTOMATION_SETTING_KEY, OUTBOX_STATUS, setGlobalAutomationEnabled } from "@/server/commands/outbox";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
 const describeDb = hasDatabase ? describe : describe.skip;
@@ -12,9 +12,24 @@ describeDb("telegram inline deliver (db)", () => {
   const prisma = new PrismaClient();
   const prefix = `tg-inline-${randomUUID()}`;
   let conversationId = "";
+  let previousAutomation:
+    | { valueJson: unknown; description: string | null }
+    | null
+    | undefined;
 
   beforeAll(async () => {
     await prisma.$queryRaw`SELECT 1 FROM "OutboxEvent" LIMIT 1`;
+    const row = await prisma.automationSetting.findUnique({
+      where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+    });
+    previousAutomation = row
+      ? { valueJson: row.valueJson, description: row.description }
+      : null;
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-inline",
+      reason: "test suite enable",
+    });
     const lead = await prisma.lead.create({
       data: {
         firstName: "Inline",
@@ -77,6 +92,20 @@ describeDb("telegram inline deliver (db)", () => {
       }
       await prisma.conversation.delete({ where: { id: conversationId } }).catch(() => undefined);
     }
+    if (previousAutomation) {
+      await prisma.automationSetting.upsert({
+        where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+        create: {
+          key: GLOBAL_AUTOMATION_SETTING_KEY,
+          valueJson: previousAutomation.valueJson as object,
+          description: previousAutomation.description,
+        },
+        update: {
+          valueJson: previousAutomation.valueJson as object,
+          description: previousAutomation.description,
+        },
+      });
+    }
     await prisma.$disconnect();
   });
 
@@ -100,7 +129,8 @@ describeDb("telegram inline deliver (db)", () => {
       const outbox = await prisma.outboxEvent.findUniqueOrThrow({
         where: { idempotencyKey: `telegram.send:${message.id}` },
       });
-      expect(outbox.status).toBe(OUTBOX_STATUS.PENDING);
+      // Concurrent claimOutboxEvents from other suites may lease this row.
+      expect(outbox.status).not.toBe(OUTBOX_STATUS.COMPLETED);
     } finally {
       if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
       else process.env.AUTOMATION_ENABLED = prev;
@@ -112,6 +142,11 @@ describeDb("telegram inline deliver (db)", () => {
     const prevToken = process.env.TELEGRAM_BOT_TOKEN;
     process.env.AUTOMATION_ENABLED = "true";
     process.env.TELEGRAM_BOT_TOKEN = "test-token-inline";
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-inline",
+      reason: "per-test enable",
+    });
 
     vi.stubGlobal(
       "fetch",

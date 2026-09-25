@@ -17,19 +17,17 @@ export const ALWAYS_ALLOWED_EVENT_TYPES = new Set([
 ]);
 
 /**
- * Event types that require AUTOMATION_ENABLED=true.
- * Phase 0 registers none beyond diagnostics; later PRs add telegram/calendar/hermes.
+ * Non-diagnostic event types gated by the kill-switch (docs only — allow is
+ * ALWAYS_ALLOWED ∪ {any type when automationEnabled}). Unknown types stay
+ * allowed when automation is on so handlers can register before a whitelist.
+ * Catalog: agent.intake, message.received, telegram.send, calendar.upsert,
+ * calendar.delete, hermes.create_run.
  */
-export const AUTOMATION_EVENT_TYPES = new Set<string>([
-  "agent.intake",
-  "message.received",
-  "telegram.send",
-  "calendar.upsert",
-  "calendar.delete",
-  "hermes.create_run",
-]);
 
 export const DEFAULT_LEASE_MS = 5 * 60 * 1000;
+
+/** How long to park gated events when the kill-switch is off. */
+export const KILL_SWITCH_DEFER_MS = 60_000;
 
 export type DbClient = PrismaClient | Prisma.TransactionClient;
 
@@ -44,20 +42,114 @@ export type EnqueueOutboxInput = {
   nextAttemptAt?: Date;
 };
 
-export function isAutomationEnabled(
+export const GLOBAL_AUTOMATION_SETTING_KEY = "global_enabled";
+
+export type GlobalAutomationValue = {
+  enabled: boolean;
+  reason?: string | null;
+  changedBy?: string | null;
+  changedAt?: string | null;
+};
+
+/** Env floor only — hard off when AUTOMATION_ENABLED is not true. */
+export function isEnvAutomationEnabled(
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
 ): boolean {
   const raw = (env.AUTOMATION_ENABLED ?? "false").trim().toLowerCase();
   return raw === "true" || raw === "1" || raw === "yes";
 }
 
-export function isEventTypeAllowed(
-  eventType: string,
+/** @deprecated Prefer isEnvAutomationEnabled or resolveAutomationEnabled. */
+export function isAutomationEnabled(
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
 ): boolean {
+  return isEnvAutomationEnabled(env);
+}
+
+function parseGlobalEnabled(valueJson: unknown): boolean {
+  if (!valueJson || typeof valueJson !== "object" || Array.isArray(valueJson)) {
+    return false;
+  }
+  return (valueJson as { enabled?: unknown }).enabled === true;
+}
+
+/**
+ * Effective automation = env AUTOMATION_ENABLED AND DB global_enabled.
+ * Missing DB row → enabled false (safe default after deploy).
+ */
+export async function resolveAutomationEnabled(
+  db: DbClient,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+): Promise<boolean> {
+  if (!isEnvAutomationEnabled(env)) return false;
+  const row = await db.automationSetting.findUnique({
+    where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+  });
+  if (!row) return false;
+  return parseGlobalEnabled(row.valueJson);
+}
+
+export async function getGlobalAutomationSetting(
+  db: DbClient,
+): Promise<{ enabled: boolean; value: GlobalAutomationValue | null }> {
+  const row = await db.automationSetting.findUnique({
+    where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+  });
+  if (!row) return { enabled: false, value: null };
+  const raw = row.valueJson;
+  const enabled = parseGlobalEnabled(raw);
+  const obj =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+  return {
+    enabled,
+    value: {
+      enabled,
+      reason: typeof obj.reason === "string" ? obj.reason : null,
+      changedBy: typeof obj.changedBy === "string" ? obj.changedBy : null,
+      changedAt: typeof obj.changedAt === "string" ? obj.changedAt : null,
+    },
+  };
+}
+
+export async function setGlobalAutomationEnabled(
+  db: DbClient,
+  options: {
+    enabled: boolean;
+    actorId: string;
+    reason?: string | null;
+  },
+): Promise<GlobalAutomationValue> {
+  const value: GlobalAutomationValue = {
+    enabled: options.enabled,
+    reason: options.reason ?? null,
+    changedBy: options.actorId,
+    changedAt: new Date().toISOString(),
+  };
+  await db.automationSetting.upsert({
+    where: { key: GLOBAL_AUTOMATION_SETTING_KEY },
+    create: {
+      key: GLOBAL_AUTOMATION_SETTING_KEY,
+      valueJson: value,
+      description: "Global automation kill-switch (AND with AUTOMATION_ENABLED env)",
+    },
+    update: {
+      valueJson: value,
+    },
+  });
+  return value;
+}
+
+/**
+ * @param automationEnabled Pre-resolved effective flag (env ∧ DB).
+ */
+export function isEventTypeAllowed(
+  eventType: string,
+  automationEnabled: boolean,
+): boolean {
   if (ALWAYS_ALLOWED_EVENT_TYPES.has(eventType)) return true;
-  if (!isAutomationEnabled(env)) return false;
-  return true;
+  return automationEnabled;
 }
 
 export function retryDelayMs(attempt: number): number {
@@ -334,6 +426,65 @@ export async function deadLetterOutboxEvent(
       lockedAt: null,
       leaseToken: null,
       leaseExpiresAt: null,
+    },
+  });
+  return result.count > 0;
+}
+
+/**
+ * Release a PROCESSING event back to PENDING without burning attempts.
+ * Used when the kill-switch blocks a gated event type (automation may return later).
+ */
+export async function deferOutboxForKillSwitch(
+  db: DbClient,
+  eventId: string,
+  leaseToken: string,
+  errorMessage: string,
+  options?: { now?: Date; deferMs?: number },
+): Promise<boolean> {
+  const now = options?.now ?? new Date();
+  const deferMs = options?.deferMs ?? KILL_SWITCH_DEFER_MS;
+  const result = await db.outboxEvent.updateMany({
+    where: {
+      id: eventId,
+      status: OUTBOX_STATUS.PROCESSING,
+      leaseToken,
+    },
+    data: {
+      status: OUTBOX_STATUS.PENDING,
+      nextAttemptAt: new Date(now.getTime() + deferMs),
+      lastError: errorMessage.slice(0, 4000),
+      lockedBy: null,
+      lockedAt: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+    },
+  });
+  return result.count > 0;
+}
+
+/** Replay a dead-letter row back into the pending queue. */
+export async function replayDeadOutboxEvent(
+  db: DbClient,
+  eventId: string,
+  options?: { now?: Date },
+): Promise<boolean> {
+  const now = options?.now ?? new Date();
+  const result = await db.outboxEvent.updateMany({
+    where: {
+      id: eventId,
+      status: OUTBOX_STATUS.DEAD,
+    },
+    data: {
+      status: OUTBOX_STATUS.PENDING,
+      attempts: 0,
+      nextAttemptAt: now,
+      lastError: null,
+      lockedBy: null,
+      lockedAt: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+      processedAt: null,
     },
   });
   return result.count > 0;

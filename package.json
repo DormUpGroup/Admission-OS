@@ -2,6 +2,9 @@
   "name": "immigrome-os",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/ensure-tailwind-oxide.js && prisma generate && next build",

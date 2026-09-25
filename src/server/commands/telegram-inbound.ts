@@ -9,7 +9,7 @@ import {
   TELEGRAM_HELP_TEXT,
   TELEGRAM_WELCOME_TEXT,
 } from "@/server/channels/telegram-copy";
-import { enqueueOutbox, isAutomationEnabled } from "@/server/commands/outbox";
+import { enqueueOutbox, resolveAutomationEnabled } from "@/server/commands/outbox";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 
 const CHANNEL = "TELEGRAM";
@@ -180,7 +180,7 @@ export async function ingestTelegramUpdate(input: {
       idempotencyKey: `telegram:update:${message.providerEventId}`,
     });
 
-    if (createdInbound && isAutomationEnabled()) {
+    if (createdInbound && (await resolveAutomationEnabled(tx))) {
       const command = parseTelegramBotCommand(message.text);
 
       if (command === "help") {

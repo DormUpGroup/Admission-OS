@@ -6,7 +6,9 @@ import {
   claimOutboxEvents,
   completeOutboxEvent,
   deadLetterOutboxEvent,
-  isAutomationEnabled,
+  deferOutboxForKillSwitch,
+  isEventTypeAllowed,
+  resolveAutomationEnabled,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
 import { dispatchOutboxEvent } from "./dispatch";
@@ -48,6 +50,7 @@ function sleep(ms: number) {
 }
 
 async function processOnce(): Promise<number> {
+  const automationEnabled = await resolveAutomationEnabled(prisma);
   const claimed = await claimOutboxEvents(prisma, {
     workerId: WORKER_ID,
     limit: CLAIM_LIMIT,
@@ -65,8 +68,27 @@ async function processOnce(): Promise<number> {
       continue;
     }
 
+    if (!isEventTypeAllowed(event.eventType, automationEnabled)) {
+      const message = `Event type "${event.eventType}" blocked by automation kill-switch`;
+      await deferOutboxForKillSwitch(
+        prisma,
+        event.id,
+        event.leaseToken,
+        message,
+      );
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          msg: "outbox.deferred_kill_switch",
+          eventId: event.id,
+          eventType: event.eventType,
+        }),
+      );
+      continue;
+    }
+
     try {
-      await dispatchOutboxEvent(prisma, event);
+      await dispatchOutboxEvent(prisma, event, { automationEnabled });
       const ok = await completeOutboxEvent(prisma, event.id, event.leaseToken);
       if (!ok) {
         console.warn(
@@ -79,39 +101,6 @@ async function processOnce(): Promise<number> {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const blockedByKillSwitch =
-        message.includes("AUTOMATION_ENABLED=false") &&
-        !isAutomationEnabled();
-
-      if (blockedByKillSwitch) {
-        // Re-queue without burning attempts — automation may be re-enabled later.
-        await prisma.outboxEvent.updateMany({
-          where: {
-            id: event.id,
-            status: "PROCESSING",
-            leaseToken: event.leaseToken,
-          },
-          data: {
-            status: "PENDING",
-            nextAttemptAt: new Date(Date.now() + 60_000),
-            lastError: message.slice(0, 4000),
-            lockedBy: null,
-            lockedAt: null,
-            leaseToken: null,
-            leaseExpiresAt: null,
-          },
-        });
-        console.warn(
-          JSON.stringify({
-            level: "warn",
-            msg: "outbox.deferred_kill_switch",
-            eventId: event.id,
-            eventType: event.eventType,
-          }),
-        );
-        continue;
-      }
-
       const outcome = await retryOutboxEvent(
         prisma,
         event.id,
@@ -146,12 +135,13 @@ async function processOnce(): Promise<number> {
 async function main() {
   registerBuiltinHandlers();
 
+  const automationEnabled = await resolveAutomationEnabled(prisma);
   console.log(
     JSON.stringify({
       level: "info",
       msg: "worker.started",
       workerId: WORKER_ID,
-      automationEnabled: isAutomationEnabled(),
+      automationEnabled,
       pollIntervalMs: POLL_INTERVAL_MS,
       claimLimit: CLAIM_LIMIT,
     }),
