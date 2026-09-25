@@ -50,6 +50,21 @@ describe("isTechnicalConversation", () => {
       ]),
     ).toBe(false);
   });
+
+  it("treats fixture contacts as technical even with human text", () => {
+    expect(
+      isTechnicalConversation(
+        [{ direction: "INBOUND", body: "hello-dedupe" }],
+        { title: "Test", username: "tgtest" },
+      ),
+    ).toBe(true);
+    expect(
+      isTechnicalConversation(
+        [{ direction: "INBOUND", body: "reply" }],
+        { title: "Unk", username: "tgunk" },
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("pickPreviewMessage", () => {

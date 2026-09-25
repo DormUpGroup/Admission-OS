@@ -1,14 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { StudentAvatar } from "@/components/student-avatar";
-import { AdminInboxReplyForm } from "@/components/admin-inbox-reply-form";
 import {
   isBotCommandBody,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 import { cn, formatDate } from "@/lib/utils";
+import {
+  sendTelegramInboxReplyAction,
+  type SendTelegramInboxReplyResult,
+} from "@/server/inbox-actions";
+import { Button } from "@/components/ui/button";
+import { useFormStatus } from "react-dom";
 
 export type TelegramListItem = {
   id: string;
@@ -88,10 +100,33 @@ function formatListTime(iso: string | null) {
     d.getFullYear() === now.getFullYear() &&
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate();
-  if (sameDay) {
-    return formatMessageTime(iso);
-  }
+  if (sameDay) return formatMessageTime(iso);
   return formatDate(d);
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      size="sm"
+      disabled={pending}
+      className="h-9 shrink-0 rounded-full px-4"
+    >
+      {pending ? "…" : "Отправить"}
+    </Button>
+  );
+}
+
+function syncUrl(folder: ConversationFolder, conversationId: string | null) {
+  const params = new URLSearchParams();
+  if (folder === "technical") params.set("folder", "technical");
+  if (conversationId) params.set("conversationId", conversationId);
+  const qs = params.toString();
+  const href = qs
+    ? `/admin/messages/telegram?${qs}`
+    : "/admin/messages/telegram";
+  window.history.replaceState(null, "", href);
 }
 
 export function TelegramMessenger({
@@ -99,25 +134,105 @@ export function TelegramMessenger({
   chatsCount,
   technicalCount,
   conversations,
-  active,
+  initialActive,
 }: {
   folder: ConversationFolder;
   chatsCount: number;
   technicalCount: number;
   conversations: TelegramListItem[];
-  active: TelegramActiveThread | null;
+  initialActive: TelegramActiveThread | null;
 }) {
   const [query, setQuery] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(
+    initialActive?.id ?? conversations[0]?.id ?? null,
+  );
+  const [active, setActive] = useState<TelegramActiveThread | null>(
+    initialActive,
+  );
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [list, setList] = useState(conversations);
+  const [, startTransition] = useTransition();
+  const cacheRef = useRef<Map<string, TelegramActiveThread>>(new Map());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    setList(conversations);
+  }, [conversations]);
+
+  useEffect(() => {
+    if (initialActive) {
+      cacheRef.current.set(initialActive.id, initialActive);
+    }
+  }, [initialActive]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [active?.id, active?.messages.length]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return conversations;
-    return conversations.filter(
+    if (!q) return list;
+    return list.filter(
       (c) =>
         c.title.toLowerCase().includes(q) ||
         c.preview.toLowerCase().includes(q),
     );
-  }, [conversations, query]);
+  }, [list, query]);
+
+  const loadThread = useCallback(
+    async (id: string, opts?: { silent?: boolean }) => {
+      const cached = cacheRef.current.get(id);
+      if (cached && !opts?.silent) {
+        setActive(cached);
+      }
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+      if (!opts?.silent && !cached) setThreadLoading(true);
+      try {
+        const res = await fetch(
+          `/api/admin/telegram/conversations/${encodeURIComponent(id)}`,
+          { signal: ac.signal, cache: "no-store" },
+        );
+        if (!res.ok) throw new Error(`thread ${res.status}`);
+        const data = (await res.json()) as TelegramActiveThread;
+        cacheRef.current.set(id, data);
+        setActiveId((currentId) => {
+          if (currentId === id) setActive(data);
+          return currentId;
+        });
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      } finally {
+        if (!ac.signal.aborted) setThreadLoading(false);
+      }
+    },
+    [],
+  );
+
+  const selectConversation = useCallback(
+    (id: string) => {
+      setActiveId(id);
+      syncUrl(folder, id);
+      const cached = cacheRef.current.get(id);
+      if (cached) setActive(cached);
+      else setActive(null);
+      void loadThread(id);
+    },
+    [folder, loadThread],
+  );
+
+  // Soft-poll delivery for pending outbound in the open thread.
+  useEffect(() => {
+    if (!active?.hasPendingDelivery || !activeId) return;
+    const id = window.setInterval(() => {
+      void loadThread(activeId, { silent: true });
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [active?.hasPendingDelivery, activeId, loadThread]);
 
   function folderHref(next: ConversationFolder) {
     const params = new URLSearchParams();
@@ -125,16 +240,99 @@ export function TelegramMessenger({
     return `/admin/messages/telegram?${params.toString()}`;
   }
 
-  function conversationHref(id: string) {
-    const params = new URLSearchParams();
-    if (folder === "technical") params.set("folder", "technical");
-    params.set("conversationId", id);
-    return `/admin/messages/telegram?${params.toString()}`;
+  async function handleSend(formData: FormData) {
+    const body = String(formData.get("body") ?? "").trim();
+    if (!activeId || !body || !active) return;
+
+    const tempId = `temp:${Date.now()}`;
+    const optimistic: TelegramThreadMessage = {
+      id: tempId,
+      direction: "OUTBOUND",
+      body,
+      createdAt: new Date().toISOString(),
+      deliveryStatus: "PENDING",
+      attemptError: null,
+    };
+
+    startTransition(() => {
+      setActive((prev) =>
+        prev
+          ? {
+              ...prev,
+              hasPendingDelivery: true,
+              messages: [...prev.messages, optimistic],
+            }
+          : prev,
+      );
+      setList((prev) =>
+        prev.map((c) =>
+          c.id === activeId
+            ? {
+                ...c,
+                preview: body,
+                previewAt: optimistic.createdAt,
+                undelivered: true,
+                deliveryStatus: "PENDING",
+              }
+            : c,
+        ),
+      );
+    });
+
+    // Reset textarea immediately (form action may keep values otherwise).
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      `textarea[name="body"]`,
+    );
+    if (textarea) {
+      textarea.value = "";
+      textarea.style.height = "auto";
+    }
+
+    try {
+      const result: SendTelegramInboxReplyResult =
+        await sendTelegramInboxReplyAction(formData);
+      setActive((prev) => {
+        if (!prev || prev.id !== activeId) return prev;
+        const messages = prev.messages.map((m) =>
+          m.id === tempId
+            ? {
+                id: result.messageId,
+                direction: "OUTBOUND" as const,
+                body: result.body,
+                createdAt: result.createdAt,
+                deliveryStatus: result.deliveryStatus,
+                attemptError: null,
+              }
+            : m,
+        );
+        return {
+          ...prev,
+          hasPendingDelivery: messages.some(
+            (m) =>
+              m.direction === "OUTBOUND" &&
+              (m.deliveryStatus === "PENDING" ||
+                m.deliveryStatus === "PROCESSING"),
+          ),
+          messages,
+        };
+      });
+      window.setTimeout(() => {
+        void loadThread(activeId, { silent: true });
+      }, 800);
+    } catch {
+      setActive((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: prev.messages.filter((m) => m.id !== tempId),
+            }
+          : prev,
+      );
+    }
   }
 
   return (
     <div className="-m-6 flex h-[calc(100vh-3rem)] min-h-[480px] overflow-hidden border-t border-black/5 bg-[#eef2f5]">
-      {/* Sidebar */}
       <aside className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-black/10 bg-white">
         <div className="space-y-2 border-b border-black/5 p-3">
           <div className="flex gap-1 rounded-lg bg-muted/70 p-0.5">
@@ -187,16 +385,15 @@ export function TelegramMessenger({
             </p>
           ) : (
             filtered.map((c) => {
-              const selected = c.id === active?.id;
+              const selected = c.id === activeId;
               return (
-                <Link
+                <button
                   key={c.id}
-                  href={conversationHref(c.id)}
+                  type="button"
+                  onClick={() => selectConversation(c.id)}
                   className={cn(
-                    "flex gap-3 border-b border-black/5 px-3 py-2.5 transition-colors",
-                    selected
-                      ? "bg-[var(--brand-soft)]"
-                      : "hover:bg-muted/50",
+                    "flex w-full gap-3 border-b border-black/5 px-3 py-2.5 text-left transition-colors",
+                    selected ? "bg-[var(--brand-soft)]" : "hover:bg-muted/50",
                   )}
                 >
                   <StudentAvatar name={c.title} size="lg" className="mt-0.5" />
@@ -223,16 +420,19 @@ export function TelegramMessenger({
                       </span>
                     ) : null}
                   </div>
-                </Link>
+                </button>
               );
             })
           )}
         </div>
       </aside>
 
-      {/* Thread */}
       <section className="flex min-w-0 flex-1 flex-col bg-[#e6ebee]">
-        {!active ? (
+        {!active && threadLoading ? (
+          <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
+            Загрузка…
+          </div>
+        ) : !active ? (
           <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
             Выберите диалог
           </div>
@@ -240,7 +440,7 @@ export function TelegramMessenger({
           <>
             <header className="flex items-center gap-3 border-b border-black/10 bg-white px-4 py-2.5">
               <StudentAvatar name={active.title} size="md" />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="truncate text-[15px] font-semibold leading-tight">
                   {active.title}
                 </h2>
@@ -248,21 +448,22 @@ export function TelegramMessenger({
                   Telegram
                   {active.automationPaused ? " · автоответы на паузе" : ""}
                   {folder === "technical" ? " · технический" : ""}
+                  {threadLoading ? " · …" : ""}
                 </p>
               </div>
             </header>
 
-            <div className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
+            <div
+              ref={scrollRef}
+              className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3"
+            >
               {active.messages.map((m) => {
                 const outbound = m.direction === "OUTBOUND";
                 const command = isBotCommandBody(m.body);
 
                 if (command && !outbound) {
                   return (
-                    <div
-                      key={m.id}
-                      className="flex justify-center py-1"
-                    >
+                    <div key={m.id} className="flex justify-center py-1">
                       <span className="rounded-full bg-black/5 px-3 py-1 text-[12px] text-muted-foreground">
                         {m.body}
                       </span>
@@ -315,11 +516,32 @@ export function TelegramMessenger({
             </div>
 
             <div className="border-t border-black/10 bg-white px-3 py-2">
-              <AdminInboxReplyForm
-                conversationId={active.id}
-                hasPendingDelivery={active.hasPendingDelivery}
-                variant="telegram"
-              />
+              <form action={handleSend} className="flex items-end gap-2">
+                <input
+                  type="hidden"
+                  name="conversationId"
+                  value={active.id}
+                />
+                <textarea
+                  name="body"
+                  rows={1}
+                  required
+                  placeholder="Напишите клиенту…"
+                  className="max-h-32 min-h-9 flex-1 resize-none rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted"
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.style.height = "auto";
+                    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      e.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                />
+                <SubmitButton />
+              </form>
             </div>
           </>
         )}

@@ -1,5 +1,23 @@
 export type ConversationFolder = "chats" | "technical";
 
+/** Telegram first_name / lead titles from integration fixtures. */
+const FIXTURE_DISPLAY_NAMES = new Set([
+  "test",
+  "unk",
+  "off",
+  "start",
+  "help",
+]);
+
+/** Known test usernames from telegram unit fixtures. */
+const FIXTURE_USERNAMES = new Set([
+  "tgtest",
+  "tgunk",
+  "tgstart",
+  "tghelp",
+  "tgoff",
+]);
+
 /**
  * Parse a bot command from message text.
  * Supports `/start`, `/start@BotName`, `/help payload`.
@@ -18,13 +36,26 @@ export function isBotCommandBody(body: string | null | undefined): boolean {
   return parseTelegramBotCommand(body) !== null;
 }
 
+export function isFixtureContact(contact: {
+  title?: string | null;
+  username?: string | null;
+}): boolean {
+  const title = (contact.title ?? "").trim().toLowerCase();
+  if (title && FIXTURE_DISPLAY_NAMES.has(title)) return true;
+  const username = (contact.username ?? "").trim().toLowerCase();
+  if (username && FIXTURE_USERNAMES.has(username)) return true;
+  return false;
+}
+
 /**
- * Technical = no human inbound yet (empty inbound, or every inbound is a bot command).
- * Once the contact sends non-command text, the conversation belongs in "Чаты".
+ * Technical = fixture contact, or no human inbound yet
+ * (empty inbound, or every inbound is a bot command).
  */
 export function isTechnicalConversation(
   messages: Array<{ direction: string; body: string | null }>,
+  contact?: { title?: string | null; username?: string | null },
 ): boolean {
+  if (contact && isFixtureContact(contact)) return true;
   const inbound = messages.filter((m) => m.direction === "INBOUND");
   if (inbound.length === 0) return true;
   return inbound.every((m) => isBotCommandBody(m.body));

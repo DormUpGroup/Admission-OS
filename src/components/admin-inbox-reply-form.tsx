@@ -28,6 +28,7 @@ function SubmitButton({ variant }: { variant: "default" | "telegram" }) {
   );
 }
 
+/** Legacy form used outside the fast Telegram messenger shell. */
 export function AdminInboxReplyForm({
   conversationId,
   hasPendingDelivery,
@@ -44,7 +45,7 @@ export function AdminInboxReplyForm({
     if (!hasPendingDelivery) return;
     const id = window.setInterval(() => {
       router.refresh();
-    }, 1500);
+    }, 2500);
     return () => window.clearInterval(id);
   }, [hasPendingDelivery, router]);
 
