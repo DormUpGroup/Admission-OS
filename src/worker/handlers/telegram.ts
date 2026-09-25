@@ -1,4 +1,5 @@
 import type { OutboxHandler } from "../dispatch";
+import { queueIntakeRunForMessageReceived } from "@/server/automation/runs";
 import {
   callTelegramDelivery,
   finalizeTelegramDelivery,
@@ -46,15 +47,15 @@ export const handleTelegramSend: OutboxHandler = async (_db, event) => {
   }
 };
 
-export const handleMessageReceived: OutboxHandler = async (_db, event) => {
-  // Phase 1 stub — Hermes create_run lands in PR4.
+export const handleMessageReceived: OutboxHandler = async (db, event) => {
+  const result = await queueIntakeRunForMessageReceived(db, event);
   console.log(
     JSON.stringify({
       level: "info",
-      msg: "message.received.stub",
+      msg: result.queued ? "message.received.intake_queued" : "message.received.skipped",
       eventId: event.id,
       idempotencyKey: event.idempotencyKey,
-      payload: event.payloadJson,
+      result,
       at: new Date().toISOString(),
     }),
   );

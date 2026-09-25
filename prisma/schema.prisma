@@ -28,6 +28,7 @@ model User {
   assignedConversations Conversation[]      @relation("ConversationAssignee")
   assignedAppointments  Appointment[]       @relation("AppointmentAssignee")
   assignedLeads         Lead[]              @relation("LeadAssignee")
+  approvedAutomationRequests ApprovalRequest[] @relation("ApprovalDecider")
 }
 
 model Student {
@@ -676,6 +677,8 @@ model Lead {
   locale             String?
   consentStatus      String    @default("UNKNOWN")
   consentAt          DateTime?
+  consentEvidence    String?
+  consentChannel     String?
   qualificationJson  Json?
   assignedCuratorId  String?
   convertedStudentId String?   @unique
@@ -754,6 +757,7 @@ model Conversation {
   assignedCurator User?                 @relation("ConversationAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
   messages        ConversationMessage[]
   appointments    Appointment[]
+  agentRuns       AgentRun[]
 
   @@index([leadId, status])
   @@index([studentId, status])
@@ -833,6 +837,114 @@ model AutomationSetting {
   valueJson   Json
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// --- Agent automation (Phase 3 foundation) ---
+// Tables already existed from an earlier Hermes rollout. PR0 adds consent
+// evidence fields plus immutable approval payload hashing without dropping
+// legacy columns (version, hermesRunId, action/proposedJson, etc.).
+
+/// Versioned registry for the small, allow-listed set of automation roles.
+/// Definitions are configuration, never a source of client workflow state.
+model AgentDefinition {
+  key                String   @id
+  version            String   @default("v1")
+  enabled            Boolean  @default(false)
+  autonomyLevel      String   @default("DRAFT_ONLY")
+  allowedToolsJson   Json
+  eventTypesJson     Json
+  approvalPolicyJson Json     @default("{}")
+  policyJson         Json     @default("{}")
+  promptVersion      String   @default("v1")
+  policyVersion      String   @default("v1")
+  maxIterations      Int      @default(8)
+  timeoutSeconds     Int      @default(120)
+  maxCostUsd         Decimal? @default(0.25) @db.Decimal(10, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  runs AgentRun[]
+}
+
+/// Durable technical record of a future agent execution. It is deliberately
+/// separate from Conversation and never owns customer-facing state.
+model AgentRun {
+  id              String    @id @default(cuid())
+  agentKey        String
+  parentRunId     String?
+  conversationId  String?
+  subjectType     String
+  subjectId       String
+  status          String    @default("PENDING")
+  hermesRunId     String?   @unique
+  hermesSessionId String?
+  model           String?
+  promptVersion   String
+  policyVersion   String
+  idempotencyKey  String    @unique
+  inputJson       Json?
+  outputJson      Json?
+  inputTokens     Int?
+  outputTokens    Int?
+  toolCallCount   Int       @default(0)
+  errorCode       String?
+  errorMessage    String?
+  correlationId   String
+  queuedAt        DateTime  @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  agentDefinition AgentDefinition   @relation(fields: [agentKey], references: [key], onDelete: Restrict)
+  parent          AgentRun?         @relation("AgentRunChildren", fields: [parentRunId], references: [id])
+  children        AgentRun[]        @relation("AgentRunChildren")
+  conversation    Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  approvals       ApprovalRequest[]
+
+  @@index([agentKey, status, queuedAt])
+  @@index([conversationId, createdAt])
+  @@index([subjectType, subjectId, createdAt])
+  @@index([status, createdAt])
+  @@index([agentKey, createdAt])
+  @@index([conversationId])
+}
+
+/// A human decision is bound to the exact canonical action payload and expires
+/// before it can be consumed by a later external-effect command.
+model ApprovalRequest {
+  id              String    @id @default(cuid())
+  agentRunId      String?
+  /// Legacy required label kept in sync with actionKey.
+  action          String
+  riskClass       String
+  status          String    @default("PENDING")
+  subjectType     String
+  subjectId       String
+  /// Legacy mirror of payloadJson for older readers.
+  proposedJson    Json
+  actionKey       String
+  payloadJson     Json
+  payloadHash     String
+  requestedByType String
+  requestedById   String?
+  decidedById     String?
+  decisionNote    String?
+  decisionReason  String?
+  expiresAt       DateTime?
+  decidedAt       DateTime?
+  executedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  agentRun  AgentRun? @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+  decidedBy User?     @relation("ApprovalDecider", fields: [decidedById], references: [id])
+
+  @@index([status, expiresAt])
+  @@index([agentRunId, createdAt])
+  @@index([status, createdAt])
+  @@index([subjectType, subjectId])
+  @@index([decidedById])
 }
 
 model OutboxEvent {

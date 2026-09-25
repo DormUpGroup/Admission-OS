@@ -32,6 +32,35 @@ export {
 export { runCommand, type CommandContext, type CommandResult } from "./run-command";
 
 export {
+  APPROVAL_STATUS,
+  approvalPayloadHash,
+  canonicalApprovalPayload,
+  createApprovalRequest,
+  decideApprovalRequest,
+} from "@/server/automation/approval";
+
+export {
+  evaluateActionPolicy,
+  evaluateActionPolicyForConversation,
+  POLICY_DECISIONS,
+  type PolicyEvaluation,
+} from "@/server/automation/policy";
+
+export {
+  escalateAgentToHuman,
+  requestSchedulingApproval,
+  sendAgentClientMessage,
+  updateLeadQualificationFromAgent,
+} from "@/server/automation/actions";
+
+export {
+  getContactProfile,
+  getConversationContext,
+  listAvailableSlots,
+  updateLeadQualification,
+} from "@/server/automation/context";
+
+export {
   ingestTelegramUpdate,
   type IngestTelegramResult,
 } from "./telegram-inbound";
