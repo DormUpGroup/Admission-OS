@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { StudentAvatar } from "@/components/student-avatar";
+import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
 import { cn, formatDate } from "@/lib/utils";
 
 export type ChannelListItem = {
@@ -212,18 +213,12 @@ export function ChannelMessenger({
                     next.outbound === m.outbound &&
                     (next.senderName?.trim() ||
                       (next.outbound ? "Куратор" : active.title)) === sender;
-                  const showName = !prevSame;
                   const showAvatar = !nextSame;
+                  const startCluster = !prevSame;
                   const avatar = showAvatar ? (
-                    <StudentAvatar
+                    <MessageSenderAvatar
                       name={sender}
-                      size="sm"
-                      className={cn(
-                        "mb-0.5",
-                        m.outbound
-                          ? "bg-[var(--brand)] text-white"
-                          : "bg-[#6c8eae] text-white",
-                      )}
+                      outbound={m.outbound}
                     />
                   ) : (
                     <span
@@ -238,30 +233,18 @@ export function ChannelMessenger({
                       className={cn(
                         "flex items-end gap-1.5",
                         m.outbound ? "justify-end" : "justify-start",
-                        showName && i > 0 ? "mt-2" : null,
+                        startCluster && i > 0 ? "mt-2" : null,
                       )}
                     >
                       {!m.outbound ? avatar : null}
                       <div
                         className={cn(
-                          "max-w-[min(85%,420px)] rounded-2xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
+                          "max-w-[min(85%,420px)] rounded-xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
                           m.outbound
-                            ? "rounded-br-md bg-[var(--brand-soft)] text-foreground"
-                            : "rounded-bl-md bg-white text-foreground",
+                            ? "rounded-br-sm bg-[var(--brand-soft)] text-foreground"
+                            : "rounded-bl-sm bg-white text-foreground",
                         )}
                       >
-                        {showName ? (
-                          <p
-                            className={cn(
-                              "mb-0.5 text-[12px] font-semibold",
-                              m.outbound
-                                ? "text-foreground/70"
-                                : "text-[#3d6b99]",
-                            )}
-                          >
-                            {sender}
-                          </p>
-                        ) : null}
                         <p className="whitespace-pre-wrap">{m.body || "—"}</p>
                         <div
                           className={cn(
