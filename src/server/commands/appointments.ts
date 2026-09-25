@@ -2,7 +2,11 @@ import { randomBytes } from "crypto";
 import type { Appointment, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
-import { requestTelegramSend } from "@/server/commands/telegram-outbound";
+import {
+  requestTelegramSend,
+  type TelegramInlineKeyboard,
+} from "@/server/commands/telegram-outbound";
+import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import {
   APPOINTMENT_TIMEZONE,
   endsAtFromStart,
@@ -38,6 +42,8 @@ export type AppointmentProposeRescheduleInput = {
   endsAt?: Date;
   timezone?: string;
   title?: string;
+  /** Curator who initiated the change. Marks the Telegram notice as a staff send. */
+  senderUserId?: string | null;
 };
 
 export type AppointmentRescheduleInput = AppointmentProposeRescheduleInput;
@@ -149,22 +155,106 @@ async function enqueueClientNudge(
   });
 }
 
+export function formatAppointmentCancelNotice(input: {
+  title: string;
+  whenLabel: string;
+  timezone: string;
+}): string {
+  return `Консультация «${input.title}» отменена.\n${input.whenLabel} (${input.timezone})`;
+}
+
+async function resolveTelegramConversationId(
+  tx: DbClient,
+  appointment: {
+    conversationId: string | null;
+    leadId: string | null;
+    studentId: string | null;
+  },
+): Promise<string | null> {
+  if (appointment.conversationId) {
+    const linked = await tx.conversation.findUnique({
+      where: { id: appointment.conversationId },
+      select: { id: true, channel: true },
+    });
+    if (linked?.channel === "TELEGRAM") return linked.id;
+  }
+
+  const or: Array<{ leadId: string } | { studentId: string }> = [];
+  if (appointment.leadId) or.push({ leadId: appointment.leadId });
+  if (appointment.studentId) or.push({ studentId: appointment.studentId });
+  if (or.length === 0) return null;
+
+  const open = await tx.conversation.findFirst({
+    where: { channel: "TELEGRAM", status: "OPEN", OR: or },
+    orderBy: { lastInboundAt: "desc" },
+    select: { id: true },
+  });
+  if (open) return open.id;
+
+  const any = await tx.conversation.findFirst({
+    where: { channel: "TELEGRAM", OR: or },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  return any?.id ?? null;
+}
+
+async function notifyClientOnTelegram(
+  tx: DbClient,
+  appointment: Appointment,
+  input: {
+    body: string;
+    clientRequestId: string;
+    senderUserId?: string | null;
+    replyMarkup?: TelegramInlineKeyboard | null;
+  },
+): Promise<string | null> {
+  const conversationId = await resolveTelegramConversationId(tx, appointment);
+  if (!conversationId) return null;
+
+  if (appointment.conversationId !== conversationId) {
+    await tx.appointment.update({
+      where: { id: appointment.id },
+      data: { conversationId },
+    });
+  }
+
+  const { message } = await requestTelegramSend({
+    tx,
+    conversationId,
+    body: input.body,
+    senderUserId: input.senderUserId,
+    clientRequestId: input.clientRequestId,
+    replyMarkup: input.replyMarkup,
+  });
+  return message.id;
+}
+
+async function deliverClientNotice(messageId: string | null) {
+  if (!messageId) return;
+  await tryDeliverTelegramSendNow(messageId).catch((error) => {
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        msg: "telegram.send.appointment_notice_failed",
+        messageId,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  });
+}
+
 async function sendProposalMessage(
   tx: DbClient,
   appointment: Appointment,
-  opts: { kind: "create" | "reschedule" | "alt" },
-) {
-  if (!appointment.conversationId || !appointment.confirmationToken) {
-    return;
-  }
-  const conversation = await tx.conversation.findUnique({
-    where: { id: appointment.conversationId },
-    select: { channel: true },
-  });
-  if (conversation?.channel !== "TELEGRAM") return;
+  opts: {
+    kind: "create" | "reschedule" | "alt";
+    senderUserId?: string | null;
+  },
+): Promise<string | null> {
+  if (!appointment.confirmationToken) return null;
 
-  const proposedStart =
-    appointment.pendingStartsAt ?? appointment.startsAt;
+  const proposedStart = appointment.pendingStartsAt ?? appointment.startsAt;
   const when = formatSlotLabel(proposedStart, appointment.timezone);
   let body: string;
   if (opts.kind === "create") {
@@ -176,18 +266,19 @@ async function sendProposalMessage(
     body = `Вы выбрали новое время: ${when} (${appointment.timezone})\nПодтвердите запись.`;
   }
 
-  await requestTelegramSend({
-    tx,
-    conversationId: appointment.conversationId,
+  const messageId = await notifyClientOnTelegram(tx, appointment, {
     body,
+    senderUserId: opts.senderUserId,
     clientRequestId: `appt-propose:${appointment.id}:v${appointment.version}:${opts.kind}`,
     replyMarkup: confirmKeyboard(
       appointment.confirmationToken,
       appointment.id,
     ),
   });
+  if (!messageId) return null;
 
   await enqueueClientNudge(tx, appointment.id, 1, appointment.version);
+  return messageId;
 }
 
 export async function appointmentCreate(
@@ -250,7 +341,7 @@ export async function appointmentProposeReschedule(
   const endsAt = input.endsAt ?? endsAtFromStart(input.startsAt);
   assertValidInterval(input.startsAt, endsAt);
 
-  return prisma.$transaction(async (tx) => {
+  const { appointment, messageId } = await prisma.$transaction(async (tx) => {
     const current = await tx.appointment.findUnique({
       where: { id: input.appointmentId },
     });
@@ -289,9 +380,15 @@ export async function appointmentProposeReschedule(
       },
     });
 
-    await sendProposalMessage(tx, appointment, { kind: "reschedule" });
-    return appointment;
+    const messageId = await sendProposalMessage(tx, appointment, {
+      kind: "reschedule",
+      senderUserId: input.senderUserId,
+    });
+    return { appointment, messageId };
   });
+
+  await deliverClientNotice(messageId);
+  return appointment;
 }
 
 /** @deprecated Use appointmentProposeReschedule — kept for tests that expect immediate apply. */
@@ -480,8 +577,9 @@ export async function appointmentSelectAltSlot(
 
 export async function appointmentCancel(
   appointmentId: string,
+  options?: { senderUserId?: string | null },
 ): Promise<Appointment> {
-  return prisma.$transaction(async (tx) => {
+  const { appointment, messageId } = await prisma.$transaction(async (tx) => {
     const current = await tx.appointment.findUnique({
       where: { id: appointmentId },
     });
@@ -489,9 +587,13 @@ export async function appointmentCancel(
       throw new Error("Appointment not found");
     }
     if (current.status === APPOINTMENT_STATUS.CANCELLED) {
-      return current;
+      return { appointment: current, messageId: null as string | null };
     }
 
+    const whenLabel = formatSlotLabel(
+      current.pendingStartsAt ?? current.startsAt,
+      current.timezone,
+    );
     const appointment = await tx.appointment.update({
       where: { id: current.id },
       data: {
@@ -516,6 +618,19 @@ export async function appointmentCancel(
       });
     }
 
-    return appointment;
+    const messageId = await notifyClientOnTelegram(tx, appointment, {
+      body: formatAppointmentCancelNotice({
+        title: appointment.title,
+        whenLabel,
+        timezone: appointment.timezone,
+      }),
+      senderUserId: options?.senderUserId,
+      clientRequestId: `appt-cancel:${appointment.id}:v${appointment.version}`,
+    });
+
+    return { appointment, messageId };
   });
+
+  await deliverClientNotice(messageId);
+  return appointment;
 }

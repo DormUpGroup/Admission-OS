@@ -101,7 +101,7 @@ export async function proposeRescheduleAppointmentAction(
   _prev: AppointmentActionState,
   formData: FormData,
 ): Promise<AppointmentActionState> {
-  await requireStaff();
+  const session = await requireStaff();
   const appointmentId = String(formData.get("appointmentId") ?? "").trim();
   const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
   const startsAt = new Date(startsAtRaw);
@@ -114,6 +114,7 @@ export async function proposeRescheduleAppointmentAction(
       appointmentId,
       startsAt,
       endsAt: endsAtFromStart(startsAt),
+      senderUserId: session.user.id,
     });
   } catch (error) {
     if (isNextRedirect(error)) throw error;
@@ -132,8 +133,8 @@ export async function confirmAppointmentManualAction(formData: FormData) {
 }
 
 export async function cancelAppointmentAction(formData: FormData) {
-  await requireStaff();
+  const session = await requireStaff();
   const appointmentId = String(formData.get("appointmentId") ?? "").trim();
-  await appointmentCancel(appointmentId);
+  await appointmentCancel(appointmentId, { senderUserId: session.user.id });
   revalidatePath("/admin/appointments");
 }
