@@ -360,6 +360,7 @@ export default async function AdminAppointmentsPage({
       nickname,
       alias,
       hasTelegram: a.conversation?.channel === "TELEGRAM",
+      unseenClientChange: a.clientChangeUnseen,
       googleEventId: a.googleEventId,
     };
   });

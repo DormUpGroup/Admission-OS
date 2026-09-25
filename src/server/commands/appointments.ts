@@ -385,6 +385,7 @@ export async function appointmentProposeReschedule(
         confirmationRequestedAt: new Date(),
         lastClientNudgeAt: null,
         curatorNudgeSentAt: null,
+        clientChangeUnseen: false,
         version: { increment: 1 },
         // Keep CONFIRMED/PENDING on calendar; UI uses pending* for badge
         status:
@@ -415,6 +416,7 @@ export async function appointmentReschedule(
 export async function appointmentConfirmByClient(
   appointmentId: string,
   token: string,
+  options?: { source?: "client" | "staff" },
 ): Promise<{ ok: true; appointment: Appointment } | { ok: false; reason: string }> {
   return prisma.$transaction(async (tx) => {
     const current = await tx.appointment.findUnique({
@@ -451,6 +453,7 @@ export async function appointmentConfirmByClient(
         confirmationRequestedAt: null,
         lastClientNudgeAt: null,
         curatorNudgeSentAt: null,
+        clientChangeUnseen: options?.source !== "staff",
         status: APPOINTMENT_STATUS.PENDING,
         version: { increment: 1 },
       },
@@ -490,7 +493,9 @@ export async function appointmentConfirmManual(
     });
   }
 
-  const result = await appointmentConfirmByClient(appointmentId, token);
+  const result = await appointmentConfirmByClient(appointmentId, token, {
+    source: "staff",
+  });
   if (!result.ok) throw new Error(`Cannot confirm: ${result.reason}`);
   return result.appointment;
 }
@@ -576,6 +581,7 @@ export async function appointmentSelectAltSlot(
         confirmationRequestedAt: new Date(),
         lastClientNudgeAt: null,
         curatorNudgeSentAt: null,
+        clientChangeUnseen: true,
         version: { increment: 1 },
         status:
           current.googleEventId == null
@@ -615,6 +621,7 @@ export async function appointmentCancel(
         pendingStartsAt: null,
         pendingEndsAt: null,
         confirmationToken: null,
+        clientChangeUnseen: false,
         version: { increment: 1 },
       },
     });

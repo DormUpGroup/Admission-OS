@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
 import { requireStaff } from "@/server/auth/guards";
 import {
   appointmentCancel,
@@ -130,6 +131,19 @@ export async function confirmAppointmentManualAction(formData: FormData) {
   const appointmentId = String(formData.get("appointmentId") ?? "").trim();
   await appointmentConfirmManual(appointmentId);
   revalidatePath("/admin/appointments");
+}
+
+export async function markAppointmentClientChangeSeenAction(
+  appointmentId: string,
+) {
+  await requireStaff();
+  const id = appointmentId.trim();
+  if (!id) return;
+  await prisma.appointment.updateMany({
+    where: { id, clientChangeUnseen: true },
+    data: { clientChangeUnseen: false },
+  });
+  revalidatePath("/admin", "layout");
 }
 
 export async function cancelAppointmentAction(formData: FormData) {

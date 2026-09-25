@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { requireStaff } from "@/server/auth/guards";
 import { logoutAction } from "@/server/auth-actions";
 import { getMessageUnreadCounts } from "@/server/message-unread-counts";
+import { countUnseenAppointmentEvents } from "@/server/appointment-event-count";
 
 export default async function AdminLayout({
   children,
@@ -9,10 +10,13 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await requireStaff();
-  const messageCounts = await getMessageUnreadCounts({
-    userId: session.user.id,
-    role: session.user.role,
-  });
+  const [messageCounts, appointmentEventCount] = await Promise.all([
+    getMessageUnreadCounts({
+      userId: session.user.id,
+      role: session.user.role,
+    }),
+    countUnseenAppointmentEvents(),
+  ]);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -20,6 +24,7 @@ export default async function AdminLayout({
         userName={session.user.name}
         userRole={session.user.role}
         messageCounts={messageCounts}
+        appointmentEventCount={appointmentEventCount}
       />
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="surface-glass sticky top-0 z-10 flex h-12 items-center justify-between border-b border-black/5 px-6">

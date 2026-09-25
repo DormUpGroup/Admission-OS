@@ -48,6 +48,24 @@ export function todayYmdRome(now = new Date()): string {
   return romeParts(now.toISOString()).ymd;
 }
 
+/** Chip color: new client change, waiting, or a quiet green once confirmed. */
+export function appointmentChipClass(
+  a: CalendarAppointmentDto,
+  selected: boolean,
+) {
+  if (selected) return "bg-primary text-primary-foreground";
+  if (a.unseenClientChange) {
+    return "bg-sky-100 text-sky-950 ring-1 ring-sky-300";
+  }
+  if (a.pendingStartsAt || a.status === "AWAITING_CLIENT") {
+    return "bg-amber-50 text-amber-950";
+  }
+  if (a.status === "CONFIRMED" || a.status === "PENDING") {
+    return "bg-emerald-100/80 text-emerald-900";
+  }
+  return "bg-muted text-foreground";
+}
+
 export function statusBadge(a: CalendarAppointmentDto) {
   if (a.pendingStartsAt || a.status === "AWAITING_CLIENT") {
     return "Ждёт клиента";
@@ -131,21 +149,12 @@ export function AppointmentsHourBoard({
                   >
                     <div className="flex flex-col gap-1">
                       {cell.map((a) => {
-                        const awaiting =
-                          Boolean(a.pendingStartsAt) ||
-                          a.status === "AWAITING_CLIENT";
                         return (
                           <button
                             key={a.id}
                             type="button"
                             onClick={() => onSelect(a.id)}
-                            className={`w-full rounded-md px-2 py-1 text-left text-[11px] leading-snug ${
-                              selectedId === a.id
-                                ? "bg-primary text-primary-foreground"
-                                : awaiting
-                                  ? "bg-amber-50 text-amber-950 ring-1 ring-amber-200"
-                                  : "bg-muted hover:bg-muted/80"
-                            }`}
+                            className={`w-full rounded-md px-2 py-1 text-left text-[11px] leading-snug ${appointmentChipClass(a, selectedId === a.id)}`}
                           >
                             <span className="block truncate font-medium">
                               {a.subjectLabel}

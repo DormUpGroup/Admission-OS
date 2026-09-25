@@ -96,6 +96,7 @@ export interface AppSidebarProps {
   userName?: string;
   userRole?: string;
   messageCounts?: MessageUnreadCounts;
+  appointmentEventCount?: number;
 }
 
 export function AppSidebar({
@@ -103,6 +104,7 @@ export function AppSidebar({
   userName,
   userRole,
   messageCounts,
+  appointmentEventCount = 0,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const isAdmin = userRole === "ADMIN";
@@ -229,7 +231,10 @@ export function AppSidebar({
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  {item.label}
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.href === "/admin/appointments" ? (
+                    <UnreadBadge count={appointmentEventCount} />
+                  ) : null}
                 </Link>
               </li>
             );

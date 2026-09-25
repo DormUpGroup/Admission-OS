@@ -59,6 +59,7 @@ describe("google calendar helpers (unit)", () => {
       confirmationRequestedAt: null,
       lastClientNudgeAt: null,
       curatorNudgeSentAt: null,
+      clientChangeUnseen: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     } satisfies Appointment;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { markAppointmentClientChangeSeenAction } from "@/server/appointment-actions";
 import { Button } from "@/components/ui/button";
 import { AppointmentAssignPanel } from "./assign-panel";
 import { AppointmentDetailPanel } from "./detail-panel";
@@ -73,6 +74,14 @@ export function AppointmentsWorkspace({
   );
 
   const refresh = () => router.refresh();
+
+  useEffect(() => {
+    if (!selected?.unseenClientChange) return;
+    const id = selected.id;
+    void markAppointmentClientChangeSeenAction(id).then(() => {
+      router.refresh();
+    });
+  }, [selected?.id, selected?.unseenClientChange, router]);
 
   return (
     <div className="space-y-4">

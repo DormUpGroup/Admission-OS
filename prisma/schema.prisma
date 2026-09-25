@@ -811,6 +811,8 @@ model Appointment {
   confirmationRequestedAt  DateTime?
   lastClientNudgeAt        DateTime?
   curatorNudgeSentAt       DateTime?
+  /// Client confirmed or picked a time. Cleared when staff opens the appointment.
+  clientChangeUnseen       Boolean   @default(false)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -823,6 +825,7 @@ model Appointment {
   @@index([leadId, startsAt])
   @@index([studentId, startsAt])
   @@index([status, startsAt])
+  @@index([clientChangeUnseen])
 }
 
 model AutomationSetting {

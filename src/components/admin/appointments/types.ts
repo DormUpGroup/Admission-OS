@@ -23,6 +23,8 @@ export type CalendarAppointmentDto = {
   /** Telegram display name, when known. */
   alias: string | null;
   hasTelegram: boolean;
+  /** Client confirmed or chose a time; staff has not opened it yet. */
+  unseenClientChange: boolean;
   googleEventId: string | null;
 };
 

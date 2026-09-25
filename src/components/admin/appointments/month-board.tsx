@@ -1,7 +1,7 @@
 "use client";
 
 import type { CalendarAppointmentDto } from "./types";
-import { romeParts, todayYmdRome } from "./week-board";
+import { appointmentChipClass, romeParts, todayYmdRome } from "./week-board";
 
 function dayNum(ymd: string) {
   return Number(ymd.slice(8, 10));
@@ -108,14 +108,7 @@ export function AppointmentsMonthBoard({
                             onSelectAppointment(a.id);
                           }
                         }}
-                        className={`block truncate rounded px-1 py-0.5 text-[10px] ${
-                          selectedId === a.id
-                            ? "bg-primary text-primary-foreground"
-                            : a.pendingStartsAt ||
-                                a.status === "AWAITING_CLIENT"
-                              ? "bg-amber-50 text-amber-950"
-                              : "bg-muted"
-                        }`}
+                        className={`block truncate rounded px-1 py-0.5 text-[10px] ${appointmentChipClass(a, selectedId === a.id)}`}
                       >
                         <span className="font-medium tabular-nums">{time}</span>{" "}
                         {a.subjectLabel}

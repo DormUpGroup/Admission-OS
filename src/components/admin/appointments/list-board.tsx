@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { CalendarAppointmentDto } from "./types";
-import { statusBadge } from "./week-board";
+import { appointmentChipClass, statusBadge } from "./week-board";
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString("ru-RU", {
@@ -76,9 +76,7 @@ export function AppointmentsListBoard({
               <tr
                 key={a.id}
                 className={`cursor-pointer border-b border-black/5 last:border-0 ${
-                  active
-                    ? "bg-primary/10"
-                    : "hover:bg-muted/40"
+                  active ? "bg-primary/10" : appointmentChipClass(a, false)
                 }`}
                 onClick={() => onSelect(a.id)}
               >
