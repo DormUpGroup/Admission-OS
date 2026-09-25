@@ -4,6 +4,11 @@ export type AppointmentSlotDto = {
   endsAt: string;
 };
 
+export type AppointmentSlotGridDto = AppointmentSlotDto & {
+  status: "open" | "busy" | "past";
+  busyLabel: string | null;
+};
+
 export type CalendarAppointmentDto = {
   id: string;
   title: string;
@@ -16,3 +21,5 @@ export type CalendarAppointmentDto = {
   hasTelegram: boolean;
   googleEventId: string | null;
 };
+
+export type CalendarView = "day" | "week" | "month";

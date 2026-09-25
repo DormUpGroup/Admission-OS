@@ -6,12 +6,12 @@ import {
 } from "@/lib/appointment-slots";
 import type { CalendarAppointmentDto } from "./types";
 
-const HOURS = Array.from(
+export const HOUR_ROWS = Array.from(
   { length: SLOT_DAY_END_HOUR - SLOT_DAY_START_HOUR },
   (_, i) => SLOT_DAY_START_HOUR + i,
 );
 
-function romeParts(iso: string) {
+export function romeParts(iso: string) {
   const d = new Date(iso);
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Rome",
@@ -32,7 +32,7 @@ function romeParts(iso: string) {
   };
 }
 
-function dayHeader(ymd: string) {
+export function dayHeader(ymd: string) {
   const [y, m, d] = ymd.split("-").map(Number);
   const probe = new Date(Date.UTC(y, m - 1, d, 12));
   return probe.toLocaleDateString("ru-RU", {
@@ -43,7 +43,7 @@ function dayHeader(ymd: string) {
   });
 }
 
-function statusBadge(a: CalendarAppointmentDto) {
+export function statusBadge(a: CalendarAppointmentDto) {
   if (a.pendingStartsAt || a.status === "AWAITING_CLIENT") {
     return "Ждёт клиента";
   }
@@ -53,14 +53,14 @@ function statusBadge(a: CalendarAppointmentDto) {
   return a.status;
 }
 
-export function AppointmentsWeekBoard({
-  weekDays,
+/** Day or week hour grid (one or many YYYY-MM-DD columns). */
+export function AppointmentsHourBoard({
+  days,
   appointments,
   selectedId,
   onSelect,
 }: {
-  /** YYYY-MM-DD Mon–Fri */
-  weekDays: string[];
+  days: string[];
   appointments: CalendarAppointmentDto[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -69,7 +69,7 @@ export function AppointmentsWeekBoard({
   for (const a of appointments) {
     const displayIso = a.pendingStartsAt ?? a.startsAt;
     const p = romeParts(displayIso);
-    if (!weekDays.includes(p.ymd)) continue;
+    if (!days.includes(p.ymd)) continue;
     if (p.hour < SLOT_DAY_START_HOUR || p.hour >= SLOT_DAY_END_HOUR) continue;
     const key = `${p.ymd}:${p.hour}`;
     const list = byCell.get(key) ?? [];
@@ -77,13 +77,18 @@ export function AppointmentsWeekBoard({
     byCell.set(key, list);
   }
 
+  const minWidth = days.length <= 1 ? "360px" : "720px";
+
   return (
     <div className="overflow-x-auto rounded-lg border border-black/5 bg-white">
-      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+      <table
+        className="w-full border-collapse text-left text-sm"
+        style={{ minWidth }}
+      >
         <thead>
           <tr className="border-b border-black/5 text-[12px] text-muted-foreground">
-            <th className="w-16 px-2 py-2 font-medium">UTC+1/2</th>
-            {weekDays.map((ymd) => (
+            <th className="w-16 px-2 py-2 font-medium">Rome</th>
+            {days.map((ymd) => (
               <th key={ymd} className="px-2 py-2 font-medium">
                 {dayHeader(ymd)}
               </th>
@@ -91,12 +96,12 @@ export function AppointmentsWeekBoard({
           </tr>
         </thead>
         <tbody>
-          {HOURS.map((hour) => (
+          {HOUR_ROWS.map((hour) => (
             <tr key={hour} className="border-b border-black/5 last:border-0">
               <td className="px-2 py-2 align-top font-mono text-[11px] text-muted-foreground">
                 {String(hour).padStart(2, "0")}:00
               </td>
-              {weekDays.map((ymd) => {
+              {days.map((ymd) => {
                 const cell = byCell.get(`${ymd}:${hour}`) ?? [];
                 return (
                   <td key={`${ymd}:${hour}`} className="h-14 px-1 py-1 align-top">
@@ -136,5 +141,24 @@ export function AppointmentsWeekBoard({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** @deprecated prefer AppointmentsHourBoard */
+export function AppointmentsWeekBoard(
+  props: {
+    weekDays: string[];
+    appointments: CalendarAppointmentDto[];
+    selectedId: string | null;
+    onSelect: (id: string) => void;
+  },
+) {
+  return (
+    <AppointmentsHourBoard
+      days={props.weekDays}
+      appointments={props.appointments}
+      selectedId={props.selectedId}
+      onSelect={props.onSelect}
+    />
   );
 }

@@ -4,7 +4,12 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createAppointmentAction } from "@/server/appointment-actions";
 import { Button } from "@/components/ui/button";
-import type { AppointmentSlotDto } from "@/components/admin/appointments/types";
+import {
+  SLOT_DAY_END_HOUR,
+  SLOT_DAY_START_HOUR,
+} from "@/lib/appointment-slots";
+import type { AppointmentSlotGridDto } from "@/components/admin/appointments/types";
+import { dayHeader, HOUR_ROWS, romeParts } from "./week-board";
 
 export type AppointmentLeadOption = {
   id: string;
@@ -35,70 +40,55 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
 const selectClass =
   "w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground";
 
-function dayKey(iso: string) {
-  return iso.slice(0, 10);
-}
-
-function formatDayLabel(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("ru-RU", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "Europe/Rome",
-  });
-}
-
-function formatTimeLabel(iso: string) {
-  return new Date(iso).toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Rome",
-  });
-}
-
 export function AppointmentAssignPanel({
   leads,
   students,
   conversations,
-  openSlots,
+  slotGrid,
   onClose,
   onDone,
 }: {
   leads: AppointmentLeadOption[];
   students: AppointmentStudentOption[];
   conversations: AppointmentConversationOption[];
-  openSlots: AppointmentSlotDto[];
+  slotGrid: AppointmentSlotGridDto[];
   onClose: () => void;
   onDone?: () => void;
 }) {
   const [leadId, setLeadId] = useState("");
   const [studentId, setStudentId] = useState("");
   const [conversationId, setConversationId] = useState("");
-  const [selectedDay, setSelectedDay] = useState("");
   const [startsAt, setStartsAt] = useState("");
+  const [weekOffset, setWeekOffset] = useState(0);
   const [state, formAction] = useActionState(createAppointmentAction, null);
   const canPerson = Boolean(leadId) !== Boolean(studentId);
   const canSubmit = canPerson && Boolean(startsAt);
 
-  const days = useMemo(() => {
-    const map = new Map<string, AppointmentSlotDto[]>();
-    for (const slot of openSlots) {
-      const key = dayKey(slot.startsAt);
-      const list = map.get(key) ?? [];
-      list.push(slot);
-      map.set(key, list);
-    }
-    return [...map.entries()].map(([key, slots]) => ({
-      key,
-      label: formatDayLabel(slots[0].startsAt),
-      slots,
-    }));
-  }, [openSlots]);
+  const workdayColumns = useMemo(() => {
+    return [
+      ...new Set(slotGrid.map((s) => romeParts(s.startsAt).ymd)),
+    ].sort();
+  }, [slotGrid]);
 
-  useEffect(() => {
-    if (!selectedDay && days[0]) setSelectedDay(days[0].key);
-  }, [days, selectedDay]);
+  const weeks = useMemo(() => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < workdayColumns.length; i += 5) {
+      chunks.push(workdayColumns.slice(i, i + 5));
+    }
+    return chunks.length > 0 ? chunks : [[]];
+  }, [workdayColumns]);
+
+  const safeOffset = Math.min(weekOffset, Math.max(0, weeks.length - 1));
+  const visibleDays = weeks[safeOffset] ?? [];
+
+  const cellMap = useMemo(() => {
+    const map = new Map<string, AppointmentSlotGridDto>();
+    for (const slot of slotGrid) {
+      const p = romeParts(slot.startsAt);
+      map.set(`${p.ymd}:${p.hour}`, slot);
+    }
+    return map;
+  }, [slotGrid]);
 
   useEffect(() => {
     if (state && "ok" in state && state.ok) {
@@ -106,8 +96,6 @@ export function AppointmentAssignPanel({
       onClose();
     }
   }, [state, onClose, onDone]);
-
-  const daySlots = days.find((d) => d.key === selectedDay)?.slots ?? [];
 
   const filteredConversations = useMemo(() => {
     if (leadId) return conversations.filter((c) => c.leadId === leadId);
@@ -122,16 +110,23 @@ export function AppointmentAssignPanel({
     : "";
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <button
         type="button"
-        className="flex-1 cursor-default"
+        className="absolute inset-0 cursor-default"
         aria-label="Закрыть"
         onClick={onClose}
       />
-      <aside className="flex h-full w-full max-w-md flex-col border-l border-black/10 bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-black/5 px-4 py-3">
-          <h2 className="text-sm font-semibold">Назначить звонок</h2>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assign-call-title"
+        className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-black/5 px-5 py-3">
+          <h2 id="assign-call-title" className="text-sm font-semibold">
+            Назначить звонок
+          </h2>
           <button
             type="button"
             className="text-[13px] text-muted-foreground hover:text-foreground"
@@ -141,55 +136,62 @@ export function AppointmentAssignPanel({
           </button>
         </div>
 
-        <form action={formAction} className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+        <form
+          action={formAction}
+          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5"
+        >
           <input type="hidden" name="leadId" value={leadId} />
           <input type="hidden" name="studentId" value={studentId} />
           <input type="hidden" name="startsAt" value={startsAt} />
           <input type="hidden" name="timezone" value="Europe/Rome" />
 
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Клиент (лид)</span>
-            <select
-              className={selectClass}
-              value={leadId}
-              disabled={Boolean(studentId)}
-              onChange={(e) => {
-                const next = e.target.value;
-                setLeadId(next);
-                if (next) setStudentId("");
-                setConversationId("");
-              }}
-            >
-              <option value="">— не выбран —</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">
+                Клиент (лид)
+              </span>
+              <select
+                className={selectClass}
+                value={leadId}
+                disabled={Boolean(studentId)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setLeadId(next);
+                  if (next) setStudentId("");
+                  setConversationId("");
+                }}
+              >
+                <option value="">— не выбран —</option>
+                {leads.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Студент</span>
-            <select
-              className={selectClass}
-              value={studentId}
-              disabled={Boolean(leadId)}
-              onChange={(e) => {
-                const next = e.target.value;
-                setStudentId(next);
-                if (next) setLeadId("");
-                setConversationId("");
-              }}
-            >
-              <option value="">— не выбран —</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">Студент</span>
+              <select
+                className={selectClass}
+                value={studentId}
+                disabled={Boolean(leadId)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setStudentId(next);
+                  if (next) setLeadId("");
+                  setConversationId("");
+                }}
+              >
+                <option value="">— не выбран —</option>
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <label className="text-sm">
             <span className="mb-1 block text-muted-foreground">
@@ -216,56 +218,110 @@ export function AppointmentAssignPanel({
           </label>
 
           <div>
-            <p className="mb-2 text-sm text-muted-foreground">День</p>
-            <div className="flex flex-wrap gap-1.5">
-              {days.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Нет свободных дней</p>
-              ) : (
-                days.map((d) => (
-                  <button
-                    key={d.key}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDay(d.key);
-                      setStartsAt("");
-                    }}
-                    className={`rounded-full px-3 py-1.5 text-[13px] ${
-                      selectedDay === d.key
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground hover:bg-muted/80"
-                    }`}
-                  >
-                    {d.label}
-                  </button>
-                ))
-              )}
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-sm text-muted-foreground">
+                Слоты {SLOT_DAY_START_HOUR}:00–
+                {SLOT_DAY_END_HOUR}:00 Rome · 50 мин
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="rounded-full border border-black/10 px-2 py-0.5 text-[12px] disabled:opacity-40"
+                  disabled={safeOffset <= 0}
+                  onClick={() => setWeekOffset((o) => Math.max(0, o - 1))}
+                >
+                  ←
+                </button>
+                <span className="text-[12px] text-muted-foreground">
+                  {safeOffset + 1}/{weeks.length}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-full border border-black/10 px-2 py-0.5 text-[12px] disabled:opacity-40"
+                  disabled={safeOffset >= weeks.length - 1}
+                  onClick={() =>
+                    setWeekOffset((o) => Math.min(weeks.length - 1, o + 1))
+                  }
+                >
+                  →
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <p className="mb-2 text-sm text-muted-foreground">Время (50 мин)</p>
-            <div className="flex flex-wrap gap-1.5">
-              {daySlots.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Нет свободных слотов в этот день
-                </p>
-              ) : (
-                daySlots.map((slot) => (
-                  <button
-                    key={slot.key}
-                    type="button"
-                    onClick={() => setStartsAt(slot.startsAt)}
-                    className={`rounded-md border px-3 py-1.5 text-[13px] ${
-                      startsAt === slot.startsAt
-                        ? "border-primary bg-primary/10 font-medium text-primary"
-                        : "border-black/10 hover:border-black/20"
-                    }`}
-                  >
-                    {formatTimeLabel(slot.startsAt)}
-                  </button>
-                ))
-              )}
+            <div className="overflow-x-auto rounded-lg border border-black/10">
+              <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-black/5 bg-muted/30 text-[12px] text-muted-foreground">
+                    <th className="w-14 px-2 py-2 font-medium">Время</th>
+                    {visibleDays.map((ymd) => (
+                      <th key={ymd} className="px-1 py-2 font-medium">
+                        {dayHeader(ymd)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HOUR_ROWS.map((hour) => (
+                    <tr
+                      key={hour}
+                      className="border-b border-black/5 last:border-0"
+                    >
+                      <td className="px-2 py-1 font-mono text-[11px] text-muted-foreground">
+                        {String(hour).padStart(2, "0")}:00
+                      </td>
+                      {visibleDays.map((ymd) => {
+                        const slot = cellMap.get(`${ymd}:${hour}`);
+                        if (!slot) {
+                          return (
+                            <td
+                              key={`${ymd}:${hour}`}
+                              className="px-1 py-1"
+                            />
+                          );
+                        }
+                        if (slot.status === "open") {
+                          const selected = startsAt === slot.startsAt;
+                          return (
+                            <td key={`${ymd}:${hour}`} className="px-1 py-1">
+                              <button
+                                type="button"
+                                onClick={() => setStartsAt(slot.startsAt)}
+                                className={`w-full rounded-md px-2 py-1.5 text-[12px] ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                                }`}
+                              >
+                                Свободно
+                              </button>
+                            </td>
+                          );
+                        }
+                        if (slot.status === "busy") {
+                          return (
+                            <td key={`${ymd}:${hour}`} className="px-1 py-1">
+                              <div className="truncate rounded-md bg-muted px-2 py-1.5 text-[11px] text-muted-foreground">
+                                {slot.busyLabel ?? "Занято"}
+                              </div>
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={`${ymd}:${hour}`} className="px-1 py-1">
+                            <div className="rounded-md px-2 py-1.5 text-[11px] text-muted-foreground/50">
+                              —
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Зелёный — свободно (нажмите). Серый с именем — уже занято.
+            </p>
           </div>
 
           <label className="text-sm">
@@ -277,7 +333,7 @@ export function AppointmentAssignPanel({
             />
           </label>
 
-          <div className="mt-auto space-y-2 border-t border-black/5 pt-3">
+          <div className="space-y-2 border-t border-black/5 pt-3">
             {state && "error" in state && state.error ? (
               <p className="text-sm text-destructive" role="alert">
                 {state.error}
@@ -290,7 +346,7 @@ export function AppointmentAssignPanel({
             </p>
           </div>
         </form>
-      </aside>
+      </div>
     </div>
   );
 }

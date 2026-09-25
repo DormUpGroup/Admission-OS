@@ -287,6 +287,111 @@ export async function listOpenSlots(input: {
   });
 }
 
+export type SlotGridCell = AppointmentSlot & {
+  status: "open" | "busy" | "past";
+  busyLabel: string | null;
+};
+
+/** All candidate slots with open/busy/past for assign UI tables. */
+export async function listSlotGrid(input: {
+  curatorId: string;
+  from: Date;
+  to: Date;
+  excludeAppointmentId?: string;
+  timeZone?: string;
+}): Promise<SlotGridCell[]> {
+  const timeZone = input.timeZone ?? APPOINTMENT_TIMEZONE;
+  const candidates = generateCandidateSlots(input.from, input.to, timeZone);
+  const now = new Date();
+
+  const rows = await prisma.appointment.findMany({
+    where: {
+      assignedCuratorId: input.curatorId,
+      status: { in: [...ACTIVE_STATUSES] },
+      ...(input.excludeAppointmentId
+        ? { id: { not: input.excludeAppointmentId } }
+        : {}),
+      OR: [
+        { startsAt: { lt: input.to }, endsAt: { gt: input.from } },
+        {
+          pendingStartsAt: { lt: input.to },
+          pendingEndsAt: { gt: input.from },
+        },
+      ],
+    },
+    select: {
+      startsAt: true,
+      endsAt: true,
+      pendingStartsAt: true,
+      pendingEndsAt: true,
+      title: true,
+      lead: { select: { firstName: true, lastName: true } },
+      student: { select: { firstName: true, lastName: true } },
+    },
+  });
+
+  type BusyWithLabel = BusyInterval & { label: string };
+  const busy: BusyWithLabel[] = [];
+  for (const a of rows) {
+    const label =
+      (a.student
+        ? `${a.student.firstName} ${a.student.lastName}`.trim()
+        : null) ||
+      [a.lead?.firstName, a.lead?.lastName].filter(Boolean).join(" ").trim() ||
+      a.title;
+    busy.push({ startsAt: a.startsAt, endsAt: a.endsAt, label });
+    if (a.pendingStartsAt && a.pendingEndsAt) {
+      busy.push({
+        startsAt: a.pendingStartsAt,
+        endsAt: a.pendingEndsAt,
+        label,
+      });
+    }
+  }
+
+  return candidates.map((slot) => {
+    if (slot.startsAt < now) {
+      return { ...slot, status: "past" as const, busyLabel: null };
+    }
+    const hit = busy.find((b) =>
+      overlaps(slot.startsAt, slot.endsAt, b.startsAt, b.endsAt),
+    );
+    if (hit) {
+      return { ...slot, status: "busy" as const, busyLabel: hit.label };
+    }
+    return { ...slot, status: "open" as const, busyLabel: null };
+  });
+}
+
+/** Single local calendar day [00:00, next day 00:00). */
+export function dayRangeContaining(
+  anchor: Date,
+  timeZone = APPOINTMENT_TIMEZONE,
+): { from: Date; to: Date } {
+  const p = zonedParts(anchor, timeZone);
+  const from = zonedWallTimeToUtc(p.year, p.month, p.day, 0, 0, timeZone);
+  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+  return { from, to };
+}
+
+/** Month starting on Monday of week containing the 1st, through Sunday after month end. */
+export function monthRangeContaining(
+  anchor: Date,
+  timeZone = APPOINTMENT_TIMEZONE,
+): { from: Date; to: Date; month: number; year: number } {
+  const p = zonedParts(anchor, timeZone);
+  const first = zonedWallTimeToUtc(p.year, p.month, 1, 0, 0, timeZone);
+  const { from } = weekRangeContaining(first, timeZone);
+  // last day of month
+  const nextMonth =
+    p.month === 12
+      ? zonedWallTimeToUtc(p.year + 1, 1, 1, 0, 0, timeZone)
+      : zonedWallTimeToUtc(p.year, p.month + 1, 1, 0, 0, timeZone);
+  const lastDay = new Date(nextMonth.getTime() - 12 * 60 * 60 * 1000);
+  const { to: weekEnd } = weekRangeContaining(lastDay, timeZone);
+  return { from, to: weekEnd, month: p.month, year: p.year };
+}
+
 /** Week range Mon 00:00 – next Mon 00:00 in timezone, containing `anchor`. */
 export function weekRangeContaining(
   anchor: Date,
