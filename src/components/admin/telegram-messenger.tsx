@@ -22,6 +22,10 @@ import {
 } from "@/server/inbox-actions";
 import { Button } from "@/components/ui/button";
 import { useFormStatus } from "react-dom";
+import {
+  MessageReceiptTicks,
+  receiptFromDelivery,
+} from "@/components/admin/message-receipt-ticks";
 
 export type TelegramListItem = {
   id: string;
@@ -38,6 +42,8 @@ export type TelegramThreadMessage = {
   body: string | null;
   createdAt: string;
   deliveryStatus: string;
+  /** Contact replied after this outbound → treat as read (2 ticks). */
+  clientSeen?: boolean;
   attemptError: string | null;
   senderName: string;
 };
@@ -50,45 +56,6 @@ export type TelegramActiveThread = {
   hasPendingDelivery: boolean;
   messages: TelegramThreadMessage[];
 };
-
-function deliveryLabel(status: string, direction: string): string | null {
-  if (direction === "INBOUND") {
-    if (status === "RECEIVED") return null;
-    return status;
-  }
-  switch (status) {
-    case "SENT":
-    case "SUCCESS":
-      return "Отправлено";
-    case "PENDING":
-    case "PROCESSING":
-      return "Отправляется…";
-    case "FAILED":
-      return "Не доставлено";
-    case "UNKNOWN_REQUIRES_REVIEW":
-      return "Проверьте доставку";
-    default:
-      return status;
-  }
-}
-
-function deliveryTone(status: string) {
-  switch (status) {
-    case "SENT":
-    case "SUCCESS":
-    case "RECEIVED":
-      return "text-emerald-700";
-    case "PENDING":
-    case "PROCESSING":
-      return "text-amber-700";
-    case "UNKNOWN_REQUIRES_REVIEW":
-      return "text-orange-700";
-    case "FAILED":
-      return "text-red-700";
-    default:
-      return "text-muted-foreground";
-  }
-}
 
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
@@ -419,13 +386,15 @@ export function TelegramMessenger({
                       {c.preview || "—"}
                     </p>
                     {c.undelivered && c.deliveryStatus ? (
-                      <span
-                        className={cn(
-                          "mt-1 inline-block text-[11px] font-medium",
-                          deliveryTone(c.deliveryStatus),
-                        )}
-                      >
-                        {deliveryLabel(c.deliveryStatus, "OUTBOUND")}
+                      <span className="mt-1 inline-flex items-center gap-1">
+                        <MessageReceiptTicks
+                          receipt={
+                            receiptFromDelivery({
+                              direction: "OUTBOUND",
+                              deliveryStatus: c.deliveryStatus,
+                            }) ?? "sending"
+                          }
+                        />
                       </span>
                     ) : null}
                   </div>
@@ -507,7 +476,11 @@ export function TelegramMessenger({
                 const showName = !prevSame;
                 const showAvatar = !nextSame;
 
-                const label = deliveryLabel(m.deliveryStatus, m.direction);
+                const receipt = receiptFromDelivery({
+                  direction: m.direction,
+                  deliveryStatus: m.deliveryStatus,
+                  clientSeen: m.clientSeen,
+                });
                 const avatar = showAvatar ? (
                   <StudentAvatar
                     name={sender}
@@ -563,10 +536,8 @@ export function TelegramMessenger({
                         )}
                       >
                         <span>{formatMessageTime(m.createdAt)}</span>
-                        {label ? (
-                          <span className={deliveryTone(m.deliveryStatus)}>
-                            {label}
-                          </span>
+                        {receipt ? (
+                          <MessageReceiptTicks receipt={receipt} />
                         ) : null}
                       </div>
                       {m.attemptError ? (

@@ -269,12 +269,20 @@ export async function loadTelegramThread(
             ? staffNameById.get(m.senderUserId)?.trim() || "Куратор"
             : "Бот")
         : contactName;
+      const clientSeen =
+        outbound &&
+        row.messages.some(
+          (other) =>
+            other.direction === "INBOUND" &&
+            other.createdAt.getTime() > m.createdAt.getTime(),
+        );
       return {
         id: m.id,
         direction: m.direction,
         body: m.body,
         createdAt: m.createdAt.toISOString(),
         deliveryStatus: m.deliveryStatus,
+        clientSeen,
         attemptError,
         senderName,
       };
