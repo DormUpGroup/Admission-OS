@@ -61,7 +61,11 @@ export function AppointmentsMonthBoard({
                 `${year}-${String(month).padStart(2, "0")}-`,
               );
               const isToday = ymd === today;
-              const items = byDay.get(ymd) ?? [];
+              const items = (byDay.get(ymd) ?? []).slice().sort((a, b) => {
+                const aIso = a.pendingStartsAt ?? a.startsAt;
+                const bIso = b.pendingStartsAt ?? b.startsAt;
+                return aIso.localeCompare(bIso);
+              });
               return (
                 <button
                   key={ymd}
@@ -85,7 +89,11 @@ export function AppointmentsMonthBoard({
                     {dayNum(ymd)}
                   </span>
                   <div className="mt-1 space-y-0.5">
-                    {items.slice(0, 3).map((a) => (
+                    {items.slice(0, 3).map((a) => {
+                      const iso = a.pendingStartsAt ?? a.startsAt;
+                      const { hour, minute } = romeParts(iso);
+                      const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+                      return (
                       <span
                         key={a.id}
                         role="link"
@@ -109,9 +117,11 @@ export function AppointmentsMonthBoard({
                               : "bg-muted"
                         }`}
                       >
+                        <span className="font-medium tabular-nums">{time}</span>{" "}
                         {a.subjectLabel}
                       </span>
-                    ))}
+                      );
+                    })}
                     {items.length > 3 ? (
                       <span className="text-[10px] text-muted-foreground">
                         +{items.length - 3}
