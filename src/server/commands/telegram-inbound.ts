@@ -27,6 +27,8 @@ export type IngestTelegramResult =
       leadId: string | null;
       studentId: string | null;
       outboxEventId: string;
+      /** Bot replies created in this update. Deliver after the transaction commits. */
+      outboundMessageIds: string[];
     };
 
 export async function ingestTelegramUpdate(input: {
@@ -167,6 +169,7 @@ export async function ingestTelegramUpdate(input: {
       createdInbound = true;
     }
 
+    const outboundMessageIds: string[] = [];
     const outbox = await enqueueOutbox(tx, {
       aggregateType: "ConversationMessage",
       aggregateId: messageId,
@@ -184,12 +187,13 @@ export async function ingestTelegramUpdate(input: {
       const command = parseTelegramBotCommand(message.text);
 
       if (command === "help") {
-        await requestTelegramSend({
+        const sent = await requestTelegramSend({
           tx,
           conversationId: conversation.id,
           body: TELEGRAM_HELP_TEXT,
           clientRequestId: `telegram:help:${message.providerEventId}`,
         });
+        outboundMessageIds.push(sent.message.id);
       } else {
         const inboundCount = await tx.conversationMessage.count({
           where: {
@@ -199,12 +203,13 @@ export async function ingestTelegramUpdate(input: {
         });
         const shouldWelcome = command === "start" || inboundCount === 1;
         if (shouldWelcome) {
-          await requestTelegramSend({
+          const sent = await requestTelegramSend({
             tx,
             conversationId: conversation.id,
             body: TELEGRAM_WELCOME_TEXT,
             clientRequestId: `telegram:welcome:${conversation.id}`,
           });
+          outboundMessageIds.push(sent.message.id);
         }
       }
     }
@@ -222,6 +227,7 @@ export async function ingestTelegramUpdate(input: {
       leadId,
       studentId,
       outboxEventId: outbox.id,
+      outboundMessageIds,
     };
   });
 }

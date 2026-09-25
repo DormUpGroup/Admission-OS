@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { normalizeTelegramUpdate } from "@/server/channels/telegram";
 import { handleAppointmentCallback } from "@/server/commands/appointment-callbacks";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
+import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 
 export const runtime = "nodejs";
 
@@ -42,6 +44,36 @@ export async function POST(request: Request) {
       rawPayload: payload,
       message: update,
     });
+    if (!result.duplicate) {
+      const pending = await prisma.conversationMessage.findMany({
+        where: {
+          conversationId: result.conversationId,
+          direction: "OUTBOUND",
+          deliveryStatus: { in: ["PENDING", "PROCESSING"] },
+        },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+        take: 8,
+      });
+      const messageIds = [
+        ...new Set([
+          ...result.outboundMessageIds,
+          ...pending.map((row) => row.id),
+        ]),
+      ];
+      for (const messageId of messageIds) {
+        await tryDeliverTelegramSendNow(messageId).catch((error) => {
+          console.warn(
+            JSON.stringify({
+              level: "warn",
+              msg: "telegram.send.bot_inline_failed",
+              messageId,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
+        });
+      }
+    }
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error(

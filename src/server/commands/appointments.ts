@@ -293,12 +293,16 @@ export async function appointmentCreate(
     throw new Error("Exactly one of leadId or studentId is required");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const createdResult = await prisma.$transaction(async (tx) => {
     const existing = await tx.appointment.findUnique({
       where: { clientRequestId: input.clientRequestId },
     });
     if (existing) {
-      return { appointment: existing, created: false };
+      return {
+        appointment: existing,
+        created: false as const,
+        messageId: null as string | null,
+      };
     }
 
     await assertNoCuratorConflict(tx, {
@@ -328,10 +332,20 @@ export async function appointmentCreate(
       },
     });
 
-    await sendProposalMessage(tx, appointment, { kind: "create" });
+    const messageId = await sendProposalMessage(tx, appointment, {
+      kind: "create",
+    });
 
-    return { appointment, created: true };
+    return { appointment, created: true as const, messageId };
   });
+
+  if (createdResult.messageId) {
+    await deliverClientNotice(createdResult.messageId);
+  }
+  return {
+    appointment: createdResult.appointment,
+    created: createdResult.created,
+  };
 }
 
 /** Propose a reschedule — keeps calendar time until client confirms. */
