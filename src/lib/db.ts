@@ -17,9 +17,9 @@ function getPrisma() {
   const existing = globalForPrisma.prisma;
   if (existing && hasIntakeCohort(existing)) return existing;
   const client = createPrisma();
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
+  // Always pin on globalThis: serverless/hot-reload otherwise spawn
+  // multiple clients and interactive transactions can die mid-request.
+  globalForPrisma.prisma = client;
   return client;
 }
 

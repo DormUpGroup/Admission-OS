@@ -31,6 +31,10 @@ export type IngestTelegramResult =
       outboundMessageIds: string[];
     };
 
+/** Pooler RTT + cold start can exceed Prisma's 5s interactive default. */
+const INGEST_TX_MAX_WAIT_MS = 10_000;
+const INGEST_TX_TIMEOUT_MS = 20_000;
+
 export async function ingestTelegramUpdate(input: {
   rawPayload: unknown;
   message: NormalizedTelegramMessage;
@@ -38,7 +42,8 @@ export async function ingestTelegramUpdate(input: {
   const { rawPayload, message } = input;
   const now = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(
+    async (tx) => {
     const existingInbox = await tx.inboxEvent.findUnique({
       where: {
         provider_providerEventId: {
@@ -229,5 +234,7 @@ export async function ingestTelegramUpdate(input: {
       outboxEventId: outbox.id,
       outboundMessageIds,
     };
-  });
+    },
+    { maxWait: INGEST_TX_MAX_WAIT_MS, timeout: INGEST_TX_TIMEOUT_MS },
+  );
 }
