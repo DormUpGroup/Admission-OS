@@ -72,7 +72,7 @@ export function parseServiceAccountJson(
 
 /** Accept escaped \\n, real newlines, or a compacted one-line PEM. */
 export function normalizePemPrivateKey(raw: string): string {
-  let key = raw.replace(/\\n/g, "\n").trim();
+  const key = raw.replace(/\\n/g, "\n").trim();
   if (key.includes("\n")) return key.endsWith("\n") ? key : `${key}\n`;
   const begin = "-----BEGIN PRIVATE KEY-----";
   const end = "-----END PRIVATE KEY-----";
@@ -311,14 +311,13 @@ export async function callCalendarUpsert(
 
   // Deleted deterministic ids return 404/410 and cannot be reused — insert without id.
   if (insertWithId.status === 404 || insertWithId.status === 410) {
-    const { id: _omit, ...bodyWithoutId } = body;
     const retry = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(bodyWithoutId),
+      body: JSON.stringify({ ...body, id: undefined }),
     });
     if (!retry.ok) {
       throw new Error(
