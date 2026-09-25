@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
-import { calculateReadiness } from "./readiness";
+import {
+  calculateReadiness,
+  nextApplicationStatusAfterRecalc,
+} from "./readiness";
 import { calculateApplicationRisk, calculateStudentRisk } from "./risk";
 import { computeNextAction } from "./compute-next-action";
 
@@ -12,19 +15,11 @@ export async function recalculateApplication(applicationId: string) {
 
   const readinessPercent = calculateReadiness(application.requirements);
   const riskLevel = calculateApplicationRisk(application, 0, false);
-
-  const criticalDone = application.requirements
-    .filter((r) => r.isCritical)
-    .every((r) => r.status === "COMPLETED" || r.status === "NOT_APPLICABLE");
-
-  let status = application.status;
-  if (
-    criticalDone &&
-    readinessPercent >= 90 &&
-    ["SELECTED", "PREPARING"].includes(application.status)
-  ) {
-    status = "READY_FOR_REVIEW";
-  }
+  const status = nextApplicationStatusAfterRecalc(
+    application.status,
+    application.requirements,
+    readinessPercent
+  );
 
   return prisma.application.update({
     where: { id: applicationId },
@@ -63,18 +58,11 @@ export async function recalculateStudent(studentId: string) {
       )
     );
 
-    const criticalDone = app.requirements
-      .filter((r) => r.isCritical)
-      .every((r) => r.status === "COMPLETED" || r.status === "NOT_APPLICABLE");
-
-    let status = app.status;
-    if (
-      criticalDone &&
-      readinessPercent >= 90 &&
-      ["SELECTED", "PREPARING"].includes(app.status)
-    ) {
-      status = "READY_FOR_REVIEW";
-    }
+    const status = nextApplicationStatusAfterRecalc(
+      app.status,
+      app.requirements,
+      readinessPercent
+    );
 
     await prisma.application.update({
       where: { id: app.id },
