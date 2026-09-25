@@ -32,19 +32,65 @@ export type TelegramThreadDto = {
   messages: TelegramThreadMessageDto[];
 };
 
-function conversationTitle(c: {
+type IdentityBits = {
+  username?: string | null;
+  displayName?: string | null;
+};
+
+type TitleSource = {
   id: string;
-  lead?: { id: string; firstName: string | null; lastName: string | null } | null;
-  student?: { firstName: string; lastName: string } | null;
-}) {
-  if (c.lead) {
-    const name = [c.lead.firstName, c.lead.lastName].filter(Boolean).join(" ");
-    return name || `Клиент ${c.lead.id.slice(0, 8)}`;
-  }
+  lead?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    channelIdentities?: IdentityBits[];
+  } | null;
+  student?: {
+    firstName: string;
+    lastName: string;
+    channelIdentities?: IdentityBits[];
+  } | null;
+};
+
+const identitySelect = {
+  where: { channel: "TELEGRAM" as const },
+  select: { username: true, displayName: true },
+  take: 1,
+};
+
+function primaryIdentity(c: TitleSource): IdentityBits | null {
+  return (
+    c.lead?.channelIdentities?.[0] ??
+    c.student?.channelIdentities?.[0] ??
+    null
+  );
+}
+
+/** Display name without @username (for fixture classification). */
+export function conversationBaseName(c: TitleSource): string {
   if (c.student) {
-    return `${c.student.firstName} ${c.student.lastName}`;
+    return `${c.student.firstName} ${c.student.lastName}`.trim();
   }
+  if (c.lead) {
+    const leadName = [c.lead.firstName, c.lead.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (leadName) return leadName;
+    const display = primaryIdentity(c)?.displayName?.trim();
+    if (display) return display;
+    return `Клиент ${c.lead.id.slice(0, 8)}`;
+  }
+  const display = primaryIdentity(c)?.displayName?.trim();
+  if (display) return display;
   return `Чат ${c.id.slice(0, 8)}`;
+}
+
+export function conversationTitle(c: TitleSource): string {
+  const base = conversationBaseName(c);
+  const username = primaryIdentity(c)?.username?.trim();
+  if (username) return `${base} · @${username.replace(/^@/, "")}`;
+  return base;
 }
 
 function isUndeliveredOutbound(status: string) {
@@ -68,15 +114,17 @@ export async function listTelegramConversations(): Promise<{
           id: true,
           firstName: true,
           lastName: true,
-          channelIdentities: {
-            where: { channel: "TELEGRAM" },
-            select: { username: true },
-            take: 1,
-          },
+          channelIdentities: identitySelect,
         },
       },
-      student: { select: { id: true, firstName: true, lastName: true } },
-      // Enough recent rows for preview + command-only classification.
+      student: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          channelIdentities: identitySelect,
+        },
+      },
       messages: {
         orderBy: { createdAt: "desc" },
         take: 12,
@@ -96,9 +144,13 @@ export async function listTelegramConversations(): Promise<{
   const technical: TelegramListItemDto[] = [];
 
   for (const c of conversations) {
+    const baseName = conversationBaseName(c);
+    const username = primaryIdentity(c)?.username ?? null;
     const title = conversationTitle(c);
-    const username = c.lead?.channelIdentities[0]?.username ?? null;
-    const isTech = isTechnicalConversation(c.messages, { title, username });
+    const isTech = isTechnicalConversation(c.messages, {
+      title: baseName,
+      username,
+    });
     const previewMsg = pickPreviewMessage(c.messages);
     const last = c.messages[0];
     const item: TelegramListItemDto = {
@@ -134,8 +186,22 @@ export async function loadTelegramThread(
   const row = await prisma.conversation.findUnique({
     where: { id: conversationId },
     include: {
-      lead: { select: { id: true, firstName: true, lastName: true } },
-      student: { select: { id: true, firstName: true, lastName: true } },
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          channelIdentities: identitySelect,
+        },
+      },
+      student: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          channelIdentities: identitySelect,
+        },
+      },
       messages: {
         orderBy: { createdAt: "asc" },
         take: 100,

@@ -1,24 +1,40 @@
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/server/auth/guards";
-import {
-  cancelAppointmentAction,
-  createAppointmentAction,
-} from "@/server/appointment-actions";
+import { cancelAppointmentAction } from "@/server/appointment-actions";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { AppointmentCreateForm } from "@/components/admin/appointment-create-form";
 import { formatDate } from "@/lib/utils";
+
+function personLabel(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  fallback: string,
+) {
+  const name = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return name || fallback;
+}
 
 function subjectLabel(a: {
   lead?: { firstName: string | null; lastName: string | null; id: string } | null;
   student?: { firstName: string; lastName: string } | null;
 }) {
   if (a.lead) {
-    const name = [a.lead.firstName, a.lead.lastName].filter(Boolean).join(" ");
-    return name || `Lead ${a.lead.id.slice(0, 8)}`;
+    return personLabel(
+      a.lead.firstName,
+      a.lead.lastName,
+      `Клиент ${a.lead.id.slice(0, 8)}`,
+    );
   }
   if (a.student) return `${a.student.firstName} ${a.student.lastName}`;
   return "—";
+}
+
+function sortByLabel<T extends { label: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) =>
+    a.label.localeCompare(b.label, "ru", { sensitivity: "base" }),
+  );
 }
 
 export default async function AdminAppointmentsPage() {
@@ -39,27 +55,93 @@ export default async function AdminAppointmentsPage() {
     }),
     prisma.lead.findMany({
       orderBy: { createdAt: "desc" },
-      take: 40,
-      select: { id: true, firstName: true, lastName: true },
+      take: 80,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        channelIdentities: {
+          where: { channel: "TELEGRAM" },
+          select: { username: true, displayName: true },
+          take: 1,
+        },
+      },
     }),
     prisma.student.findMany({
       where: { status: { notIn: ["ARCHIVED"] } },
       orderBy: { updatedAt: "desc" },
-      take: 40,
+      take: 80,
       select: { id: true, firstName: true, lastName: true },
     }),
     prisma.conversation.findMany({
       where: { channel: "TELEGRAM", status: "OPEN" },
       orderBy: { updatedAt: "desc" },
-      take: 40,
+      take: 80,
       select: {
         id: true,
         leadId: true,
         studentId: true,
-        lead: { select: { firstName: true, lastName: true } },
+        lead: {
+          select: {
+            firstName: true,
+            lastName: true,
+            channelIdentities: {
+              where: { channel: "TELEGRAM" },
+              select: { username: true, displayName: true },
+              take: 1,
+            },
+          },
+        },
+        student: { select: { firstName: true, lastName: true } },
       },
     }),
   ]);
+
+  const leadOptions = sortByLabel(
+    leads.map((l) => {
+      const identity = l.channelIdentities[0];
+      const base =
+        personLabel(l.firstName, l.lastName, "") ||
+        identity?.displayName?.trim() ||
+        `Клиент ${l.id.slice(0, 8)}`;
+      const username = identity?.username?.trim();
+      return {
+        id: l.id,
+        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
+      };
+    }),
+  );
+
+  const studentOptions = sortByLabel(
+    students.map((s) => ({
+      id: s.id,
+      label: `${s.firstName} ${s.lastName}`.trim(),
+    })),
+  );
+
+  const conversationOptions = sortByLabel(
+    conversations.map((c) => {
+      const identity = c.lead?.channelIdentities[0];
+      let base = "";
+      if (c.student) {
+        base = `${c.student.firstName} ${c.student.lastName}`.trim();
+      } else if (c.lead) {
+        base =
+          personLabel(c.lead.firstName, c.lead.lastName, "") ||
+          identity?.displayName?.trim() ||
+          "Чат";
+      } else {
+        base = identity?.displayName?.trim() || "Чат";
+      }
+      const username = identity?.username?.trim();
+      return {
+        id: c.id,
+        leadId: c.leadId,
+        studentId: c.studentId,
+        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
+      };
+    }),
+  );
 
   return (
     <div className="space-y-6">
@@ -70,93 +152,11 @@ export default async function AdminAppointmentsPage() {
 
       <section className="rounded-lg border border-black/5 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold">Новая консультация</h2>
-        <form action={createAppointmentAction} className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Lead</span>
-            <select
-              name="leadId"
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-              defaultValue=""
-            >
-              <option value="">—</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {[l.firstName, l.lastName].filter(Boolean).join(" ") || l.id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Student</span>
-            <select
-              name="studentId"
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-              defaultValue=""
-            >
-              <option value="">—</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.firstName} {s.lastName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm md:col-span-2">
-            <span className="mb-1 block text-muted-foreground">
-              Telegram conversation (optional confirm)
-            </span>
-            <select
-              name="conversationId"
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-              defaultValue=""
-            >
-              <option value="">—</option>
-              {conversations.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id.slice(0, 8)} ·{" "}
-                  {[c.lead?.firstName, c.lead?.lastName].filter(Boolean).join(" ") ||
-                    c.studentId ||
-                    "chat"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Начало</span>
-            <input
-              type="datetime-local"
-              name="startsAt"
-              required
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-muted-foreground">Конец</span>
-            <input
-              type="datetime-local"
-              name="endsAt"
-              required
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-sm md:col-span-2">
-            <span className="mb-1 block text-muted-foreground">Тема</span>
-            <input
-              name="title"
-              defaultValue="Консультация"
-              className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
-            />
-          </label>
-          <input type="hidden" name="timezone" value="Europe/Rome" />
-          <div className="md:col-span-2">
-            <Button type="submit" size="sm">
-              Создать (outbox → Calendar)
-            </Button>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Укажите ровно один из Lead / Student. Worker: AUTOMATION_ENABLED + Google env.
-            </p>
-          </div>
-        </form>
+        <AppointmentCreateForm
+          leads={leadOptions}
+          students={studentOptions}
+          conversations={conversationOptions}
+        />
       </section>
 
       {appointments.length === 0 ? (
@@ -193,7 +193,11 @@ export default async function AdminAppointmentsPage() {
                   <td className="px-3 py-2">
                     {a.status !== "CANCELLED" ? (
                       <form action={cancelAppointmentAction}>
-                        <input type="hidden" name="appointmentId" value={a.id} />
+                        <input
+                          type="hidden"
+                          name="appointmentId"
+                          value={a.id}
+                        />
                         <Button type="submit" size="sm" variant="outline">
                           Отменить
                         </Button>
