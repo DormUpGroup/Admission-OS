@@ -52,12 +52,17 @@ export function isFixtureContact(contact: {
 /**
  * Technical = fixture contact, or no human inbound yet
  * (empty inbound, or every inbound is a bot command).
+ *
+ * `hasHumanInbound` is the full-history answer. The message list is only a
+ * recent window and must not hide an older client reply.
  */
 export function isTechnicalConversation(
   messages: Array<{ direction: string; body: string | null }>,
   contact?: { title?: string | null; username?: string | null },
+  options?: { hasHumanInbound?: boolean },
 ): boolean {
   if (contact && isFixtureContact(contact)) return true;
+  if (options?.hasHumanInbound != null) return !options.hasHumanInbound;
   const inbound = messages.filter((m) => m.direction === "INBOUND");
   if (inbound.length === 0) return true;
   return inbound.every((m) => isBotCommandBody(m.body));

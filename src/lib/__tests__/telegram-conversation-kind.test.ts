@@ -51,6 +51,29 @@ describe("isTechnicalConversation", () => {
     ).toBe(false);
   });
 
+  it("stays a chat when human inbound is outside the recent window", () => {
+    expect(
+      isTechnicalConversation(
+        [
+          { direction: "INBOUND", body: "/start" },
+          { direction: "OUTBOUND", body: "как там с документами?" },
+        ],
+        { title: "Michael Bilak", username: "bilakmichael" },
+        { hasHumanInbound: true },
+      ),
+    ).toBe(false);
+  });
+
+  it("is technical when the full history has no human inbound", () => {
+    expect(
+      isTechnicalConversation(
+        [{ direction: "OUTBOUND", body: "welcome" }],
+        { title: "Anna Rossi", username: "annarossi" },
+        { hasHumanInbound: false },
+      ),
+    ).toBe(true);
+  });
+
   it("treats fixture contacts as technical even with human text", () => {
     expect(
       isTechnicalConversation(

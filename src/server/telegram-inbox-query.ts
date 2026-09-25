@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import {
+  isBotCommandBody,
   isTechnicalConversation,
   pickPreviewMessage,
   type ConversationFolder,
@@ -95,6 +96,29 @@ export function conversationTitle(c: TitleSource): string {
   return base;
 }
 
+/**
+ * Client replies can sit behind a long run of curator/bot messages.
+ * The sidebar preview only loads the latest few, so folder placement
+ * has to look at the whole inbound history.
+ */
+async function humanInboundConversationIds(
+  conversationIds: string[],
+): Promise<Set<string>> {
+  if (conversationIds.length === 0) return new Set();
+  const rows = await prisma.conversationMessage.findMany({
+    where: {
+      conversationId: { in: conversationIds },
+      direction: "INBOUND",
+    },
+    select: { conversationId: true, body: true },
+  });
+  return new Set(
+    rows
+      .filter((row) => !isBotCommandBody(row.body))
+      .map((row) => row.conversationId),
+  );
+}
+
 function isUndeliveredOutbound(status: string) {
   return (
     status === "PENDING" ||
@@ -144,15 +168,22 @@ export async function listTelegramConversations(): Promise<{
 
   const chats: TelegramListItemDto[] = [];
   const technical: TelegramListItemDto[] = [];
+  const humanInboundIds = await humanInboundConversationIds(
+    conversations.map((c) => c.id),
+  );
 
   for (const c of conversations) {
     const baseName = conversationBaseName(c);
     const username = primaryIdentity(c)?.username ?? null;
     const title = conversationTitle(c);
-    const isTech = isTechnicalConversation(c.messages, {
-      title: baseName,
-      username,
-    });
+    const isTech = isTechnicalConversation(
+      c.messages,
+      {
+        title: baseName,
+        username,
+      },
+      { hasHumanInbound: humanInboundIds.has(c.id) },
+    );
     const previewMsg = pickPreviewMessage(c.messages);
     const last = c.messages[0];
     const item: TelegramListItemDto = {
