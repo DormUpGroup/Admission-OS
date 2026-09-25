@@ -107,14 +107,7 @@ export function AppointmentsHourBoard({
                       : ""
                   }`}
                 >
-                  <span className="inline-flex flex-col gap-0.5">
-                    <span>{dayHeader(ymd)}</span>
-                    {isToday ? (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        сегодня
-                      </span>
-                    ) : null}
-                  </span>
+                  <span>{dayHeader(ymd)}</span>
                 </th>
               );
             })}

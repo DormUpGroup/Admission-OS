@@ -75,21 +75,14 @@ export function AppointmentsMonthBoard({
                         : "bg-muted/20 text-muted-foreground"
                   }`}
                 >
-                  <span className="inline-flex items-center gap-1">
-                    <span
-                      className={`text-[12px] font-medium ${
-                        isToday
-                          ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                          : ""
-                      }`}
-                    >
-                      {dayNum(ymd)}
-                    </span>
-                    {isToday ? (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        сегодня
-                      </span>
-                    ) : null}
+                  <span
+                    className={`text-[12px] font-medium ${
+                      isToday
+                        ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                        : ""
+                    }`}
+                  >
+                    {dayNum(ymd)}
                   </span>
                   <div className="mt-1 space-y-0.5">
                     {items.slice(0, 3).map((a) => (
