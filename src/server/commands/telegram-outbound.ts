@@ -68,9 +68,10 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
       },
     });
 
+    const now = new Date();
     await tx.conversation.update({
       where: { id: input.conversationId },
-      data: { lastOutboundAt: new Date() },
+      data: { lastOutboundAt: now, staffLastReadAt: now },
     });
 
     await enqueueOutbox(tx, {

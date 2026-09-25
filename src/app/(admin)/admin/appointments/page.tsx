@@ -365,6 +365,7 @@ export default async function AdminAppointmentsPage({
         googleCalendarUrl={googleCalendarOpenUrl(
           process.env.GOOGLE_CALENDAR_ID,
         )}
+        todayYmd={todayYmd}
       />
     </div>
   );

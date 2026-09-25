@@ -43,6 +43,11 @@ export function dayHeader(ymd: string) {
   });
 }
 
+/** Today's calendar date in Europe/Rome as YYYY-MM-DD. */
+export function todayYmdRome(now = new Date()): string {
+  return romeParts(now.toISOString()).ymd;
+}
+
 export function statusBadge(a: CalendarAppointmentDto) {
   if (a.pendingStartsAt || a.status === "AWAITING_CLIENT") {
     return "Ждёт клиента";
@@ -59,12 +64,15 @@ export function AppointmentsHourBoard({
   appointments,
   selectedId,
   onSelect,
+  todayYmd,
 }: {
   days: string[];
   appointments: CalendarAppointmentDto[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  todayYmd?: string;
 }) {
+  const today = todayYmd ?? todayYmdRome();
   const byCell = new Map<string, CalendarAppointmentDto[]>();
   for (const a of appointments) {
     const displayIso = a.pendingStartsAt ?? a.startsAt;
@@ -88,11 +96,28 @@ export function AppointmentsHourBoard({
         <thead>
           <tr className="border-b border-black/5 text-[12px] text-muted-foreground">
             <th className="w-16 px-2 py-2 font-medium">Rome</th>
-            {days.map((ymd) => (
-              <th key={ymd} className="px-2 py-2 font-medium">
-                {dayHeader(ymd)}
-              </th>
-            ))}
+            {days.map((ymd) => {
+              const isToday = ymd === today;
+              return (
+                <th
+                  key={ymd}
+                  className={`px-2 py-2 font-medium ${
+                    isToday
+                      ? "bg-primary/10 text-foreground"
+                      : ""
+                  }`}
+                >
+                  <span className="inline-flex flex-col gap-0.5">
+                    <span>{dayHeader(ymd)}</span>
+                    {isToday ? (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        сегодня
+                      </span>
+                    ) : null}
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -103,8 +128,14 @@ export function AppointmentsHourBoard({
               </td>
               {days.map((ymd) => {
                 const cell = byCell.get(`${ymd}:${hour}`) ?? [];
+                const isToday = ymd === today;
                 return (
-                  <td key={`${ymd}:${hour}`} className="h-14 px-1 py-1 align-top">
+                  <td
+                    key={`${ymd}:${hour}`}
+                    className={`h-14 px-1 py-1 align-top ${
+                      isToday ? "bg-primary/5" : ""
+                    }`}
+                  >
                     <div className="flex flex-col gap-1">
                       {cell.map((a) => {
                         const awaiting =

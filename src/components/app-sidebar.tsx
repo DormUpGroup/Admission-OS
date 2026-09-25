@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/labels";
+import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
 
 type NavItem = {
   label: string;
@@ -31,6 +32,7 @@ type ChannelItem = {
   label: string;
   href: string;
   icon: ComponentType<{ className?: string }>;
+  countKey: keyof Omit<MessageUnreadCounts, "total">;
 };
 
 const primaryItems: NavItem[] = [
@@ -43,10 +45,25 @@ const primaryItems: NavItem[] = [
 ];
 
 const messageChannels: ChannelItem[] = [
-  { label: "Сайт", href: "/admin/messages/site", icon: Globe },
-  { label: "Telegram", href: "/admin/messages/telegram", icon: Send },
-  { label: "Почта", href: "/admin/messages/email", icon: Mail },
-  { label: "Instagram", href: "/admin/messages/instagram", icon: Sparkles },
+  { label: "Сайт", href: "/admin/messages/site", icon: Globe, countKey: "site" },
+  {
+    label: "Telegram",
+    href: "/admin/messages/telegram",
+    icon: Send,
+    countKey: "telegram",
+  },
+  {
+    label: "Почта",
+    href: "/admin/messages/email",
+    icon: Mail,
+    countKey: "email",
+  },
+  {
+    label: "Instagram",
+    href: "/admin/messages/instagram",
+    icon: Sparkles,
+    countKey: "instagram",
+  },
 ];
 
 const serviceLinks = [
@@ -61,17 +78,43 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = count > 99 ? "99+" : String(count);
+  return (
+    <span
+      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] px-1.5 text-[10px] font-semibold leading-none text-white"
+      aria-label={`${count} непрочитанных`}
+    >
+      {label}
+    </span>
+  );
+}
+
 export interface AppSidebarProps {
   className?: string;
   userName?: string;
   userRole?: string;
+  messageCounts?: MessageUnreadCounts;
 }
 
-export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
+export function AppSidebar({
+  className,
+  userName,
+  userRole,
+  messageCounts,
+}: AppSidebarProps) {
   const pathname = usePathname();
   const isAdmin = userRole === "ADMIN";
   const messagesActive = pathname.startsWith("/admin/messages");
   const [messagesOpen, setMessagesOpen] = useState(messagesActive);
+  const counts = messageCounts ?? {
+    total: 0,
+    site: 0,
+    telegram: 0,
+    email: 0,
+    instagram: 0,
+  };
 
   useEffect(() => {
     if (messagesActive) setMessagesOpen(true);
@@ -81,7 +124,7 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
     <aside
       className={cn(
         "flex h-screen sticky top-0 w-[220px] shrink-0 flex-col overflow-hidden rounded-r-[28px] border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
-        className
+        className,
       )}
     >
       <div className="px-4 py-5">
@@ -111,7 +154,7 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                     "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                     active
                       ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]"
+                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -129,16 +172,17 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                 "flex w-full items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                 messagesActive
                   ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                  : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]"
+                  : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
               )}
               aria-expanded={messagesOpen}
             >
               <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-80" />
               <span className="flex-1 text-left">Сообщения</span>
+              <UnreadBadge count={counts.total} />
               <ChevronDown
                 className={cn(
                   "h-3.5 w-3.5 shrink-0 opacity-70 transition-transform",
-                  messagesOpen && "rotate-180"
+                  messagesOpen && "rotate-180",
                 )}
               />
             </button>
@@ -147,6 +191,7 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                 {messageChannels.map((channel) => {
                   const Icon = channel.icon;
                   const active = isActive(pathname, channel.href);
+                  const count = counts[channel.countKey];
                   return (
                     <li key={channel.href}>
                       <Link
@@ -155,11 +200,12 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                           "flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[12px] transition-[box-shadow,background,color]",
                           active
                             ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                            : "text-[var(--sidebar-foreground)]/75 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]"
+                            : "text-[var(--sidebar-foreground)]/75 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
                         )}
                       >
                         <Icon className="h-3 w-3 shrink-0 opacity-80" />
-                        {channel.label}
+                        <span className="flex-1">{channel.label}</span>
+                        <UnreadBadge count={count} />
                       </Link>
                     </li>
                   );
@@ -179,7 +225,7 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                     "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                     active
                       ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]"
+                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -202,7 +248,7 @@ export function AppSidebar({ className, userName, userRole }: AppSidebarProps) {
                   href={item.href}
                   className={cn(
                     "hover:text-foreground",
-                    isActive(pathname, item.href) && "text-foreground"
+                    isActive(pathname, item.href) && "text-foreground",
                   )}
                 >
                   {item.label}

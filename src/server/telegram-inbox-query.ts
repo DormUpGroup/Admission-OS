@@ -22,11 +22,13 @@ export type TelegramThreadMessageDto = {
   createdAt: string;
   deliveryStatus: string;
   attemptError: string | null;
+  senderName: string;
 };
 
 export type TelegramThreadDto = {
   id: string;
   title: string;
+  contactName: string;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   messages: TelegramThreadMessageDto[];
@@ -216,9 +218,38 @@ export async function loadTelegramThread(
   });
   if (!row || row.channel !== "TELEGRAM") return null;
 
+  const now = new Date();
+  const needsReadMark =
+    row.lastInboundAt != null &&
+    (row.staffLastReadAt == null || row.lastInboundAt > row.staffLastReadAt);
+  if (needsReadMark) {
+    await prisma.conversation.update({
+      where: { id: row.id },
+      data: { staffLastReadAt: now },
+    });
+  }
+
+  const contactName = conversationBaseName(row);
+  const staffIds = [
+    ...new Set(
+      row.messages
+        .map((m) => m.senderUserId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const staffUsers =
+    staffIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: staffIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+  const staffNameById = new Map(staffUsers.map((u) => [u.id, u.name]));
+
   return {
     id: row.id,
     title: conversationTitle(row),
+    contactName,
     automationPaused: !!row.automationPausedAt,
     hasPendingDelivery: row.messages.some(
       (m) =>
@@ -233,6 +264,11 @@ export async function loadTelegramThread(
           m.deliveryStatus === "UNKNOWN_REQUIRES_REVIEW")
           ? (m.deliveryAttempts[0]?.errorMessage ?? null)
           : null;
+      const senderName = outbound
+        ? (m.senderUserId
+            ? staffNameById.get(m.senderUserId)?.trim() || "Куратор"
+            : "Бот")
+        : contactName;
       return {
         id: m.id,
         direction: m.direction,
@@ -240,6 +276,7 @@ export async function loadTelegramThread(
         createdAt: m.createdAt.toISOString(),
         deliveryStatus: m.deliveryStatus,
         attemptError,
+        senderName,
       };
     }),
   };

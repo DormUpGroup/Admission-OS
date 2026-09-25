@@ -743,6 +743,8 @@ model Conversation {
   automationPauseReason String?
   lastInboundAt         DateTime?
   lastOutboundAt        DateTime?
+  /// Watermark: staff has seen inbound up to this time (Immigrome UI open / reply).
+  staffLastReadAt       DateTime?
   version               Int       @default(1)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -757,6 +759,7 @@ model Conversation {
   @@index([studentId, status])
   @@index([assignedCuratorId, status])
   @@index([channel, status])
+  @@index([channel, status, lastInboundAt])
 }
 
 model ConversationMessage {

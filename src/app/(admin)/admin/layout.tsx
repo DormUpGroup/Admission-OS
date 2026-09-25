@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { requireStaff } from "@/server/auth/guards";
 import { logoutAction } from "@/server/auth-actions";
+import { getMessageUnreadCounts } from "@/server/message-unread-counts";
 
 export default async function AdminLayout({
   children,
@@ -8,14 +9,24 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await requireStaff();
+  const messageCounts = await getMessageUnreadCounts({
+    userId: session.user.id,
+    role: session.user.role,
+  });
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar userName={session.user.name} userRole={session.user.role} />
+      <AppSidebar
+        userName={session.user.name}
+        userRole={session.user.role}
+        messageCounts={messageCounts}
+      />
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="surface-glass sticky top-0 z-10 flex h-12 items-center justify-between border-b border-black/5 px-6">
           <p className="text-[13px] text-muted-foreground">
-            <span className="font-semibold tracking-wide text-foreground">IMMIGROME</span>
+            <span className="font-semibold tracking-wide text-foreground">
+              IMMIGROME
+            </span>
             {" · Система поступлений"}
           </p>
           <form action={logoutAction}>

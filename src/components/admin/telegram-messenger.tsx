@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
 import {
   isBotCommandBody,
@@ -38,11 +39,13 @@ export type TelegramThreadMessage = {
   createdAt: string;
   deliveryStatus: string;
   attemptError: string | null;
+  senderName: string;
 };
 
 export type TelegramActiveThread = {
   id: string;
   title: string;
+  contactName?: string;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   messages: TelegramThreadMessage[];
@@ -142,6 +145,7 @@ export function TelegramMessenger({
   conversations: TelegramListItem[];
   initialActive: TelegramActiveThread | null;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState<string | null>(
     initialActive?.id ?? conversations[0]?.id ?? null,
@@ -220,9 +224,11 @@ export function TelegramMessenger({
       const cached = cacheRef.current.get(id);
       if (cached) setActive(cached);
       else setActive(null);
-      void loadThread(id);
+      void loadThread(id).then(() => {
+        router.refresh();
+      });
     },
-    [folder, loadThread],
+    [folder, loadThread, router],
   );
 
   // Soft-poll delivery for pending outbound in the open thread.
@@ -252,6 +258,7 @@ export function TelegramMessenger({
       createdAt: new Date().toISOString(),
       deliveryStatus: "PENDING",
       attemptError: null,
+      senderName: "Вы",
     };
 
     startTransition(() => {
@@ -302,6 +309,7 @@ export function TelegramMessenger({
                 createdAt: result.createdAt,
                 deliveryStatus: result.deliveryStatus,
                 attemptError: null,
+                senderName: "Вы",
               }
             : m,
         );
@@ -318,6 +326,7 @@ export function TelegramMessenger({
       });
       window.setTimeout(() => {
         void loadThread(activeId, { silent: true });
+        router.refresh();
       }, 800);
     } catch {
       setActive((prev) =>
@@ -488,6 +497,16 @@ export function TelegramMessenger({
                           : "rounded-bl-md bg-white text-foreground",
                       )}
                     >
+                      <p
+                        className={cn(
+                          "mb-0.5 text-[11px] font-medium",
+                          outbound
+                            ? "text-foreground/60"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {m.senderName || (outbound ? "Куратор" : "Клиент")}
+                      </p>
                       <p className="whitespace-pre-wrap">{m.body || "—"}</p>
                       <div
                         className={cn(

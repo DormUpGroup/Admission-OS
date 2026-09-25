@@ -41,6 +41,7 @@ export function AppointmentsWorkspace({
   students,
   conversations,
   googleCalendarUrl,
+  todayYmd,
 }: {
   view: CalendarView;
   rangeLabel: string;
@@ -58,6 +59,7 @@ export function AppointmentsWorkspace({
   students: AppointmentStudentOption[];
   conversations: AppointmentConversationOption[];
   googleCalendarUrl: string | null;
+  todayYmd: string;
 }) {
   const router = useRouter();
   const [assignOpen, setAssignOpen] = useState(false);
@@ -123,6 +125,7 @@ export function AppointmentsWorkspace({
           year={monthMeta.year}
           appointments={appointments}
           selectedId={selectedId}
+          todayYmd={todayYmd}
           onSelectDay={(ymd) => {
             router.push(`/admin/appointments?view=day&date=${ymd}`);
           }}
@@ -133,6 +136,7 @@ export function AppointmentsWorkspace({
           days={gridDays}
           appointments={appointments}
           selectedId={selectedId}
+          todayYmd={todayYmd}
           onSelect={setSelectedId}
         />
       )}

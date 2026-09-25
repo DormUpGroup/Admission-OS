@@ -1,7 +1,7 @@
 "use client";
 
 import type { CalendarAppointmentDto } from "./types";
-import { romeParts } from "./week-board";
+import { romeParts, todayYmdRome } from "./week-board";
 
 function dayNum(ymd: string) {
   return Number(ymd.slice(8, 10));
@@ -15,6 +15,7 @@ export function AppointmentsMonthBoard({
   selectedId,
   onSelectDay,
   onSelectAppointment,
+  todayYmd,
 }: {
   /** Full grid Mon–Sun weeks covering the month (YYYY-MM-DD). */
   monthDays: string[];
@@ -24,7 +25,9 @@ export function AppointmentsMonthBoard({
   selectedId: string | null;
   onSelectDay: (ymd: string) => void;
   onSelectAppointment: (id: string) => void;
+  todayYmd?: string;
 }) {
+  const today = todayYmd ?? todayYmdRome();
   const byDay = new Map<string, CalendarAppointmentDto[]>();
   for (const a of appointments) {
     const iso = a.pendingStartsAt ?? a.startsAt;
@@ -54,10 +57,10 @@ export function AppointmentsMonthBoard({
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 divide-x divide-black/5">
             {week.map((ymd) => {
-              const inMonth =
-                ymd.startsWith(
-                  `${year}-${String(month).padStart(2, "0")}-`,
-                );
+              const inMonth = ymd.startsWith(
+                `${year}-${String(month).padStart(2, "0")}-`,
+              );
+              const isToday = ymd === today;
               const items = byDay.get(ymd) ?? [];
               return (
                 <button
@@ -65,10 +68,29 @@ export function AppointmentsMonthBoard({
                   type="button"
                   onClick={() => onSelectDay(ymd)}
                   className={`min-h-24 p-1.5 text-left align-top hover:bg-muted/40 ${
-                    inMonth ? "bg-white" : "bg-muted/20 text-muted-foreground"
+                    isToday
+                      ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
+                      : inMonth
+                        ? "bg-white"
+                        : "bg-muted/20 text-muted-foreground"
                   }`}
                 >
-                  <span className="text-[12px] font-medium">{dayNum(ymd)}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className={`text-[12px] font-medium ${
+                        isToday
+                          ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                          : ""
+                      }`}
+                    >
+                      {dayNum(ymd)}
+                    </span>
+                    {isToday ? (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        сегодня
+                      </span>
+                    ) : null}
+                  </span>
                   <div className="mt-1 space-y-0.5">
                     {items.slice(0, 3).map((a) => (
                       <span
@@ -88,7 +110,8 @@ export function AppointmentsMonthBoard({
                         className={`block truncate rounded px-1 py-0.5 text-[10px] ${
                           selectedId === a.id
                             ? "bg-primary text-primary-foreground"
-                            : a.pendingStartsAt || a.status === "AWAITING_CLIENT"
+                            : a.pendingStartsAt ||
+                                a.status === "AWAITING_CLIENT"
                               ? "bg-amber-50 text-amber-950"
                               : "bg-muted"
                         }`}
