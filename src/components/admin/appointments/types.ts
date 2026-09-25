@@ -22,4 +22,4 @@ export type CalendarAppointmentDto = {
   googleEventId: string | null;
 };
 
-export type CalendarView = "day" | "week" | "month";
+export type CalendarView = "day" | "week" | "month" | "list";

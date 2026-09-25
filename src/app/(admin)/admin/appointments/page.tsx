@@ -57,7 +57,7 @@ function parseDateParam(raw: string | undefined): Date {
 }
 
 function parseView(raw: string | undefined): CalendarView {
-  if (raw === "day" || raw === "month") return raw;
+  if (raw === "day" || raw === "month" || raw === "list") return raw;
   return "week";
 }
 
@@ -104,7 +104,11 @@ export default async function AdminAppointmentsPage({
   let prevDate = anchorYmd;
   let nextDate = anchorYmd;
 
-  if (view === "day") {
+  if (view === "list") {
+    from = new Date(0);
+    to = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    rangeLabel = "Все консультации";
+  } else if (view === "day") {
     ({ from, to } = dayRangeContaining(anchor));
     gridDays = [anchorYmd];
     rangeLabel = `${anchorYmd} · Europe/Rome`;
@@ -156,14 +160,20 @@ export default async function AdminAppointmentsPage({
   const [appointments, leads, students, conversations, openSlots, slotGrid] =
     await Promise.all([
       prisma.appointment.findMany({
-        where: {
-          assignedCuratorId: curatorId,
-          status: { not: "CANCELLED" },
-          OR: [
-            { startsAt: { gte: from, lt: to } },
-            { pendingStartsAt: { gte: from, lt: to } },
-          ],
-        },
+        where:
+          view === "list"
+            ? {
+                assignedCuratorId: curatorId,
+                status: { not: "CANCELLED" },
+              }
+            : {
+                assignedCuratorId: curatorId,
+                status: { not: "CANCELLED" },
+                OR: [
+                  { startsAt: { gte: from, lt: to } },
+                  { pendingStartsAt: { gte: from, lt: to } },
+                ],
+              },
         include: {
           lead: { select: { id: true, firstName: true, lastName: true } },
           student: { select: { id: true, firstName: true, lastName: true } },
@@ -330,7 +340,7 @@ export default async function AdminAppointmentsPage({
     <div className="space-y-6">
       <PageHeader
         title="Консультации"
-        description="День / неделя / месяц · слоты 9:00–16:00 Rome · подтверждение в Telegram"
+        description="Календарь и список · слоты 9:00–16:00 Rome · подтверждение в Telegram"
       />
 
       <AppointmentsWorkspace
@@ -345,6 +355,7 @@ export default async function AdminAppointmentsPage({
           day: hrefFor("day", anchorYmd),
           week: hrefFor("week", anchorYmd),
           month: hrefFor("month", anchorYmd),
+          list: hrefFor("list", anchorYmd),
         }}
         appointments={calendarAppointments}
         openSlots={openSlots.map((s) => ({
