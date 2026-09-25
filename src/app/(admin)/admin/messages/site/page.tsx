@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
-import { sendCuratorMessageAction } from "@/server/actions";
-import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
-import { fullName, formatDate } from "@/lib/utils";
+import { SiteMessenger } from "@/components/admin/site-messenger";
+import type { ChannelListItem } from "@/components/admin/channel-messenger";
+import { fullName } from "@/lib/utils";
 
 type MessageMeta = {
   note?: string;
@@ -84,11 +82,24 @@ export default async function AdminSiteMessagesPage({
     return b.lastAt.getTime() - a.lastAt.getTime();
   });
 
-  const selectedId = studentId || list[0]?.studentId;
+  const conversationsUi: ChannelListItem[] = list.map((item) => ({
+    id: item.studentId,
+    title: item.name,
+    preview: item.lastText,
+    previewAt: item.lastAt.toISOString(),
+    badge: item.unanswered ? "Без ответа" : null,
+    badgeTone: item.unanswered ? "warning" : null,
+  }));
+
+  const selectedId =
+    studentId && list.some((c) => c.studentId === studentId)
+      ? studentId
+      : (list[0]?.studentId ?? null);
+
   const selected = selectedId
     ? await prisma.student.findUnique({
         where: { id: selectedId },
-        select: { id: true, firstName: true, lastName: true, curatorId: true },
+        select: { id: true, firstName: true, lastName: true },
       })
     : null;
 
@@ -104,9 +115,6 @@ export default async function AdminSiteMessagesPage({
             id: activity.id,
             text: meta.note.trim(),
             fromStudent: meta.from === "student",
-            author: meta.from === "student"
-              ? fullName(activity.student.firstName, activity.student.lastName)
-              : activity.user?.name || "Куратор",
             createdAt: activity.createdAt,
           };
         })
@@ -114,96 +122,38 @@ export default async function AdminSiteMessagesPage({
         .reverse()
     : [];
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Сайт"
-        description="Переписка со студентами в портале Immigrome"
-      />
-
-      {list.length === 0 && !selected ? (
-        <EmptyState
-          title="Нет сообщений"
-          description="Когда студент напишет, диалог появится здесь."
-        />
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <ul className="space-y-1">
-            {list.map((item) => (
-              <li key={item.studentId}>
-                <Link
-                  href={`/admin/messages/site?studentId=${item.studentId}`}
-                  className={`block rounded-xl border px-3 py-2 ${
-                    item.studentId === selectedId
-                      ? "border-[var(--brand)] bg-white"
-                      : "border-transparent hover:bg-white"
-                  }`}
-                >
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {item.lastText}
-                  </p>
-                  {item.unanswered ? (
-                    <p className="mt-1 text-[11px] text-[var(--warning-fg)]">
-                      Без ответа
-                    </p>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <div className="space-y-4">
-            {selected ? (
-              <>
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold">
-                    {fullName(selected.firstName, selected.lastName)}
-                  </h2>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/admin/students/${selected.id}`}>Открыть</Link>
-                  </Button>
-                </div>
-                {thread.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Напишите первое сообщение.
-                  </p>
-                ) : (
-                  <ul className="space-y-3">
-                    {thread.map((message) => (
-                      <li
-                        key={message.id}
-                        className="rounded-2xl border border-border bg-white px-4 py-3"
-                      >
-                        <p className="text-xs text-muted-foreground">
-                          {message.author} · {formatDate(message.createdAt)}
-                        </p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm">
-                          {message.text}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <form action={sendCuratorMessageAction} className="space-y-2">
-                  <input type="hidden" name="studentId" value={selected.id} />
-                  <textarea
-                    name="message"
-                    required
-                    rows={4}
-                    maxLength={2000}
-                    placeholder="Написать студенту"
-                    className="min-h-24 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm"
-                  />
-                  <Button type="submit" size="sm">
-                    Отправить
-                  </Button>
-                </form>
-              </>
-            ) : null}
-          </div>
+  if (list.length === 0 && !selected) {
+    return (
+      <div className="-m-6 flex h-[calc(100vh-3rem)] min-h-[480px] overflow-hidden border-t border-black/5 bg-[#eef2f5]">
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState
+            title="Нет сообщений"
+            description="Когда студент напишет, диалог появится здесь."
+          />
         </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <SiteMessenger
+      conversations={conversationsUi}
+      active={
+        selected
+          ? {
+              id: selected.id,
+              studentId: selected.id,
+              title: fullName(selected.firstName, selected.lastName),
+              subtitle: "Сайт · портал Immigrome",
+              messages: thread.map((m) => ({
+                id: m.id,
+                outbound: !m.fromStudent,
+                body: m.text,
+                createdAt: m.createdAt.toISOString(),
+              })),
+            }
+          : null
+      }
+    />
   );
 }

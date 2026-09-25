@@ -1,17 +1,17 @@
 import { requireStaff } from "@/server/auth/guards";
-import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
+import { ChannelMessenger } from "@/components/admin/channel-messenger";
 
 export default async function AdminEmailMessagesPage() {
   await requireStaff();
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Почта"
-        description="Переписка по email"
-      />
-      <EmptyState title="Coming soon..." description="Канал почты ещё не подключён." />
-    </div>
+    <ChannelMessenger
+      channelLabel="Почта"
+      conversations={[]}
+      active={null}
+      conversationHref="/admin/messages/email"
+      emptyListText="Канал почты ещё не подключён"
+      emptyThreadText="Coming soon — переписка по email появится здесь"
+    />
   );
 }
