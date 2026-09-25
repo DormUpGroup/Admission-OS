@@ -18,6 +18,10 @@ export type CalendarAppointmentDto = {
   pendingStartsAt: string | null;
   pendingEndsAt: string | null;
   subjectLabel: string;
+  /** Telegram @username without @, when known. */
+  nickname: string | null;
+  /** Telegram display name, when known. */
+  alias: string | null;
   hasTelegram: boolean;
   googleEventId: string | null;
 };

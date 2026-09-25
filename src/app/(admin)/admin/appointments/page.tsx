@@ -175,8 +175,30 @@ export default async function AdminAppointmentsPage({
                 ],
               },
         include: {
-          lead: { select: { id: true, firstName: true, lastName: true } },
-          student: { select: { id: true, firstName: true, lastName: true } },
+          lead: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              channelIdentities: {
+                where: { channel: "TELEGRAM" },
+                select: { username: true, displayName: true },
+                take: 1,
+              },
+            },
+          },
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              channelIdentities: {
+                where: { channel: "TELEGRAM" },
+                select: { username: true, displayName: true },
+                take: 1,
+              },
+            },
+          },
           conversation: { select: { id: true, channel: true } },
         },
         orderBy: { startsAt: "asc" },
@@ -312,6 +334,7 @@ export default async function AdminAppointmentsPage({
   );
 
   const calendarAppointments = appointments.map((a) => {
+    const person = a.lead ?? a.student;
     let subjectLabel = "—";
     if (a.lead) {
       subjectLabel = personLabel(
@@ -322,6 +345,9 @@ export default async function AdminAppointmentsPage({
     } else if (a.student) {
       subjectLabel = `${a.student.firstName} ${a.student.lastName}`;
     }
+    const identity = person?.channelIdentities[0];
+    const nickname = identity?.username?.replace(/^@/, "").trim() || null;
+    const alias = identity?.displayName?.trim() || null;
     return {
       id: a.id,
       title: a.title,
@@ -331,6 +357,8 @@ export default async function AdminAppointmentsPage({
       pendingStartsAt: a.pendingStartsAt?.toISOString() ?? null,
       pendingEndsAt: a.pendingEndsAt?.toISOString() ?? null,
       subjectLabel,
+      nickname,
+      alias,
       hasTelegram: a.conversation?.channel === "TELEGRAM",
       googleEventId: a.googleEventId,
     };
