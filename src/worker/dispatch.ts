@@ -1,6 +1,6 @@
 import type { OutboxEvent } from "@prisma/client";
 import {
-  isEventTypeAllowed,
+  shouldProcessOutboxEvent,
   type DbClient,
 } from "@/server/commands/outbox";
 
@@ -28,7 +28,7 @@ export async function dispatchOutboxEvent(
   options?: { automationEnabled?: boolean },
 ): Promise<void> {
   const automationEnabled = options?.automationEnabled ?? false;
-  if (!isEventTypeAllowed(event.eventType, automationEnabled)) {
+  if (!(await shouldProcessOutboxEvent(db, event, automationEnabled))) {
     throw new Error(
       `Event type "${event.eventType}" blocked by automation kill-switch`,
     );

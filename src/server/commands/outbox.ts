@@ -152,6 +152,48 @@ export function isEventTypeAllowed(
   return automationEnabled;
 }
 
+function payloadRecord(
+  payload: Prisma.JsonValue | null | undefined,
+): Record<string, unknown> | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  return payload as Record<string, unknown>;
+}
+
+/** Curator reply: must reach Telegram even when the automation kill-switch is off. */
+export function isStaffTelegramSend(event: {
+  eventType: string;
+  payloadJson?: Prisma.JsonValue | null;
+}): boolean {
+  if (event.eventType !== "telegram.send") return false;
+  return payloadRecord(event.payloadJson)?.staffSend === true;
+}
+
+/**
+ * Kill-switch gates autonomous work (welcome, nudges, Hermes).
+ * A curator reply is delivered either via payload.staffSend or a message
+ * that already has senderUserId (backlog enqueued before the flag existed).
+ */
+export async function shouldProcessOutboxEvent(
+  db: DbClient,
+  event: { eventType: string; payloadJson: Prisma.JsonValue },
+  automationEnabled: boolean,
+): Promise<boolean> {
+  if (isEventTypeAllowed(event.eventType, automationEnabled)) return true;
+  if (event.eventType !== "telegram.send") return false;
+  if (isStaffTelegramSend(event)) return true;
+
+  const messageId = payloadRecord(event.payloadJson)?.messageId;
+  if (typeof messageId !== "string" || !messageId) return false;
+
+  const message = await db.conversationMessage.findUnique({
+    where: { id: messageId },
+    select: { senderUserId: true },
+  });
+  return Boolean(message?.senderUserId);
+}
+
 export function retryDelayMs(attempt: number): number {
   const capped = Math.min(attempt, 11);
   const seconds = Math.min(3600, 2 ** capped);

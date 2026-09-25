@@ -13,6 +13,8 @@ export {
   isAutomationEnabled,
   isEnvAutomationEnabled,
   isEventTypeAllowed,
+  isStaffTelegramSend,
+  shouldProcessOutboxEvent,
   KILL_SWITCH_DEFER_MS,
   OUTBOX_STATUS,
   renewOutboxLease,

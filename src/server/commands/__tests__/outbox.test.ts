@@ -7,6 +7,8 @@ import {
   enqueueOutbox,
   GLOBAL_AUTOMATION_SETTING_KEY,
   isEventTypeAllowed,
+  isStaffTelegramSend,
+  shouldProcessOutboxEvent,
   KILL_SWITCH_DEFER_MS,
   OUTBOX_STATUS,
   deferOutboxForKillSwitch,
@@ -349,5 +351,59 @@ describe("outbox helpers (unit)", () => {
     expect(isEventTypeAllowed("noop", false)).toBe(true);
     expect(isEventTypeAllowed("telegram.send", false)).toBe(false);
     expect(isEventTypeAllowed("telegram.send", true)).toBe(true);
+  });
+
+  it("curator telegram.send bypasses the kill-switch", async () => {
+    expect(
+      isStaffTelegramSend({
+        eventType: "telegram.send",
+        payloadJson: { staffSend: true, messageId: "m1" },
+      }),
+    ).toBe(true);
+    expect(
+      isStaffTelegramSend({
+        eventType: "telegram.send",
+        payloadJson: { messageId: "m1" },
+      }),
+    ).toBe(false);
+
+    const db = {
+      conversationMessage: {
+        findUnique: async () => ({ senderUserId: "curator-1" }),
+      },
+    } as unknown as Parameters<typeof shouldProcessOutboxEvent>[0];
+
+    await expect(
+      shouldProcessOutboxEvent(
+        db,
+        {
+          eventType: "telegram.send",
+          payloadJson: { staffSend: true, messageId: "m1" },
+        },
+        false,
+      ),
+    ).resolves.toBe(true);
+
+    await expect(
+      shouldProcessOutboxEvent(
+        db,
+        { eventType: "telegram.send", payloadJson: { messageId: "m-old" } },
+        false,
+      ),
+    ).resolves.toBe(true);
+
+    const botDb = {
+      conversationMessage: {
+        findUnique: async () => ({ senderUserId: null }),
+      },
+    } as unknown as Parameters<typeof shouldProcessOutboxEvent>[0];
+
+    await expect(
+      shouldProcessOutboxEvent(
+        botDb,
+        { eventType: "telegram.send", payloadJson: { messageId: "welcome" } },
+        false,
+      ),
+    ).resolves.toBe(false);
   });
 });

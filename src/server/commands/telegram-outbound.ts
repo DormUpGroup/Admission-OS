@@ -81,6 +81,7 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
       payload: {
         messageId: message.id,
         conversationId: input.conversationId,
+        ...(input.senderUserId ? { staffSend: true } : {}),
         ...(input.replyMarkup ? { replyMarkup: input.replyMarkup } : {}),
       },
       idempotencyKey: `telegram.send:${message.id}`,

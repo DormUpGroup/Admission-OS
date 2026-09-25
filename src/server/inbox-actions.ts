@@ -1,6 +1,6 @@
 "use server";
 
-import { after } from "next/server";
+import { prisma } from "@/lib/db";
 import { requireStaff } from "@/server/auth/guards";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
@@ -32,20 +32,16 @@ export async function sendTelegramInboxReplyAction(
     clientRequestId: `admin-inbox:${conversationId}:${Date.now()}`,
   });
 
-  // Deliver in background — do not block the curator UI on Telegram RTT.
+  let deliveryStatus = message.deliveryStatus;
   if (!duplicate) {
-    after(() => {
-      void tryDeliverTelegramSendNow(message.id).catch((err) => {
-        console.warn(
-          JSON.stringify({
-            level: "warn",
-            msg: "telegram.send.inbox_after_failed",
-            messageId: message.id,
-            error: err instanceof Error ? err.message : String(err),
-          }),
-        );
-      });
+    // Await Telegram here. after() dropped the promise, so the reply stayed
+    // PENDING in the UI while the client never received it.
+    await tryDeliverTelegramSendNow(message.id);
+    const fresh = await prisma.conversationMessage.findUnique({
+      where: { id: message.id },
+      select: { deliveryStatus: true },
     });
+    if (fresh) deliveryStatus = fresh.deliveryStatus;
   }
 
   return {
@@ -53,7 +49,7 @@ export async function sendTelegramInboxReplyAction(
     conversationId,
     body: message.body ?? body,
     createdAt: message.createdAt.toISOString(),
-    deliveryStatus: message.deliveryStatus,
+    deliveryStatus,
     duplicate,
   };
 }

@@ -13,13 +13,13 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
    - Start: `npm run worker`
 3. Worker env:
    - `DATABASE_URL` (same as web)
-   - `AUTOMATION_ENABLED=true` to process `message.received` / `telegram.send` (noop / `worker.log` always run)
+   - `AUTOMATION_ENABLED=true` to process `message.received`, bot welcome/help, and nudges (noop / `worker.log` / curator `telegram.send` always run)
    - Phase 1+: `TELEGRAM_BOT_TOKEN` (outbound send)
 4. Web env (Phase 1): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`
-   - Admin inbox replies may deliver **inline** from the web process when
-     `AUTOMATION_ENABLED=true` and `TELEGRAM_BOT_TOKEN` are set on web (no wait for
-     worker poll). The worker remains required for welcome/help, backlog, and
-     calendar events.
+   - Admin inbox replies deliver **inline** from the web process when
+     `TELEGRAM_BOT_TOKEN` is set. They are not blocked by the automation
+     kill-switch. The worker remains required for welcome/help, backlog retries,
+     and calendar events.
 5. Do **not** redeploy old api / beat / Celery workers.
 
 ## Telegram webhook
@@ -55,7 +55,8 @@ Automation runs only when **both** are true:
 2. DB `AutomationSetting` key `global_enabled` with `{ "enabled": true }`
 
 Missing DB row = off (safe default after deploy). Toggle from `/admin/automation`
-(ADMIN). When effective automation is off, the worker defers agent/outbound
-event types without burning attempts. Diagnostic types `noop` and `worker.log`
-always run. Webhook ingest still persists to Postgres. Dead-letter replay is on
-the same admin page.
+(ADMIN). When effective automation is off, the worker defers agent and
+autonomous outbound event types (welcome, nudges) without burning attempts.
+Curator replies (`telegram.send` with a staff sender) still deliver. Diagnostic
+types `noop` and `worker.log` always run. Webhook ingest still persists to
+Postgres. Dead-letter replay is on the same admin page.

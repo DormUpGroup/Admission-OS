@@ -4,7 +4,6 @@ import {
   completeOutboxEvent,
   DEFAULT_LEASE_MS,
   OUTBOX_STATUS,
-  resolveAutomationEnabled,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
 import {
@@ -15,23 +14,29 @@ import {
 } from "@/server/delivery/telegram";
 
 export type InlineDeliverResult =
-  | { status: "skipped"; reason: "automation_off" | "no_token" | "not_found" | "lost_lease" }
+  | { status: "skipped"; reason: "no_token" | "not_found" | "lost_lease" }
   | { status: "delivered" }
   | { status: "deferred"; error: string };
 
 /**
  * Claim a pending telegram.send outbox row and deliver immediately from the web
- * process so admin replies do not wait for the worker idle poll.
+ * process. Curator replies use this path and are not gated by the automation
+ * kill-switch (that switch only holds autonomous welcome/nudges/agent work).
  * On failure, re-queues for the worker (does not throw to the UI).
  */
 export async function tryDeliverTelegramSendNow(
   messageId: string,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<InlineDeliverResult> {
-  if (!(await resolveAutomationEnabled(prisma, env))) {
-    return { status: "skipped", reason: "automation_off" };
-  }
   if (!env.TELEGRAM_BOT_TOKEN?.trim()) {
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        msg: "telegram.send.inline_skipped",
+        messageId,
+        reason: "no_token",
+      }),
+    );
     return { status: "skipped", reason: "no_token" };
   }
 

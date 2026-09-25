@@ -7,8 +7,8 @@ import {
   completeOutboxEvent,
   deadLetterOutboxEvent,
   deferOutboxForKillSwitch,
-  isEventTypeAllowed,
   resolveAutomationEnabled,
+  shouldProcessOutboxEvent,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
 import { dispatchOutboxEvent } from "./dispatch";
@@ -68,7 +68,7 @@ async function processOnce(): Promise<number> {
       continue;
     }
 
-    if (!isEventTypeAllowed(event.eventType, automationEnabled)) {
+    if (!(await shouldProcessOutboxEvent(prisma, event, automationEnabled))) {
       const message = `Event type "${event.eventType}" blocked by automation kill-switch`;
       await deferOutboxForKillSwitch(
         prisma,

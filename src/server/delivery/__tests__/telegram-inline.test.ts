@@ -109,31 +109,47 @@ describeDb("telegram inline deliver (db)", () => {
     await prisma.$disconnect();
   });
 
-  it("skips inline deliver when AUTOMATION_ENABLED=false and leaves PENDING", async () => {
+  it("delivers a curator reply even when AUTOMATION_ENABLED=false", async () => {
     const prev = process.env.AUTOMATION_ENABLED;
+    const prevToken = process.env.TELEGRAM_BOT_TOKEN;
     process.env.AUTOMATION_ENABLED = "false";
+    process.env.TELEGRAM_BOT_TOKEN = "test-token-inline";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          result: { message_id: 5150 },
+        }),
+      })),
+    );
     try {
       const { message } = await requestTelegramSend({
         conversationId,
-        body: "hold for worker",
+        body: "curator while automation off",
+        senderUserId: "curator-1",
         clientRequestId: `${prefix}-off-${Date.now()}`,
       });
       const result = await tryDeliverTelegramSendNow(message.id);
-      expect(result).toEqual({ status: "skipped", reason: "automation_off" });
+      expect(result).toEqual({ status: "delivered" });
 
       const refreshed = await prisma.conversationMessage.findUniqueOrThrow({
         where: { id: message.id },
       });
-      expect(refreshed.deliveryStatus).toBe("PENDING");
+      expect(refreshed.deliveryStatus).toBe("SENT");
+      expect(refreshed.providerMessageId).toBe("5150");
 
       const outbox = await prisma.outboxEvent.findUniqueOrThrow({
         where: { idempotencyKey: `telegram.send:${message.id}` },
       });
-      // Concurrent claimOutboxEvents from other suites may lease this row.
-      expect(outbox.status).not.toBe(OUTBOX_STATUS.COMPLETED);
+      expect(outbox.status).toBe(OUTBOX_STATUS.COMPLETED);
     } finally {
       if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
       else process.env.AUTOMATION_ENABLED = prev;
+      if (prevToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+      else process.env.TELEGRAM_BOT_TOKEN = prevToken;
     }
   });
 
