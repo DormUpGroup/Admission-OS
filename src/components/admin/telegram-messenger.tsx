@@ -464,9 +464,9 @@ export function TelegramMessenger({
 
             <div
               ref={scrollRef}
-              className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3"
+              className="flex-1 space-y-0.5 overflow-y-auto px-4 py-3"
             >
-              {active.messages.map((m) => {
+              {active.messages.map((m, i) => {
                 const outbound = m.direction === "OUTBOUND";
                 const command = isBotCommandBody(m.body);
 
@@ -480,15 +480,59 @@ export function TelegramMessenger({
                   );
                 }
 
+                const sender =
+                  m.senderName || (outbound ? "Куратор" : "Клиент");
+                const prev = active.messages[i - 1];
+                const next = active.messages[i + 1];
+                const prevSame =
+                  !!prev &&
+                  !(
+                    prev.direction !== "OUTBOUND" &&
+                    isBotCommandBody(prev.body)
+                  ) &&
+                  prev.direction === m.direction &&
+                  (prev.senderName ||
+                    (prev.direction === "OUTBOUND" ? "Куратор" : "Клиент")) ===
+                    sender;
+                const nextSame =
+                  !!next &&
+                  !(
+                    next.direction !== "OUTBOUND" &&
+                    isBotCommandBody(next.body)
+                  ) &&
+                  next.direction === m.direction &&
+                  (next.senderName ||
+                    (next.direction === "OUTBOUND" ? "Куратор" : "Клиент")) ===
+                    sender;
+                const showName = !prevSame;
+                const showAvatar = !nextSame;
+
                 const label = deliveryLabel(m.deliveryStatus, m.direction);
+                const avatar = showAvatar ? (
+                  <StudentAvatar
+                    name={sender}
+                    size="sm"
+                    className={cn(
+                      "mb-0.5",
+                      outbound
+                        ? "bg-[var(--brand)] text-white"
+                        : "bg-[#6c8eae] text-white",
+                    )}
+                  />
+                ) : (
+                  <span className="inline-block h-6 w-6 shrink-0" aria-hidden />
+                );
+
                 return (
                   <div
                     key={m.id}
                     className={cn(
-                      "flex",
+                      "flex items-end gap-1.5",
                       outbound ? "justify-end" : "justify-start",
+                      showName && i > 0 ? "mt-2" : null,
                     )}
                   >
+                    {!outbound ? avatar : null}
                     <div
                       className={cn(
                         "max-w-[min(85%,420px)] rounded-2xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
@@ -497,16 +541,18 @@ export function TelegramMessenger({
                           : "rounded-bl-md bg-white text-foreground",
                       )}
                     >
-                      <p
-                        className={cn(
-                          "mb-0.5 text-[11px] font-medium",
-                          outbound
-                            ? "text-foreground/60"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {m.senderName || (outbound ? "Куратор" : "Клиент")}
-                      </p>
+                      {showName ? (
+                        <p
+                          className={cn(
+                            "mb-0.5 text-[12px] font-semibold",
+                            outbound
+                              ? "text-foreground/70"
+                              : "text-[#3d6b99]",
+                          )}
+                        >
+                          {sender}
+                        </p>
+                      ) : null}
                       <p className="whitespace-pre-wrap">{m.body || "—"}</p>
                       <div
                         className={cn(
@@ -529,6 +575,7 @@ export function TelegramMessenger({
                         </p>
                       ) : null}
                     </div>
+                    {outbound ? avatar : null}
                   </div>
                 );
               })}

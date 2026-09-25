@@ -150,6 +150,9 @@ export default async function AdminSiteMessagesPage({
                 outbound: !m.fromStudent,
                 body: m.text,
                 createdAt: m.createdAt.toISOString(),
+                senderName: m.fromStudent
+                  ? fullName(selected.firstName, selected.lastName)
+                  : "Куратор",
               })),
             }
           : null

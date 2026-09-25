@@ -19,6 +19,7 @@ export type ChannelThreadMessage = {
   outbound: boolean;
   body: string;
   createdAt: string;
+  senderName?: string | null;
   meta?: string | null;
   system?: boolean;
 };
@@ -177,13 +178,13 @@ export function ChannelMessenger({
               {active.headerExtra}
             </header>
 
-            <div className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
+            <div className="flex-1 space-y-0.5 overflow-y-auto px-4 py-3">
               {active.messages.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   Напишите первое сообщение
                 </p>
               ) : (
-                active.messages.map((m) => {
+                active.messages.map((m, i) => {
                   if (m.system) {
                     return (
                       <div key={m.id} className="flex justify-center py-1">
@@ -193,14 +194,54 @@ export function ChannelMessenger({
                       </div>
                     );
                   }
+
+                  const sender =
+                    m.senderName?.trim() ||
+                    (m.outbound ? "Куратор" : active.title);
+                  const prev = active.messages[i - 1];
+                  const next = active.messages[i + 1];
+                  const prevSame =
+                    !!prev &&
+                    !prev.system &&
+                    prev.outbound === m.outbound &&
+                    (prev.senderName?.trim() ||
+                      (prev.outbound ? "Куратор" : active.title)) === sender;
+                  const nextSame =
+                    !!next &&
+                    !next.system &&
+                    next.outbound === m.outbound &&
+                    (next.senderName?.trim() ||
+                      (next.outbound ? "Куратор" : active.title)) === sender;
+                  const showName = !prevSame;
+                  const showAvatar = !nextSame;
+                  const avatar = showAvatar ? (
+                    <StudentAvatar
+                      name={sender}
+                      size="sm"
+                      className={cn(
+                        "mb-0.5",
+                        m.outbound
+                          ? "bg-[var(--brand)] text-white"
+                          : "bg-[#6c8eae] text-white",
+                      )}
+                    />
+                  ) : (
+                    <span
+                      className="inline-block h-6 w-6 shrink-0"
+                      aria-hidden
+                    />
+                  );
+
                   return (
                     <div
                       key={m.id}
                       className={cn(
-                        "flex",
+                        "flex items-end gap-1.5",
                         m.outbound ? "justify-end" : "justify-start",
+                        showName && i > 0 ? "mt-2" : null,
                       )}
                     >
+                      {!m.outbound ? avatar : null}
                       <div
                         className={cn(
                           "max-w-[min(85%,420px)] rounded-2xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
@@ -209,6 +250,18 @@ export function ChannelMessenger({
                             : "rounded-bl-md bg-white text-foreground",
                         )}
                       >
+                        {showName ? (
+                          <p
+                            className={cn(
+                              "mb-0.5 text-[12px] font-semibold",
+                              m.outbound
+                                ? "text-foreground/70"
+                                : "text-[#3d6b99]",
+                            )}
+                          >
+                            {sender}
+                          </p>
+                        ) : null}
                         <p className="whitespace-pre-wrap">{m.body || "—"}</p>
                         <div
                           className={cn(
@@ -222,6 +275,7 @@ export function ChannelMessenger({
                           {m.meta ? <span>{m.meta}</span> : null}
                         </div>
                       </div>
+                      {m.outbound ? avatar : null}
                     </div>
                   );
                 })
