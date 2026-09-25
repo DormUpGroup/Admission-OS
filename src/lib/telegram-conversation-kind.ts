@@ -1,21 +1,23 @@
 export type ConversationFolder = "chats" | "technical";
 
 /** Telegram first_name / lead titles from integration fixtures. */
-const FIXTURE_DISPLAY_NAMES = new Set([
+export const FIXTURE_DISPLAY_NAMES = new Set([
   "test",
   "unk",
   "off",
   "start",
   "help",
+  "inline test",
 ]);
 
 /** Known test usernames from telegram unit fixtures. */
-const FIXTURE_USERNAMES = new Set([
+export const FIXTURE_USERNAMES = new Set([
   "tgtest",
   "tgunk",
   "tgstart",
   "tghelp",
   "tgoff",
+  "inlinetest",
 ]);
 
 /**

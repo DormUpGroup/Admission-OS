@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { createAppointmentAction } from "@/server/appointment-actions";
+import { useActionState, useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
+import {
+  createAppointmentAction,
+  type CreateAppointmentState,
+} from "@/server/appointment-actions";
 import { Button } from "@/components/ui/button";
 
 export type AppointmentLeadOption = {
@@ -24,6 +28,15 @@ export type AppointmentConversationOption = {
 const selectClass =
   "w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground";
 
+function CreateButton({ canSubmit }: { canSubmit: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" disabled={!canSubmit || pending}>
+      {pending ? "Создаём…" : "Создать (outbox → Calendar)"}
+    </Button>
+  );
+}
+
 export function AppointmentCreateForm({
   leads,
   students,
@@ -36,6 +49,11 @@ export function AppointmentCreateForm({
   const [leadId, setLeadId] = useState("");
   const [studentId, setStudentId] = useState("");
   const [conversationId, setConversationId] = useState("");
+  const [state, formAction] = useActionState<
+    CreateAppointmentState,
+    FormData
+  >(createAppointmentAction, null);
+  const canSubmit = Boolean(leadId) !== Boolean(studentId);
 
   const filteredConversations = useMemo(() => {
     if (leadId) {
@@ -47,7 +65,6 @@ export function AppointmentCreateForm({
     return conversations;
   }, [conversations, leadId, studentId]);
 
-  // Drop conversation if it no longer matches the filtered set.
   const conversationValue = filteredConversations.some(
     (c) => c.id === conversationId,
   )
@@ -55,14 +72,14 @@ export function AppointmentCreateForm({
     : "";
 
   return (
-    <form
-      action={createAppointmentAction}
-      className="grid gap-3 md:grid-cols-2"
-    >
+    <form action={formAction} className="grid gap-3 md:grid-cols-2">
+      <input type="hidden" name="leadId" value={leadId} />
+      <input type="hidden" name="studentId" value={studentId} />
+      <input type="hidden" name="conversationId" value={conversationValue} />
+
       <label className="text-sm">
         <span className="mb-1 block text-muted-foreground">Клиент (лид)</span>
         <select
-          name="leadId"
           className={selectClass}
           value={leadId}
           disabled={Boolean(studentId)}
@@ -85,7 +102,6 @@ export function AppointmentCreateForm({
       <label className="text-sm">
         <span className="mb-1 block text-muted-foreground">Студент</span>
         <select
-          name="studentId"
           className={selectClass}
           value={studentId}
           disabled={Boolean(leadId)}
@@ -110,7 +126,6 @@ export function AppointmentCreateForm({
           Чат Telegram (опционально)
         </span>
         <select
-          name="conversationId"
           className={selectClass}
           value={conversationValue}
           onChange={(e) => setConversationId(e.target.value)}
@@ -160,14 +175,20 @@ export function AppointmentCreateForm({
         />
       </label>
       <input type="hidden" name="timezone" value="Europe/Rome" />
-      <div className="md:col-span-2">
-        <Button type="submit" size="sm">
-          Создать (outbox → Calendar)
-        </Button>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          Укажите ровно одного: клиента (лида) или студента. Нужны worker и
-          Google Calendar env.
-        </p>
+      <div className="md:col-span-2 space-y-2">
+        <CreateButton canSubmit={canSubmit} />
+        {!canSubmit ? (
+          <p className="text-[11px] text-muted-foreground">
+            Укажите ровно одного: клиента (лида) или студента.
+          </p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">
+            Нужны worker и Google Calendar env.
+          </p>
+        )}
+        {state?.error ? (
+          <p className="text-[13px] text-red-700">{state.error}</p>
+        ) : null}
       </div>
     </form>
   );

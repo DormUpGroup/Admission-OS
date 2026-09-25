@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { AppointmentCreateForm } from "@/components/admin/appointment-create-form";
+import { isFixtureContact } from "@/lib/telegram-conversation-kind";
 import { formatDate } from "@/lib/utils";
 
 function personLabel(
@@ -37,6 +38,19 @@ function sortByLabel<T extends { label: string }>(items: T[]): T[] {
   );
 }
 
+/** Keep first occurrence per key (inputs should be newest-first). */
+function uniqueByKey<T>(items: T[], keyOf: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const key = keyOf(item);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 export default async function AdminAppointmentsPage() {
   await requireStaff();
 
@@ -55,14 +69,14 @@ export default async function AdminAppointmentsPage() {
     }),
     prisma.lead.findMany({
       orderBy: { createdAt: "desc" },
-      take: 80,
+      take: 120,
       select: {
         id: true,
         firstName: true,
         lastName: true,
         channelIdentities: {
           where: { channel: "TELEGRAM" },
-          select: { username: true, displayName: true },
+          select: { username: true, displayName: true, externalId: true },
           take: 1,
         },
       },
@@ -76,7 +90,7 @@ export default async function AdminAppointmentsPage() {
     prisma.conversation.findMany({
       where: { channel: "TELEGRAM", status: "OPEN" },
       orderBy: { updatedAt: "desc" },
-      take: 80,
+      take: 120,
       select: {
         id: true,
         leadId: true,
@@ -87,7 +101,7 @@ export default async function AdminAppointmentsPage() {
             lastName: true,
             channelIdentities: {
               where: { channel: "TELEGRAM" },
-              select: { username: true, displayName: true },
+              select: { username: true, displayName: true, externalId: true },
               take: 1,
             },
           },
@@ -98,49 +112,83 @@ export default async function AdminAppointmentsPage() {
   ]);
 
   const leadOptions = sortByLabel(
-    leads.map((l) => {
-      const identity = l.channelIdentities[0];
-      const base =
-        personLabel(l.firstName, l.lastName, "") ||
-        identity?.displayName?.trim() ||
-        `Клиент ${l.id.slice(0, 8)}`;
-      const username = identity?.username?.trim();
-      return {
-        id: l.id,
-        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
-      };
-    }),
+    uniqueByKey(
+      leads
+        .map((l) => {
+          const identity = l.channelIdentities[0];
+          const base =
+            personLabel(l.firstName, l.lastName, "") ||
+            identity?.displayName?.trim() ||
+            `Клиент ${l.id.slice(0, 8)}`;
+          const username = identity?.username?.trim() || null;
+          if (isFixtureContact({ title: base, username })) return null;
+          return {
+            id: l.id,
+            label: username
+              ? `${base} · @${username.replace(/^@/, "")}`
+              : base,
+            dedupeKey:
+              identity?.externalId?.trim() ||
+              (username ? `u:${username.toLowerCase()}` : `id:${l.id}`),
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null),
+      (x) => x.dedupeKey,
+    ).map(({ id, label }) => ({ id, label })),
   );
 
   const studentOptions = sortByLabel(
-    students.map((s) => ({
-      id: s.id,
-      label: `${s.firstName} ${s.lastName}`.trim(),
-    })),
+    uniqueByKey(
+      students.map((s) => ({
+        id: s.id,
+        label: `${s.firstName} ${s.lastName}`.trim(),
+        dedupeKey: s.id,
+      })),
+      (x) => x.dedupeKey,
+    ).map(({ id, label }) => ({ id, label })),
   );
 
   const conversationOptions = sortByLabel(
-    conversations.map((c) => {
-      const identity = c.lead?.channelIdentities[0];
-      let base = "";
-      if (c.student) {
-        base = `${c.student.firstName} ${c.student.lastName}`.trim();
-      } else if (c.lead) {
-        base =
-          personLabel(c.lead.firstName, c.lead.lastName, "") ||
-          identity?.displayName?.trim() ||
-          "Чат";
-      } else {
-        base = identity?.displayName?.trim() || "Чат";
-      }
-      const username = identity?.username?.trim();
-      return {
-        id: c.id,
-        leadId: c.leadId,
-        studentId: c.studentId,
-        label: username ? `${base} · @${username.replace(/^@/, "")}` : base,
-      };
-    }),
+    uniqueByKey(
+      conversations
+        .map((c) => {
+          const identity = c.lead?.channelIdentities[0];
+          let base = "";
+          if (c.student) {
+            base = `${c.student.firstName} ${c.student.lastName}`.trim();
+          } else if (c.lead) {
+            base =
+              personLabel(c.lead.firstName, c.lead.lastName, "") ||
+              identity?.displayName?.trim() ||
+              "Чат";
+          } else {
+            base = identity?.displayName?.trim() || "Чат";
+          }
+          const username = identity?.username?.trim() || null;
+          if (isFixtureContact({ title: base, username })) return null;
+          const label = username
+            ? `${base} · @${username.replace(/^@/, "")}`
+            : base;
+          return {
+            id: c.id,
+            leadId: c.leadId,
+            studentId: c.studentId,
+            label,
+            dedupeKey:
+              identity?.externalId?.trim() ||
+              (c.leadId ? `lead:${c.leadId}` : null) ||
+              (c.studentId ? `student:${c.studentId}` : null) ||
+              c.id,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null),
+      (x) => x.dedupeKey,
+    ).map(({ id, leadId, studentId, label }) => ({
+      id,
+      leadId,
+      studentId,
+      label,
+    })),
   );
 
   return (
