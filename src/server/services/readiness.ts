@@ -11,6 +11,30 @@ export function calculateReadiness(
   return Math.round((completed / applicable.length) * 100);
 }
 
+/**
+ * Pure status rule shared by recalculateApplication and recalculateStudent.
+ * Criticals COMPLETED|NOT_APPLICABLE + readiness >= 90 + SELECTED|PREPARING → READY_FOR_REVIEW.
+ */
+export function nextApplicationStatusAfterRecalc(
+  status: string,
+  requirements: Pick<Requirement, "status" | "isCritical">[],
+  readinessPercent: number
+): string {
+  const criticalDone = requirements
+    .filter((r) => r.isCritical)
+    .every((r) => r.status === "COMPLETED" || r.status === "NOT_APPLICABLE");
+
+  if (
+    criticalDone &&
+    readinessPercent >= 90 &&
+    ["SELECTED", "PREPARING"].includes(status)
+  ) {
+    return "READY_FOR_REVIEW";
+  }
+
+  return status;
+}
+
 export function criticalIncomplete<
   T extends Pick<Requirement, "status" | "isCritical">,
 >(requirements: T[]): T[] {
