@@ -35,6 +35,8 @@ export type TelegramThreadDto = {
   contactName: string;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
+  /** Latest Hermes draft that has not been sent yet. */
+  replyDraft: string | null;
   messages: TelegramThreadMessageDto[];
 };
 
@@ -63,6 +65,45 @@ const identitySelect = {
   select: { username: true, displayName: true },
   take: 1,
 };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/** Newest propose_reply body, unless staff already sent it or replied later. */
+export function latestUnsentReplyDraft(
+  runs: Array<{ outputJson: unknown }>,
+  messages: Array<{ direction: string; body: string | null; createdAt: Date | string }>,
+): string | null {
+  let draftBody = "";
+  let draftTime = Number.NaN;
+  for (const run of runs) {
+    const drafts = asRecord(run.outputJson)?.drafts;
+    if (!Array.isArray(drafts)) continue;
+    for (let i = drafts.length - 1; i >= 0; i--) {
+      const item = asRecord(drafts[i]);
+      const body = typeof item?.body === "string" ? item.body.trim() : "";
+      if (!body) continue;
+      draftBody = body;
+      draftTime =
+        typeof item?.createdAt === "string" ? Date.parse(item.createdAt) : Number.NaN;
+      break;
+    }
+    if (draftBody) break;
+  }
+  if (!draftBody) return null;
+
+  for (const message of messages) {
+    if (message.direction !== "OUTBOUND") continue;
+    const sent = (message.body ?? "").trim();
+    if (sent === draftBody) return null;
+    const sentAt = new Date(message.createdAt).getTime();
+    if (Number.isFinite(draftTime) && sentAt >= draftTime) return null;
+  }
+  return draftBody;
+}
 
 function primaryIdentity(c: TitleSource): IdentityBits | null {
   return (
@@ -265,6 +306,14 @@ export async function loadTelegramThread(
   });
   if (!row || row.channel !== "TELEGRAM") return null;
 
+  const runs = await prisma.agentRun.findMany({
+    where: { conversationId: row.id },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: { outputJson: true },
+  });
+  const replyDraft = latestUnsentReplyDraft(runs, row.messages);
+
   const now = new Date();
   const needsReadMark =
     row.lastInboundAt != null &&
@@ -298,6 +347,7 @@ export async function loadTelegramThread(
     title: conversationTitle(row),
     contactName,
     automationPaused: !!row.automationPausedAt,
+    replyDraft,
     hasPendingDelivery: row.messages.some(
       (m) =>
         m.direction === "OUTBOUND" &&

@@ -59,6 +59,7 @@ export type TelegramActiveThread = {
   contactName?: string;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
+  replyDraft?: string | null;
   messages: TelegramThreadMessage[];
 };
 
@@ -243,6 +244,7 @@ export function TelegramMessenger({
   async function handleSend(formData: FormData) {
     const body = String(formData.get("body") ?? "").trim();
     if (!activeId || !body || !active) return;
+    const draftBeforeSend = active.replyDraft ?? null;
 
     const tempId = `temp:${Date.now()}`;
     const optimistic: TelegramThreadMessage = {
@@ -256,15 +258,17 @@ export function TelegramMessenger({
     };
 
     startTransition(() => {
-      setActive((prev) =>
-        prev
-          ? {
-              ...prev,
-              hasPendingDelivery: true,
-              messages: [...prev.messages, optimistic],
-            }
-          : prev,
-      );
+      setActive((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          replyDraft: null,
+          hasPendingDelivery: true,
+          messages: [...prev.messages, optimistic],
+        };
+        cacheRef.current.set(activeId, next);
+        return next;
+      });
       setList((prev) =>
         prev.map((c) =>
           c.id === activeId
@@ -324,14 +328,16 @@ export function TelegramMessenger({
         router.refresh();
       }, 800);
     } catch {
-      setActive((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: prev.messages.filter((m) => m.id !== tempId),
-            }
-          : prev,
-      );
+      setActive((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          replyDraft: draftBeforeSend,
+          messages: prev.messages.filter((m) => m.id !== tempId),
+        };
+        cacheRef.current.set(activeId, next);
+        return next;
+      });
     }
   }
 
@@ -586,6 +592,11 @@ export function TelegramMessenger({
             </div>
 
             <div className="border-t border-black/10 bg-white px-3 py-2">
+              {active.replyDraft ? (
+                <p className="mb-1 px-1 text-[11px] text-muted-foreground">
+                  Черновик Hermes — проверьте и отправьте
+                </p>
+              ) : null}
               <form action={handleSend} className="flex items-end gap-2">
                 <input
                   type="hidden"
@@ -593,11 +604,18 @@ export function TelegramMessenger({
                   value={active.id}
                 />
                 <textarea
+                  key={`${active.id}:${active.replyDraft ?? ""}`}
                   name="body"
                   rows={1}
                   required
+                  defaultValue={active.replyDraft ?? ""}
                   placeholder="Напишите клиенту…"
-                  className="max-h-32 min-h-9 flex-1 resize-none rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted"
+                  className="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted"
+                  ref={(el) => {
+                    if (!el) return;
+                    el.style.height = "auto";
+                    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+                  }}
                   onInput={(e) => {
                     const el = e.currentTarget;
                     el.style.height = "auto";
