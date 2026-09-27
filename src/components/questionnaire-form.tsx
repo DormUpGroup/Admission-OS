@@ -33,7 +33,7 @@ function FieldCard({
   return (
     <div
       className={cn(
-        "surface-card rounded-[22px] border bg-card px-5 py-4",
+        "surface-card rounded-[22px] border bg-card px-4 py-4 sm:px-5",
         error ? "border-red-300" : "border-[var(--border)]"
       )}
     >
@@ -256,8 +256,8 @@ export function QuestionnaireForm({
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="overflow-hidden surface-card">
-        <div className="px-5 py-5">
-          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">{title}</h1>
+        <div className="px-4 py-4 sm:px-5 sm:py-5">
+          <h1 className="text-[22px] font-semibold tracking-tight text-foreground sm:text-[28px]">{title}</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">{subtitle}</p>
           {preview ? (
             <p className="mt-2 text-[13px] font-medium text-[var(--brand)]">
@@ -289,14 +289,14 @@ export function QuestionnaireForm({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex gap-2">
+      <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row">
           {!isFirst ? (
-            <Button type="button" variant="outline" onClick={goBack}>
+            <Button type="button" variant="outline" onClick={goBack} className="w-full sm:w-auto">
               Назад
             </Button>
           ) : null}
-          <Button type="button" onClick={goNext} disabled={pending}>
+          <Button type="button" onClick={goNext} disabled={pending} className="w-full sm:w-auto">
             {preview
               ? isLast
                 ? "Конец формы"
@@ -311,7 +311,7 @@ export function QuestionnaireForm({
         <button
           type="button"
           onClick={clearForm}
-          className="text-sm text-[var(--brand)] hover:underline"
+          className="min-h-11 text-sm text-[var(--brand)] hover:underline sm:min-h-0"
         >
           Очистить форму
         </button>

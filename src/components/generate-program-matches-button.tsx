@@ -310,8 +310,8 @@ export function GenerateProgramMatchesButton({
             ) : null}
           </div>
 
-          <div className="w-full overflow-x-auto pb-1">
-            <ol className="flex w-full min-w-[760px] items-start">
+          <div className="w-full pb-1 md:overflow-x-auto">
+            <ol className="flex w-full flex-col gap-2 md:min-w-[760px] md:flex-row md:items-start md:gap-0">
               {STEPS.map((step, index) => {
                 const done = index < activeIndex;
                 const active = index === activeIndex && loading;
@@ -320,12 +320,12 @@ export function GenerateProgramMatchesButton({
                 return (
                   <li
                     key={step.id}
-                    className="flex min-w-0 flex-1 items-start"
+                    className="flex min-w-0 flex-1 items-center md:items-start"
                     aria-current={active ? "step" : undefined}
                   >
                     <div
                       className={cn(
-                        "flex min-w-0 flex-1 flex-col items-center text-center text-[11px] leading-4",
+                        "flex min-w-0 flex-1 flex-row items-center gap-2 text-left text-[13px] leading-4 md:flex-col md:items-center md:gap-0 md:text-center md:text-[11px]",
                         done && "text-primary",
                         active && "font-medium text-foreground",
                         !done && !active && "text-muted-foreground"
@@ -350,13 +350,13 @@ export function GenerateProgramMatchesButton({
                           index + 1
                         )}
                       </span>
-                      <span className="mt-2 max-w-[140px]">{step.label}</span>
+                      <span className="md:mt-2 md:max-w-[140px]">{step.label}</span>
                     </div>
 
                     {index < STEPS.length - 1 ? (
                       <span
                         className={cn(
-                          "mt-3.5 h-px min-w-4 flex-1 bg-border transition-colors",
+                          "mt-3.5 hidden h-px min-w-4 flex-1 bg-border transition-colors md:block",
                           connectorDone && "bg-primary"
                         )}
                         aria-hidden

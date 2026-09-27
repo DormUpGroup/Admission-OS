@@ -41,7 +41,7 @@ export function SiteInboxReplyForm({ studentId }: { studentId: string }) {
         required
         maxLength={2000}
         placeholder="Написать студенту…"
-        className="max-h-32 min-h-9 flex-1 resize-none rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted"
+        className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-base outline-none placeholder:text-muted-foreground focus:bg-muted md:min-h-9 md:text-sm"
         onInput={(e) => {
           const el = e.currentTarget;
           el.style.height = "auto";

@@ -9,10 +9,10 @@ import type { StudentJourneyView } from "@/server/services/student-journey";
 
 export function StudentJourneyPage({ view }: { view: StudentJourneyView }) {
   return (
-    <div className="space-y-10 md:space-y-12">
+    <div className="space-y-8 md:space-y-12">
       <section className="space-y-4">
         <div className="space-y-2">
-          <h1 className="text-[28px] font-semibold tracking-tight">Мой путь</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Мой путь</h1>
           <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             {view.headline}
           </p>

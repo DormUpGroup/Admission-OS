@@ -20,7 +20,7 @@ export default async function PortalDocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-tight">Документы</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Документы</h1>
         <p className="mt-1 text-[15px] text-muted-foreground">
           Загрузите файлы, которые запросил куратор
         </p>

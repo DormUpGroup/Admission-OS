@@ -416,13 +416,13 @@ export default async function StudentProfilePage({
         openTasks={studentQueue.items}
       />
 
-      <div className="flex flex-wrap gap-1 border-b border-border pb-px">
+      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={`/admin/students/${studentId}?tab=${t.id}`}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-medium transition-colors",
               tab === t.id
                 ? "border-neutral-900 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"

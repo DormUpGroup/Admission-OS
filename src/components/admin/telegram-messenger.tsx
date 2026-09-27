@@ -112,6 +112,7 @@ export function TelegramMessenger({
   trashCount,
   conversations,
   initialActive,
+  openedFromUrl = false,
 }: {
   folder: ConversationFolder;
   chatsCount: number;
@@ -119,6 +120,7 @@ export function TelegramMessenger({
   trashCount: number;
   conversations: TelegramListItem[];
   initialActive: TelegramActiveThread | null;
+  openedFromUrl?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -129,6 +131,7 @@ export function TelegramMessenger({
     initialActive,
   );
   const [threadLoading, setThreadLoading] = useState(false);
+  const [openOnMobile, setOpenOnMobile] = useState(openedFromUrl);
   const [moving, setMoving] = useState(false);
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
@@ -195,6 +198,7 @@ export function TelegramMessenger({
 
   const selectConversation = useCallback(
     (id: string) => {
+      setOpenOnMobile(true);
       setActiveId(id);
       setList((prev) =>
         prev.map((c) => (c.id === id ? { ...c, unread: false } : c)),
@@ -342,8 +346,13 @@ export function TelegramMessenger({
   }
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-3rem)] min-h-[480px] overflow-hidden border-t border-black/5 bg-[#eef2f5]">
-      <aside className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-black/10 bg-white">
+    <div className="flex h-full min-h-0 overflow-hidden bg-[#eef2f5]">
+      <aside
+        className={cn(
+          "flex w-full shrink-0 flex-col border-r border-black/10 bg-white md:max-w-[360px]",
+          openOnMobile && "max-md:hidden",
+        )}
+      >
         <div className="space-y-2 border-b border-black/5 p-3">
           <div className="flex gap-1 rounded-lg bg-muted/70 p-0.5">
             {(
@@ -357,7 +366,7 @@ export function TelegramMessenger({
                 key={id}
                 href={folderHref(id)}
                 className={cn(
-                  "min-w-0 flex-1 rounded-md px-1.5 py-1.5 text-center text-[12px] font-medium transition-colors",
+                  "min-w-0 flex-1 rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:text-[12px]",
                   folder === id
                     ? "bg-white text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
@@ -451,7 +460,12 @@ export function TelegramMessenger({
         </div>
       </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col bg-[#e6ebee]">
+      <section
+        className={cn(
+          "min-w-0 flex-1 flex-col bg-[#e6ebee]",
+          openOnMobile ? "flex" : "hidden md:flex",
+        )}
+      >
         {!active && threadLoading ? (
           <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
             Загрузка…
@@ -462,7 +476,18 @@ export function TelegramMessenger({
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-3 border-b border-black/10 bg-white px-4 py-2.5">
+            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 sm:gap-3 sm:px-4">
+              <button
+                type="button"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"
+                aria-label="К списку диалогов"
+                onClick={() => {
+                  setOpenOnMobile(false);
+                  syncUrl(folder, null);
+                }}
+              >
+                ←
+              </button>
               <StudentAvatar name={active.title} size="md" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-[15px] font-semibold leading-tight">
@@ -591,7 +616,7 @@ export function TelegramMessenger({
               })}
             </div>
 
-            <div className="border-t border-black/10 bg-white px-3 py-2">
+            <div className="border-t border-black/10 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               {active.replyDraft ? (
                 <p className="mb-1 px-1 text-[11px] text-muted-foreground">
                   Черновик Hermes — проверьте и отправьте
@@ -610,7 +635,7 @@ export function TelegramMessenger({
                   required
                   defaultValue={active.replyDraft ?? ""}
                   placeholder="Напишите клиенту…"
-                  className="max-h-32 min-h-9 flex-1 resize-none overflow-y-auto rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus:bg-muted"
+                  className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-base outline-none placeholder:text-muted-foreground focus:bg-muted md:min-h-9 md:text-sm"
                   ref={(el) => {
                     if (!el) return;
                     el.style.height = "auto";

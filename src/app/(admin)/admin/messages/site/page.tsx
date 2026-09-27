@@ -91,10 +91,12 @@ export default async function AdminSiteMessagesPage({
     badgeTone: item.unanswered ? "warning" : null,
   }));
 
-  const selectedId =
-    studentId && list.some((c) => c.studentId === studentId)
-      ? studentId
-      : (list[0]?.studentId ?? null);
+  const openedFromQuery = Boolean(
+    studentId && list.some((c) => c.studentId === studentId),
+  );
+  const selectedId = openedFromQuery
+    ? studentId!
+    : (list[0]?.studentId ?? null);
 
   const selected = selectedId
     ? await prisma.student.findUnique({
@@ -124,7 +126,7 @@ export default async function AdminSiteMessagesPage({
 
   if (list.length === 0 && !selected) {
     return (
-      <div className="-m-6 flex h-[calc(100vh-3rem)] min-h-[480px] overflow-hidden border-t border-black/5 bg-[#eef2f5]">
+      <div className="flex h-full min-h-0 items-center justify-center bg-[#eef2f5]">
         <div className="flex flex-1 items-center justify-center">
           <EmptyState
             title="Нет сообщений"
@@ -137,6 +139,7 @@ export default async function AdminSiteMessagesPage({
 
   return (
     <SiteMessenger
+      openOnMobile={openedFromQuery}
       conversations={conversationsUi}
       active={
         selected

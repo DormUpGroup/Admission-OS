@@ -247,9 +247,9 @@ export default async function AdminApplicationsPage({
         ))}
       </div>
 
-      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-3">
+      <form className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
         <input type="hidden" name="view" value={view} />
-        <div className="min-w-[180px] flex-[1.2] space-y-1">
+        <div className="space-y-1 sm:col-span-2 lg:col-span-1">
           <label className="text-[11px] text-muted-foreground">Поиск</label>
           <Input
             name="q"
@@ -257,7 +257,7 @@ export default async function AdminApplicationsPage({
             defaultValue={sp.q ?? ""}
           />
         </div>
-        <div className="min-w-[160px] flex-1 space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Студент</label>
           <select
             name="studentId"
@@ -272,7 +272,7 @@ export default async function AdminApplicationsPage({
             ))}
           </select>
         </div>
-        <div className="w-[150px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Статус</label>
           <select
             name="status"
@@ -287,7 +287,7 @@ export default async function AdminApplicationsPage({
             ))}
           </select>
         </div>
-        <div className="w-[120px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Риск</label>
           <select
             name="risk"
@@ -302,7 +302,7 @@ export default async function AdminApplicationsPage({
             <option value="NONE">Нет</option>
           </select>
         </div>
-        <div className="w-[110px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Набор</label>
           <select
             name="intake"
@@ -317,7 +317,7 @@ export default async function AdminApplicationsPage({
             ))}
           </select>
         </div>
-        <div className="min-w-[160px] flex-1 space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Университет</label>
           <select
             name="universityId"
@@ -332,7 +332,7 @@ export default async function AdminApplicationsPage({
             ))}
           </select>
         </div>
-        <div className="w-[150px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Сортировка</label>
           <select
             name="sort"
@@ -346,12 +346,14 @@ export default async function AdminApplicationsPage({
             ))}
           </select>
         </div>
-        <Button type="submit" size="sm">
-          Применить
-        </Button>
-        <Button asChild type="button" size="sm" variant="outline">
-          <Link href="/admin/applications">Сбросить</Link>
-        </Button>
+        <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row lg:col-span-1">
+          <Button type="submit" size="sm" className="w-full sm:w-auto">
+            Применить
+          </Button>
+          <Button asChild type="button" size="sm" variant="outline" className="w-full sm:w-auto">
+            <Link href="/admin/applications">Сбросить</Link>
+          </Button>
+        </div>
       </form>
 
       {applications.length === 0 ? (
@@ -360,6 +362,40 @@ export default async function AdminApplicationsPage({
           description="Измените фильтры или создайте подачу в профиле студента."
         />
       ) : (
+        <>
+        <ul className="space-y-2 md:hidden">
+          {applications.map((app) => (
+            <li key={app.id}>
+              <Link
+                href={`/admin/students/${app.studentId}/applications/${app.id}`}
+                className="surface-card block p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{app.program.name}</p>
+                    <p className="truncate text-[12px] text-muted-foreground">
+                      {app.program.university.name}
+                    </p>
+                    <p className="mt-1 truncate text-[13px]">
+                      {fullName(app.student.firstName, app.student.lastName)}
+                    </p>
+                  </div>
+                  <RiskBadge level={app.riskLevel} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={app.status} kind="application" />
+                  <span className="text-[12px] text-muted-foreground">
+                    {formatDate(app.hardDeadline)}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <ProgressBar value={app.readinessPercent} showLabel size="sm" />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden md:block">
         <DataTable>
           <DataTableHeader>
             <DataTableRow>
@@ -410,6 +446,8 @@ export default async function AdminApplicationsPage({
             ))}
           </DataTableBody>
         </DataTable>
+        </div>
+        </>
       )}
     </div>
   );

@@ -106,6 +106,75 @@ export default async function AdminDocumentsPage({
           description="Загруженные файлы студентов появятся здесь для проверки."
         />
       ) : (
+        <>
+        <ul className="space-y-2 md:hidden">
+          {documents.map((doc) => {
+            const related = [
+              ...new Set(
+                doc.requirements.map(
+                  (r) =>
+                    `${r.application.program.university.name} — ${r.application.program.name}`
+                )
+              ),
+            ];
+            const canReview =
+              doc.status === "UPLOADED" || doc.status === "UNDER_REVIEW";
+            return (
+              <li key={doc.id} className="surface-card space-y-2 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium">{doc.name}</p>
+                    <Link
+                      href={`/admin/students/${doc.studentId}`}
+                      className="text-[13px] text-muted-foreground hover:underline"
+                    >
+                      {fullName(doc.student.firstName, doc.student.lastName)}
+                    </Link>
+                  </div>
+                  <DocumentStatusBadge status={doc.status} />
+                </div>
+                <p className="text-[12px] text-muted-foreground">
+                  {formatDate(doc.uploadedAt)}
+                  {related.length ? ` · ${related.join(", ")}` : ""}
+                </p>
+                {doc.fileUrl ? (
+                  <a
+                    href={doc.fileUrl}
+                    className="text-[13px] text-sky-700 hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Открыть файл
+                  </a>
+                ) : null}
+                {canReview ? (
+                  <div className="space-y-2">
+                    <form action={approveDocumentAction.bind(null, doc.id)}>
+                      <Button type="submit" size="sm" variant="secondary" className="w-full">
+                        Одобрить
+                      </Button>
+                    </form>
+                    <form action={needsChangesAction} className="flex flex-col gap-2">
+                      <input type="hidden" name="documentId" value={doc.id} />
+                      <Input name="reason" placeholder="Причина…" required />
+                      <Button type="submit" size="sm" variant="outline" className="w-full">
+                        Нужны правки
+                      </Button>
+                    </form>
+                  </div>
+                ) : (
+                  <Link
+                    href={`/admin/students/${doc.studentId}?tab=documents`}
+                    className="text-xs text-muted-foreground hover:underline"
+                  >
+                    Открыть хранилище
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden md:block">
         <DataTable>
           <DataTableHeader>
             <DataTableRow>
@@ -199,6 +268,8 @@ export default async function AdminDocumentsPage({
             })}
           </DataTableBody>
         </DataTable>
+        </div>
+        </>
       )}
     </div>
   );

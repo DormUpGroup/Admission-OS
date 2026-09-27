@@ -9,12 +9,12 @@ export function DataTable({ className, children, ...props }: DataTableProps) {
   return (
     <div
       className={cn(
-        "w-full overflow-auto rounded-2xl surface-card",
+        "w-full overflow-x-auto overscroll-x-contain rounded-2xl surface-card",
         className
       )}
       {...props}
     >
-      <table className="w-full caption-bottom text-[13px]">{children}</table>
+      <table className="w-full min-w-[640px] caption-bottom text-[13px]">{children}</table>
     </div>
   );
 }

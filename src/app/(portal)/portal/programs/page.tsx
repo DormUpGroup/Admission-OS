@@ -16,7 +16,7 @@ export default async function PortalProgramsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight">Программы</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Программы</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
             Рекомендации появятся после анкеты по подбору программ
           </p>
@@ -47,7 +47,7 @@ export default async function PortalProgramsPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
+          <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px] text-foreground">
             Программы
           </h1>
           <p className="mt-1 text-[15px] text-muted-foreground">

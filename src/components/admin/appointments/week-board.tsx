@@ -103,13 +103,13 @@ export function AppointmentsHourBoard({
     byCell.set(key, list);
   }
 
-  const minWidth = days.length <= 1 ? "360px" : "720px";
+  const minWidth = days.length <= 1 ? undefined : "720px";
 
   return (
     <div className="overflow-x-auto rounded-lg border border-black/5 bg-white">
       <table
         className="w-full border-collapse text-left text-sm"
-        style={{ minWidth }}
+        style={minWidth ? { minWidth } : undefined}
       >
         <thead>
           <tr className="border-b border-black/5 text-[12px] text-muted-foreground">

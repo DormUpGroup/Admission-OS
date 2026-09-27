@@ -70,6 +70,7 @@ export function ChannelMessenger({
   emptyThreadText = "Выберите диалог",
   sidebarTop,
   compose,
+  openOnMobile = false,
 }: {
   channelLabel: string;
   conversations: ChannelListItem[];
@@ -80,6 +81,8 @@ export function ChannelMessenger({
   emptyThreadText?: string;
   sidebarTop?: ReactNode;
   compose?: ReactNode;
+  /** Phone shows the thread only when the URL opened a specific dialog. */
+  openOnMobile?: boolean;
 }) {
   const [query, setQuery] = useState("");
 
@@ -97,9 +100,20 @@ export function ChannelMessenger({
     return conversationHref.replace("{id}", encodeURIComponent(id));
   }
 
+  const queryIndex = conversationHref.indexOf("?");
+  const listHref = (
+    queryIndex === -1 ? conversationHref : conversationHref.slice(0, queryIndex)
+  ).replace("{id}", "");
+  const threadOnPhone = Boolean(active) && openOnMobile;
+
   return (
-    <div className="-m-6 flex h-[calc(100vh-3rem)] min-h-[480px] overflow-hidden border-t border-black/5 bg-[#eef2f5]">
-      <aside className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-black/10 bg-white">
+    <div className="flex h-full min-h-0 overflow-hidden bg-[#eef2f5]">
+      <aside
+        className={cn(
+          "flex w-full shrink-0 flex-col border-r border-black/10 bg-white md:max-w-[360px]",
+          threadOnPhone && "max-md:hidden",
+        )}
+      >
         <div className="space-y-2 border-b border-black/5 p-3">
           {sidebarTop}
           <input
@@ -159,14 +173,26 @@ export function ChannelMessenger({
         </div>
       </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col bg-[#e6ebee]">
+      <section
+        className={cn(
+          "min-w-0 flex-1 flex-col bg-[#e6ebee]",
+          threadOnPhone ? "flex" : "hidden md:flex",
+        )}
+      >
         {!active ? (
           <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
             {emptyThreadText}
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-3 border-b border-black/10 bg-white px-4 py-2.5">
+            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2.5 sm:gap-3 sm:px-4">
+              <Link
+                href={listHref}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"
+                aria-label="К списку диалогов"
+              >
+                ←
+              </Link>
               <StudentAvatar name={active.title} size="md" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-[15px] font-semibold leading-tight">
@@ -266,7 +292,7 @@ export function ChannelMessenger({
             </div>
 
             {compose ? (
-              <div className="border-t border-black/10 bg-white px-3 py-2">
+              <div className="border-t border-black/10 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 {compose}
               </div>
             ) : null}

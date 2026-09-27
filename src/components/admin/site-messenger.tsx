@@ -12,9 +12,11 @@ import { Button } from "@/components/ui/button";
 export function SiteMessenger({
   conversations,
   active,
+  openOnMobile = false,
 }: {
   conversations: ChannelListItem[];
   active: (ChannelActiveThread & { studentId: string }) | null;
+  openOnMobile?: boolean;
 }) {
   return (
     <ChannelMessenger
@@ -36,6 +38,7 @@ export function SiteMessenger({
           : null
       }
       conversationHref="/admin/messages/site?studentId={id}"
+      openOnMobile={openOnMobile}
       emptyListText="Пока нет диалогов со студентами"
       emptyThreadText="Выберите диалог"
       compose={

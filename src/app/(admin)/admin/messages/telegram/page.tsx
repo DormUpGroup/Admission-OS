@@ -26,7 +26,7 @@ export default async function AdminTelegramMessagesPage({
     lists.trash.length === 0
   ) {
     return (
-      <div className="-m-6 flex h-[calc(100vh-3rem)] items-center justify-center bg-[#eef2f5]">
+      <div className="flex h-full min-h-0 items-center justify-center bg-[#eef2f5]">
         <EmptyState
           title="Пока нет диалогов"
           description="Как только клиент напишет боту, разговор появится здесь."
@@ -35,10 +35,12 @@ export default async function AdminTelegramMessagesPage({
     );
   }
 
-  const activeId =
-    conversationId && list.some((c) => c.id === conversationId)
-      ? conversationId
-      : (list[0]?.id ?? null);
+  const openedFromUrl = Boolean(
+    conversationId && list.some((c) => c.id === conversationId),
+  );
+  const activeId = openedFromUrl
+    ? conversationId!
+    : (list[0]?.id ?? null);
 
   const active = activeId ? await loadTelegramThread(activeId) : null;
 
@@ -50,6 +52,7 @@ export default async function AdminTelegramMessagesPage({
       trashCount={lists.trash.length}
       conversations={list}
       initialActive={active}
+      openedFromUrl={openedFromUrl}
     />
   );
 }

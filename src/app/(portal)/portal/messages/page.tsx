@@ -87,7 +87,7 @@ export default async function PortalMessagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-tight">Сообщения</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Сообщения</h1>
         <p className="mt-1 text-[15px] text-muted-foreground">
           {curator
             ? `Переписка с куратором ${curator.name}`

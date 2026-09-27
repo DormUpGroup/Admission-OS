@@ -162,13 +162,13 @@ export default async function StudentsPage({
         ))}
       </div>
 
-      <form className="flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-card p-3">
+      <form className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
         <input type="hidden" name="view" value={view} />
-        <div className="min-w-[160px] flex-1 space-y-1">
+        <div className="space-y-1 sm:col-span-2 lg:col-span-1">
           <label className="text-[11px] text-muted-foreground">Поиск</label>
           <Input name="q" placeholder="Имя или email" defaultValue={sp.q ?? ""} />
         </div>
-        <div className="w-[120px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Набор</label>
           <select
             name="intake"
@@ -183,7 +183,7 @@ export default async function StudentsPage({
             ))}
           </select>
         </div>
-        <div className="w-[120px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Уровень</label>
           <select
             name="studyLevel"
@@ -197,12 +197,12 @@ export default async function StudentsPage({
             <option value="OTHER">Другое</option>
           </select>
         </div>
-        <div className="w-[120px] space-y-1">
+        <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">Страна</label>
           <Input name="country" defaultValue={sp.country ?? ""} placeholder="Любая" />
         </div>
         {session.user.role === "ADMIN" ? (
-          <div className="w-[160px] space-y-1">
+          <div className="space-y-1">
             <label className="text-[11px] text-muted-foreground">Куратор</label>
             <select
               name="curatorId"
@@ -218,9 +218,11 @@ export default async function StudentsPage({
             </select>
           </div>
         ) : null}
-        <Button type="submit" size="sm" variant="secondary">
-          Фильтр
-        </Button>
+        <div className="flex items-end sm:col-span-2 lg:col-span-1">
+          <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">
+            Фильтр
+          </Button>
+        </div>
       </form>
 
       {students.length === 0 ? (
@@ -234,6 +236,50 @@ export default async function StudentsPage({
           }
         />
       ) : (
+        <>
+        <ul className="space-y-2 md:hidden">
+          {students.map((s) => {
+            const approved = s.documents.filter((d) => d.status === "APPROVED")
+              .length;
+            const next = parseNextAction(s.nextActionJson);
+            return (
+              <li key={s.id}>
+                <Link
+                  href={`/admin/students/${s.id}`}
+                  className="surface-card block p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <StudentAvatar
+                      firstName={s.firstName}
+                      lastName={s.lastName}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {fullName(s.firstName, s.lastName)}
+                      </p>
+                      <p className="truncate text-[12px] text-muted-foreground">
+                        {s.email}
+                      </p>
+                    </div>
+                    <RiskBadge level={s.riskLevel} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={s.journeyStage} />
+                    <span className="text-[12px] text-muted-foreground">
+                      Набор {s.intake} · подачи {s.applications.length} ·
+                      документы {approved}/{s.documents.length}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[13px] text-muted-foreground">
+                    {next?.title ?? "Нет следующего действия"}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden md:block">
         <DataTable>
           <DataTableHeader>
             <DataTableRow>
@@ -298,6 +344,8 @@ export default async function StudentsPage({
             })}
           </DataTableBody>
         </DataTable>
+        </div>
+        </>
       )}
     </div>
   );

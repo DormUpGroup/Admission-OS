@@ -85,6 +85,7 @@ export interface AppSidebarProps {
   userRole?: string;
   messageCounts?: MessageUnreadCounts;
   appointmentEventCount?: number;
+  onNavigate?: () => void;
 }
 
 export function AppSidebar({
@@ -93,6 +94,7 @@ export function AppSidebar({
   userRole,
   messageCounts,
   appointmentEventCount = 0,
+  onNavigate,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const isAdmin = userRole === "ADMIN";
@@ -113,7 +115,7 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "flex h-screen sticky top-0 w-[220px] shrink-0 flex-col overflow-hidden rounded-r-[28px] border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
+        "flex h-full w-[220px] shrink-0 flex-col overflow-hidden rounded-r-[28px] border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
         className,
       )}
     >
@@ -140,6 +142,7 @@ export function AppSidebar({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                     active
@@ -186,6 +189,7 @@ export function AppSidebar({
                     <li key={channel.href}>
                       <Link
                         href={channel.href}
+                        onClick={onNavigate}
                         className={cn(
                           "flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[12px] transition-[box-shadow,background,color]",
                           active
@@ -211,6 +215,7 @@ export function AppSidebar({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
                     active
@@ -239,6 +244,7 @@ export function AppSidebar({
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "hover:text-foreground",
                     isActive(pathname, item.href) && "text-foreground",

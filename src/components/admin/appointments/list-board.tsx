@@ -58,7 +58,39 @@ export function AppointmentsListBoard({
           {query.trim() ? "Ничего не найдено" : "Нет консультаций"}
         </div>
       ) : (
-    <div className="overflow-hidden rounded-lg border border-black/5 bg-white">
+    <>
+    <ul className="space-y-2 md:hidden">
+      {sorted.map((a) => {
+        const whenIso = a.pendingStartsAt ?? a.startsAt;
+        const active = selectedId === a.id;
+        return (
+          <li key={a.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(a.id)}
+              className={`w-full rounded-lg border border-black/5 px-3 py-3 text-left ${
+                active ? "bg-primary/10" : "bg-white"
+              }`}
+            >
+              <p className="text-[13px] text-muted-foreground">{formatWhen(whenIso)}</p>
+              <p className="mt-0.5 font-medium">
+                {a.subjectLabel}
+                {a.nickname ? (
+                  <span className="ml-1.5 font-normal text-muted-foreground">
+                    @{a.nickname}
+                  </span>
+                ) : null}
+              </p>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {statusBadge(a)}
+                {a.hasTelegram ? " · Telegram" : ""}
+              </p>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+    <div className="hidden overflow-x-auto rounded-lg border border-black/5 bg-white md:block">
       <table className="w-full text-left text-sm">
         <thead className="border-b border-black/5 text-[12px] text-muted-foreground">
           <tr>
@@ -103,6 +135,7 @@ export function AppointmentsListBoard({
         </tbody>
       </table>
     </div>
+    </>
       )}
     </div>
   );

@@ -139,6 +139,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* iOS zooms the page when a focused field is under 16px. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 2.75rem;
+  }
+}
+
 h1,
 h2,
 h3,

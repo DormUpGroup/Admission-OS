@@ -46,7 +46,7 @@ export function AppointmentsMonthBoard({
 
   return (
     <div className="overflow-hidden rounded-lg border border-black/5 bg-white">
-      <div className="grid grid-cols-7 border-b border-black/5 text-center text-[12px] text-muted-foreground">
+      <div className="grid grid-cols-7 border-b border-black/5 text-center text-[10px] text-muted-foreground sm:text-[12px]">
         {weekdayLabels.map((w) => (
           <div key={w} className="px-1 py-2 font-medium">
             {w}
@@ -71,7 +71,7 @@ export function AppointmentsMonthBoard({
                   key={ymd}
                   type="button"
                   onClick={() => onSelectDay(ymd)}
-                  className={`min-h-24 p-1.5 text-left align-top hover:bg-muted/40 ${
+                  className={`min-h-16 p-1 text-left align-top hover:bg-muted/40 sm:min-h-24 sm:p-1.5 ${
                     isToday
                       ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
                       : inMonth
@@ -108,10 +108,10 @@ export function AppointmentsMonthBoard({
                             onSelectAppointment(a.id);
                           }
                         }}
-                        className={`block truncate rounded px-1 py-0.5 text-[10px] ${appointmentChipClass(a, selectedId === a.id)}`}
+                        className={`block truncate rounded px-0.5 py-0.5 text-[10px] sm:px-1 ${appointmentChipClass(a, selectedId === a.id)}`}
                       >
-                        <span className="font-medium tabular-nums">{time}</span>{" "}
-                        {a.subjectLabel}
+                        <span className="font-medium tabular-nums">{time}</span>
+                        <span className="hidden sm:inline"> {a.subjectLabel}</span>
                       </span>
                       );
                     })}
