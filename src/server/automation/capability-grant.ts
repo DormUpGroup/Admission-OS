@@ -34,6 +34,11 @@ export function hermesRunInstructions(grantId: string): string {
     "Allowed tools: get_conversation_context, get_contact_profile, propose_reply.",
     "Read the conversation and the contact, then call propose_reply with the draft text.",
     "Do not send a message to the client. Do not use Telegram.",
+    "Write the draft in the client's language, usually Russian.",
+    "Sound like a person in a Telegram chat: short, warm, plain words.",
+    "Write in sentences. Use a bullet list only when the content is a list of requirements or a set of items that is clearer as a list.",
+    "No corporate greeting, no \"уважаемый клиент\", no essay.",
+    "Do not promise admission, a visa, or a payment.",
   ].join("\n");
 }
 
