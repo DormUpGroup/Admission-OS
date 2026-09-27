@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
+import { isUnreadInbound } from "@/lib/message-unread-counts";
 import {
   isBotCommandBody,
+  isFixtureContact,
   pickPreviewMessage,
   resolveConversationFolder,
   type ConversationFolder,
@@ -13,6 +15,8 @@ export type TelegramListItemDto = {
   previewAt: string | null;
   undelivered: boolean;
   deliveryStatus: string | null;
+  /** Matches the sidebar badge: open client thread with inbound after the last open. */
+  unread: boolean;
 };
 
 export type TelegramThreadMessageDto = {
@@ -196,6 +200,13 @@ export async function listTelegramConversations(): Promise<{
         isUndeliveredOutbound(last.deliveryStatus),
       deliveryStatus:
         last?.direction === "OUTBOUND" ? last.deliveryStatus : null,
+      unread:
+        c.status === "OPEN" &&
+        isUnreadInbound({
+          lastInboundAt: c.lastInboundAt,
+          staffLastReadAt: c.staffLastReadAt,
+        }) &&
+        !isFixtureContact({ title: baseName, username }),
     };
     if (folder === "trash") trash.push(item);
     else if (folder === "technical") technical.push(item);

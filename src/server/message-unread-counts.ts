@@ -2,7 +2,10 @@ import { prisma } from "@/lib/db";
 import { studentScopeWhere } from "@/server/auth/guards";
 import { isFixtureContact } from "@/lib/telegram-conversation-kind";
 import type { UserRole } from "@/lib/enums";
-import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
+import {
+  isUnreadInbound,
+  type MessageUnreadCounts,
+} from "@/lib/message-unread-counts";
 
 export type { MessageUnreadCounts };
 
@@ -50,8 +53,14 @@ async function countUnreadTelegram(): Promise<number> {
 
   let count = 0;
   for (const c of candidates) {
-    if (!c.lastInboundAt) continue;
-    if (c.staffLastReadAt && c.lastInboundAt <= c.staffLastReadAt) continue;
+    if (
+      !isUnreadInbound({
+        lastInboundAt: c.lastInboundAt,
+        staffLastReadAt: c.staffLastReadAt,
+      })
+    ) {
+      continue;
+    }
 
     const identity = c.lead?.channelIdentities[0];
     const title =

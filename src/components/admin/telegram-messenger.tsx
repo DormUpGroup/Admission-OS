@@ -23,6 +23,7 @@ import {
   setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
 } from "@/server/inbox-actions";
+import { UnreadBadge } from "@/components/unread-badge";
 import { Button } from "@/components/ui/button";
 import { useFormStatus } from "react-dom";
 import {
@@ -37,6 +38,7 @@ export type TelegramListItem = {
   previewAt: string | null;
   undelivered: boolean;
   deliveryStatus: string | null;
+  unread: boolean;
 };
 
 export type TelegramThreadMessage = {
@@ -193,6 +195,9 @@ export function TelegramMessenger({
   const selectConversation = useCallback(
     (id: string) => {
       setActiveId(id);
+      setList((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, unread: false } : c)),
+      );
       syncUrl(folder, id);
       const cached = cacheRef.current.get(id);
       if (cached) setActive(cached);
@@ -269,6 +274,7 @@ export function TelegramMessenger({
                 previewAt: optimistic.createdAt,
                 undelivered: true,
                 deliveryStatus: "PENDING",
+                unread: false,
               }
             : c,
         ),
@@ -394,16 +400,31 @@ export function TelegramMessenger({
                   <StudentAvatar name={c.title} size="lg" className="mt-0.5" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[15px] font-medium text-foreground">
+                      <span
+                        className={cn(
+                          "truncate text-[15px] text-foreground",
+                          c.unread ? "font-semibold" : "font-medium",
+                        )}
+                      >
                         {c.title}
                       </span>
-                      <span className="shrink-0 text-[12px] text-muted-foreground">
+                      <span
+                        className={cn(
+                          "shrink-0 text-[12px]",
+                          c.unread
+                            ? "font-medium text-[var(--brand)]"
+                            : "text-muted-foreground",
+                        )}
+                      >
                         {formatListTime(c.previewAt)}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                      {c.preview || "—"}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <p className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+                        {c.preview || "—"}
+                      </p>
+                      <UnreadBadge count={c.unread ? 1 : 0} />
+                    </div>
                     {c.undelivered && c.deliveryStatus ? (
                       <span className="mt-1 inline-flex items-center gap-1">
                         <MessageReceiptTicks
