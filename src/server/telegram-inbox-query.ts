@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 import {
   isBotCommandBody,
-  isTechnicalConversation,
   pickPreviewMessage,
+  resolveConversationFolder,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 
@@ -13,7 +13,6 @@ export type TelegramListItemDto = {
   previewAt: string | null;
   undelivered: boolean;
   deliveryStatus: string | null;
-  technical: boolean;
 };
 
 export type TelegramThreadMessageDto = {
@@ -131,6 +130,7 @@ function isUndeliveredOutbound(status: string) {
 export async function listTelegramConversations(): Promise<{
   chats: TelegramListItemDto[];
   technical: TelegramListItemDto[];
+  trash: TelegramListItemDto[];
 }> {
   const conversations = await prisma.conversation.findMany({
     where: { channel: "TELEGRAM" },
@@ -168,6 +168,7 @@ export async function listTelegramConversations(): Promise<{
 
   const chats: TelegramListItemDto[] = [];
   const technical: TelegramListItemDto[] = [];
+  const trash: TelegramListItemDto[] = [];
   const humanInboundIds = await humanInboundConversationIds(
     conversations.map((c) => c.id),
   );
@@ -176,14 +177,12 @@ export async function listTelegramConversations(): Promise<{
     const baseName = conversationBaseName(c);
     const username = primaryIdentity(c)?.username ?? null;
     const title = conversationTitle(c);
-    const isTech = isTechnicalConversation(
-      c.messages,
-      {
-        title: baseName,
-        username,
-      },
-      { hasHumanInbound: humanInboundIds.has(c.id) },
-    );
+    const folder = resolveConversationFolder({
+      messages: c.messages,
+      contact: { title: baseName, username },
+      hasHumanInbound: humanInboundIds.has(c.id),
+      inboxFolder: c.inboxFolder,
+    });
     const previewMsg = pickPreviewMessage(c.messages);
     const last = c.messages[0];
     const item: TelegramListItemDto = {
@@ -197,20 +196,26 @@ export async function listTelegramConversations(): Promise<{
         isUndeliveredOutbound(last.deliveryStatus),
       deliveryStatus:
         last?.direction === "OUTBOUND" ? last.deliveryStatus : null,
-      technical: isTech,
     };
-    if (isTech) technical.push(item);
+    if (folder === "trash") trash.push(item);
+    else if (folder === "technical") technical.push(item);
     else chats.push(item);
   }
 
-  return { chats, technical };
+  return { chats, technical, trash };
 }
 
 export function folderList(
   folder: ConversationFolder,
-  lists: { chats: TelegramListItemDto[]; technical: TelegramListItemDto[] },
+  lists: {
+    chats: TelegramListItemDto[];
+    technical: TelegramListItemDto[];
+    trash: TelegramListItemDto[];
+  },
 ): TelegramListItemDto[] {
-  return folder === "technical" ? lists.technical : lists.chats;
+  if (folder === "technical") return lists.technical;
+  if (folder === "trash") return lists.trash;
+  return lists.chats;
 }
 
 export async function loadTelegramThread(

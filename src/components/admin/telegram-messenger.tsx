@@ -13,12 +13,14 @@ import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
 import {
+  folderMoveTarget,
   isBotCommandBody,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 import { cn, formatDate } from "@/lib/utils";
 import {
   sendTelegramInboxReplyAction,
+  setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
 } from "@/server/inbox-actions";
 import { Button } from "@/components/ui/button";
@@ -91,7 +93,7 @@ function SubmitButton() {
 
 function syncUrl(folder: ConversationFolder, conversationId: string | null) {
   const params = new URLSearchParams();
-  if (folder === "technical") params.set("folder", "technical");
+  if (folder !== "chats") params.set("folder", folder);
   if (conversationId) params.set("conversationId", conversationId);
   const qs = params.toString();
   const href = qs
@@ -104,12 +106,14 @@ export function TelegramMessenger({
   folder,
   chatsCount,
   technicalCount,
+  trashCount,
   conversations,
   initialActive,
 }: {
   folder: ConversationFolder;
   chatsCount: number;
   technicalCount: number;
+  trashCount: number;
   conversations: TelegramListItem[];
   initialActive: TelegramActiveThread | null;
 }) {
@@ -122,6 +126,7 @@ export function TelegramMessenger({
     initialActive,
   );
   const [threadLoading, setThreadLoading] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
   const cacheRef = useRef<Map<string, TelegramActiveThread>>(new Map());
@@ -210,8 +215,24 @@ export function TelegramMessenger({
 
   function folderHref(next: ConversationFolder) {
     const params = new URLSearchParams();
-    if (next === "technical") params.set("folder", "technical");
-    return `/admin/messages/telegram?${params.toString()}`;
+    if (next !== "chats") params.set("folder", next);
+    return `/admin/messages/telegram${params.size ? `?${params.toString()}` : ""}`;
+  }
+
+  async function moveFolder() {
+    if (!activeId || moving) return;
+    const target = folderMoveTarget(folder);
+    setMoving(true);
+    try {
+      await setTelegramInboxFolderAction(activeId, target.folder);
+      const params = new URLSearchParams();
+      if (target.folder !== "chats") params.set("folder", target.folder);
+      params.set("conversationId", activeId);
+      router.push(`/admin/messages/telegram?${params.toString()}`);
+      router.refresh();
+    } finally {
+      setMoving(false);
+    }
   }
 
   async function handleSend(formData: FormData) {
@@ -313,34 +334,29 @@ export function TelegramMessenger({
       <aside className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-black/10 bg-white">
         <div className="space-y-2 border-b border-black/5 p-3">
           <div className="flex gap-1 rounded-lg bg-muted/70 p-0.5">
-            <Link
-              href={folderHref("chats")}
-              className={cn(
-                "flex-1 rounded-md px-2 py-1.5 text-center text-[13px] font-medium transition-colors",
-                folder === "chats"
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Чаты
-              <span className="ml-1 text-[11px] text-muted-foreground">
-                {chatsCount}
-              </span>
-            </Link>
-            <Link
-              href={folderHref("technical")}
-              className={cn(
-                "flex-1 rounded-md px-2 py-1.5 text-center text-[13px] font-medium transition-colors",
-                folder === "technical"
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Технические
-              <span className="ml-1 text-[11px] text-muted-foreground">
-                {technicalCount}
-              </span>
-            </Link>
+            {(
+              [
+                ["chats", "Чаты", chatsCount],
+                ["technical", "Технические", technicalCount],
+                ["trash", "Мусор", trashCount],
+              ] as const
+            ).map(([id, label, count]) => (
+              <Link
+                key={id}
+                href={folderHref(id)}
+                className={cn(
+                  "min-w-0 flex-1 rounded-md px-1.5 py-1.5 text-center text-[12px] font-medium transition-colors",
+                  folder === id
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+                <span className="ml-1 text-[11px] text-muted-foreground">
+                  {count}
+                </span>
+              </Link>
+            ))}
           </div>
           <input
             type="search"
@@ -358,7 +374,9 @@ export function TelegramMessenger({
                 ? "Ничего не найдено"
                 : folder === "technical"
                   ? "Нет технических диалогов"
-                  : "Пока нет диалогов с клиентами"}
+                  : folder === "trash"
+                    ? "Мусор пуст"
+                    : "Пока нет диалогов с клиентами"}
             </p>
           ) : (
             filtered.map((c) => {
@@ -426,10 +444,24 @@ export function TelegramMessenger({
                 <p className="text-[12px] text-muted-foreground">
                   Telegram
                   {active.automationPaused ? " · автоответы на паузе" : ""}
-                  {folder === "technical" ? " · технический" : ""}
+                  {folder === "technical"
+                    ? " · технический"
+                    : folder === "trash"
+                      ? " · мусор"
+                      : ""}
                   {threadLoading ? " · …" : ""}
                 </p>
               </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                disabled={moving}
+                onClick={() => void moveFolder()}
+              >
+                {moving ? "…" : folderMoveTarget(folder).label}
+              </Button>
             </header>
 
             <div

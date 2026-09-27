@@ -1,6 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import {
+  parseInboxFolderOverride,
+  type ConversationFolder,
+} from "@/lib/telegram-conversation-kind";
 import { requireStaff } from "@/server/auth/guards";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
@@ -52,4 +56,28 @@ export async function sendTelegramInboxReplyAction(
     deliveryStatus,
     duplicate,
   };
+}
+
+export async function setTelegramInboxFolderAction(
+  conversationId: string,
+  folder: ConversationFolder,
+): Promise<void> {
+  await requireStaff();
+  const next = parseInboxFolderOverride(folder);
+  if (!conversationId.trim() || !next) {
+    throw new Error("Не удалось перенести диалог");
+  }
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { id: true, channel: true },
+  });
+  if (!conversation || conversation.channel !== "TELEGRAM") {
+    throw new Error("Диалог не найден");
+  }
+
+  await prisma.conversation.update({
+    where: { id: conversation.id },
+    data: { inboxFolder: next },
+  });
 }

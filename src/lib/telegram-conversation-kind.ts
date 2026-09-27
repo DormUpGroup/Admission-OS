@@ -1,4 +1,4 @@
-export type ConversationFolder = "chats" | "technical";
+export type ConversationFolder = "chats" | "technical" | "trash";
 
 /** Telegram first_name / lead titles from integration fixtures. */
 export const FIXTURE_DISPLAY_NAMES = new Set([
@@ -36,6 +36,21 @@ export function parseTelegramBotCommand(text: string): string | null {
 export function isBotCommandBody(body: string | null | undefined): boolean {
   if (!body?.trim()) return false;
   return parseTelegramBotCommand(body) !== null;
+}
+
+/** Diagnostic probes (Diag / @diag_probe_user) stay out of the curator inbox. */
+export function isTrashContact(contact: {
+  title?: string | null;
+  username?: string | null;
+}): boolean {
+  const title = (contact.title ?? "").trim().toLowerCase();
+  if (title === "diag") return true;
+  const username = (contact.username ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "");
+  if (!username) return false;
+  return username === "diag_probe_user" || username.startsWith("diag_probe");
 }
 
 export function isFixtureContact(contact: {
@@ -79,8 +94,49 @@ export function pickPreviewMessage<
   return sorted.find((m) => !isBotCommandBody(m.body)) ?? sorted[0] ?? null;
 }
 
+export function parseInboxFolderOverride(
+  value: string | null | undefined,
+): ConversationFolder | null {
+  if (value === "chats" || value === "technical" || value === "trash") {
+    return value;
+  }
+  return null;
+}
+
+/** Where a thread belongs. A saved staff choice wins over automatic rules. */
+export function resolveConversationFolder(input: {
+  messages: Array<{ direction: string; body: string | null }>;
+  contact?: { title?: string | null; username?: string | null };
+  hasHumanInbound?: boolean;
+  inboxFolder?: string | null;
+}): ConversationFolder {
+  const override = parseInboxFolderOverride(input.inboxFolder);
+  if (override) return override;
+  if (input.contact && isTrashContact(input.contact)) return "trash";
+  if (
+    isTechnicalConversation(input.messages, input.contact, {
+      hasHumanInbound: input.hasHumanInbound,
+    })
+  ) {
+    return "technical";
+  }
+  return "chats";
+}
+
+/** Chats and technical swap. Trash returns to the client inbox. */
+export function folderMoveTarget(folder: ConversationFolder): {
+  folder: ConversationFolder;
+  label: string;
+} {
+  if (folder === "chats") {
+    return { folder: "technical", label: "В технические" };
+  }
+  return { folder: "chats", label: "В чаты" };
+}
+
 export function parseConversationFolder(
   value: string | undefined | null,
 ): ConversationFolder {
-  return value === "technical" ? "technical" : "chats";
+  if (value === "technical" || value === "trash") return value;
+  return "chats";
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  folderMoveTarget,
   isBotCommandBody,
   isTechnicalConversation,
   parseConversationFolder,
   pickPreviewMessage,
+  resolveConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 
 describe("isBotCommandBody", () => {
@@ -113,10 +115,58 @@ describe("pickPreviewMessage", () => {
   });
 });
 
+describe("resolveConversationFolder", () => {
+  it("puts Diag probes in trash", () => {
+    expect(
+      resolveConversationFolder({
+        messages: [{ direction: "INBOUND", body: "привет" }],
+        contact: { title: "Diag", username: "diag_probe_user" },
+        hasHumanInbound: true,
+      }),
+    ).toBe("trash");
+    expect(
+      resolveConversationFolder({
+        messages: [],
+        contact: { title: "Diag", username: null },
+      }),
+    ).toBe("trash");
+  });
+
+  it("lets a saved folder override automatic placement", () => {
+    expect(
+      resolveConversationFolder({
+        messages: [{ direction: "INBOUND", body: "привет" }],
+        contact: { title: "Michael Bilak", username: "bilakmichael" },
+        hasHumanInbound: true,
+        inboxFolder: "technical",
+      }),
+    ).toBe("technical");
+    expect(
+      resolveConversationFolder({
+        messages: [],
+        contact: { title: "Diag", username: "diag_probe_user" },
+        inboxFolder: "chats",
+      }),
+    ).toBe("chats");
+  });
+});
+
+describe("folderMoveTarget", () => {
+  it("swaps chats and technical, and restores trash to chats", () => {
+    expect(folderMoveTarget("chats")).toEqual({
+      folder: "technical",
+      label: "В технические",
+    });
+    expect(folderMoveTarget("technical").folder).toBe("chats");
+    expect(folderMoveTarget("trash").folder).toBe("chats");
+  });
+});
+
 describe("parseConversationFolder", () => {
   it("defaults to chats", () => {
     expect(parseConversationFolder(undefined)).toBe("chats");
     expect(parseConversationFolder("bogus")).toBe("chats");
     expect(parseConversationFolder("technical")).toBe("technical");
+    expect(parseConversationFolder("trash")).toBe("trash");
   });
 });

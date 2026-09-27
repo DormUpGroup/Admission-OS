@@ -20,7 +20,11 @@ export default async function AdminTelegramMessagesPage({
   const lists = await listTelegramConversations();
   const list = folderList(folder, lists);
 
-  if (lists.chats.length === 0 && lists.technical.length === 0) {
+  if (
+    lists.chats.length === 0 &&
+    lists.technical.length === 0 &&
+    lists.trash.length === 0
+  ) {
     return (
       <div className="-m-6 flex h-[calc(100vh-3rem)] items-center justify-center bg-[#eef2f5]">
         <EmptyState
@@ -43,6 +47,7 @@ export default async function AdminTelegramMessagesPage({
       folder={folder}
       chatsCount={lists.chats.length}
       technicalCount={lists.technical.length}
+      trashCount={lists.trash.length}
       conversations={list}
       initialActive={active}
     />

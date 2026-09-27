@@ -748,6 +748,8 @@ model Conversation {
   lastOutboundAt        DateTime?
   /// Watermark: staff has seen inbound up to this time (Immigrome UI open / reply).
   staffLastReadAt       DateTime?
+  /// Staff override for the Telegram inbox folder. Null keeps automatic placement.
+  inboxFolder           String?
   version               Int       @default(1)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
