@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENT_DEFINITIONS_BY_KEY } from "../registry";
-import {
-  decodeCapabilityJwtPayload,
-  HermesNotConfiguredError,
-  HermesRetryableError,
-} from "../hermes-client";
+import { HermesNotConfiguredError, HermesRetryableError } from "../hermes-client";
 import {
   dispatchHermesCreateRun,
   enqueueHermesCreateRun,
@@ -13,10 +8,8 @@ import {
 } from "../hermes-create-run";
 
 const env = {
-  HERMES_API_URL: "http://hermes.railway.internal:8080",
+  HERMES_API_URL: "http://hermes.railway.internal:8642",
   HERMES_API_KEY: "api-secret",
-  HERMES_MCP_KEY: "mcp-secret",
-  NEXTAUTH_URL: "https://os.example",
 };
 
 const now = new Date("2026-09-27T08:00:00.000Z");
@@ -139,22 +132,16 @@ describe("hermes.create_run dispatch", () => {
     const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
       fetchCalls += 1;
       const sent = JSON.parse(String(init?.body)) as {
-        text: string;
-        conversation_id: string;
+        input: string;
         session_id: string;
-        mcp_url: string;
-        capability_jwt: string;
       };
-      expect(sent.text).toBe("Хочу поступить");
-      expect(sent.conversation_id).toBe("conversation-1");
-      expect(sent.session_id).toBe("conversation-1");
-      expect(sent.mcp_url).toBe("https://os.example/api/mcp");
-      const claims = decodeCapabilityJwtPayload(sent.capability_jwt);
-      expect(claims.agent_run_id).toBe("run-1");
-      expect(claims.conversation_id).toBe("conversation-1");
-      expect(claims.allowed_tools).toEqual(AGENT_DEFINITIONS_BY_KEY.get("intake")?.allowedTools);
-      expect(claims.exp).toBe(Math.floor(now.getTime() / 1000) + 15 * 60);
-      return new Response(JSON.stringify({ run_id: "hermes-9" }), { status: 200 });
+      expect(sent).toEqual({
+        input: "Хочу поступить",
+        session_id: "conversation-1",
+      });
+      return new Response(JSON.stringify({ run_id: "hermes-9", status: "started" }), {
+        status: 202,
+      });
     }) as typeof fetch;
 
     const box = harness({

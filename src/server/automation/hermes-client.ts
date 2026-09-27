@@ -1,7 +1,4 @@
-import { createHmac } from "crypto";
-
 export const HERMES_CREATE_RUN_PATH = "/v1/runs";
-export const CAPABILITY_JWT_TTL_SECONDS = 15 * 60;
 export const HERMES_HTTP_TIMEOUT_MS = 20_000;
 
 /** Missing Hermes env. Worker defers the outbox row without burning attempts. */
@@ -20,67 +17,25 @@ export class HermesRetryableError extends Error {
   }
 }
 
-export type CapabilityJwtClaims = {
-  agent_run_id: string;
-  conversation_id: string;
-  allowed_tools: string[];
-  exp: number;
-};
-
+/** Body accepted by Nous hermes-agent POST /v1/runs. */
 export type HermesCreateRunBody = {
-  agent_run_id: string;
-  agent_key: string;
-  conversation_id: string;
+  input: string;
   session_id: string;
-  text: string;
-  mcp_url: string;
-  capability_jwt: string;
 };
 
 export type HermesHttpOutcome =
   | { kind: "ok"; runId: string; sessionId: string | null }
   | { kind: "terminal"; status: number; message: string };
 
-function base64urlJson(value: unknown): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
-}
-
-export function signCapabilityJwt(claims: CapabilityJwtClaims, secret: string): string {
-  const header = base64urlJson({ alg: "HS256", typ: "JWT" });
-  const payload = base64urlJson(claims);
-  const data = `${header}.${payload}`;
-  const signature = createHmac("sha256", secret).update(data).digest("base64url");
-  return `${data}.${signature}`;
-}
-
-export function decodeCapabilityJwtPayload(token: string): CapabilityJwtClaims {
-  const part = token.split(".")[1];
-  if (!part) throw new Error("Capability JWT is missing a payload");
-  const parsed = JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as CapabilityJwtClaims;
-  return parsed;
-}
-
-export function resolveMcpUrl(
-  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
-): string {
-  const explicit = env.HERMES_MCP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const base = (env.NEXTAUTH_URL?.trim() || "http://localhost:3000").replace(/\/$/, "");
-  return `${base}/api/mcp`;
-}
-
 export function readHermesConfig(
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
-): { apiUrl: string; apiKey: string; mcpKey: string } {
+): { apiUrl: string; apiKey: string } {
   const apiUrl = env.HERMES_API_URL?.trim() ?? "";
   const apiKey = env.HERMES_API_KEY?.trim() ?? "";
-  const mcpKey = env.HERMES_MCP_KEY?.trim() ?? "";
-  if (!apiUrl || !apiKey || !mcpKey) {
-    throw new HermesNotConfiguredError(
-      "HERMES_API_URL, HERMES_API_KEY, and HERMES_MCP_KEY are required",
-    );
+  if (!apiUrl || !apiKey) {
+    throw new HermesNotConfiguredError("HERMES_API_URL and HERMES_API_KEY are required");
   }
-  return { apiUrl: apiUrl.replace(/\/$/, ""), apiKey, mcpKey };
+  return { apiUrl: apiUrl.replace(/\/$/, ""), apiKey };
 }
 
 type HermesResponseBody = {
@@ -129,7 +84,10 @@ export async function postHermesCreateRun(options: {
     const sessionId =
       typeof data?.session_id === "string" && data.session_id.trim() ? data.session_id.trim() : null;
 
-    if ((response.status === 200 || response.status === 201 || response.status === 409) && runId) {
+    if (
+      (response.status === 200 || response.status === 201 || response.status === 202) &&
+      runId
+    ) {
       return { kind: "ok", runId, sessionId };
     }
 
@@ -137,7 +95,7 @@ export async function postHermesCreateRun(options: {
       throw new HermesRetryableError(responseMessage(data, response.status));
     }
 
-    if (response.ok || response.status === 409) {
+    if (response.ok) {
       throw new HermesRetryableError("Hermes response did not include run_id");
     }
 

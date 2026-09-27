@@ -4,12 +4,8 @@ import {
   HermesRetryableError,
   postHermesCreateRun,
   readHermesConfig,
-  resolveMcpUrl,
-  signCapabilityJwt,
-  CAPABILITY_JWT_TTL_SECONDS,
   type HermesCreateRunBody,
 } from "./hermes-client";
-import { AGENT_DEFINITIONS_BY_KEY, type AgentKey } from "./registry";
 
 export const HERMES_CREATE_RUN_EVENT = "hermes.create_run";
 
@@ -159,24 +155,9 @@ export async function dispatchHermesCreateRun(
     return { status: "failed", errorCode: "empty_text" };
   }
 
-  const spec = AGENT_DEFINITIONS_BY_KEY.get(run.agentKey as AgentKey);
-  const { mcpKey } = readHermesConfig(env);
   const body: HermesCreateRunBody = {
-    agent_run_id: run.id,
-    agent_key: run.agentKey,
-    conversation_id: conversation.id,
+    input: text,
     session_id: sessionId,
-    text,
-    mcp_url: resolveMcpUrl(env),
-    capability_jwt: signCapabilityJwt(
-      {
-        agent_run_id: run.id,
-        conversation_id: conversation.id,
-        allowed_tools: [...(spec?.allowedTools ?? [])],
-        exp: Math.floor(now.getTime() / 1000) + CAPABILITY_JWT_TTL_SECONDS,
-      },
-      mcpKey,
-    ),
   };
 
   const outcome = await postHermesCreateRun({
