@@ -757,9 +757,10 @@ model Conversation {
   lead            Lead?                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
   student         Student?              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   assignedCurator User?                 @relation("ConversationAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
-  messages        ConversationMessage[]
-  appointments    Appointment[]
-  agentRuns       AgentRun[]
+  messages         ConversationMessage[]
+  appointments     Appointment[]
+  agentRuns        AgentRun[]
+  capabilityGrants AgentCapabilityGrant[]
 
   @@index([leadId, status])
   @@index([studentId, status])
@@ -898,17 +899,36 @@ model AgentRun {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  agentDefinition AgentDefinition   @relation(fields: [agentKey], references: [key], onDelete: Restrict)
-  parent          AgentRun?         @relation("AgentRunChildren", fields: [parentRunId], references: [id])
-  children        AgentRun[]        @relation("AgentRunChildren")
-  conversation    Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  agentDefinition AgentDefinition        @relation(fields: [agentKey], references: [key], onDelete: Restrict)
+  parent          AgentRun?              @relation("AgentRunChildren", fields: [parentRunId], references: [id])
+  children        AgentRun[]             @relation("AgentRunChildren")
+  conversation    Conversation?          @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   approvals       ApprovalRequest[]
+  capabilityGrant AgentCapabilityGrant?
 
   @@index([agentKey, status, queuedAt])
   @@index([conversationId, createdAt])
   @@index([subjectType, subjectId, createdAt])
   @@index([status, createdAt])
   @@index([agentKey, createdAt])
+  @@index([conversationId])
+}
+
+/// Short-lived opaque capability for one Hermes run. The id is the secret the
+/// model must pass as grant_id. It is not a database access key.
+model AgentCapabilityGrant {
+  id               String    @id
+  agentRunId       String    @unique
+  conversationId   String
+  allowedToolsJson Json
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  agentRun     AgentRun     @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
   @@index([conversationId])
 }
 

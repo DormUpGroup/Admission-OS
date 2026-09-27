@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getHermesRun,
   HermesNotConfiguredError,
   HermesRetryableError,
   postHermesCreateRun,
@@ -93,5 +94,42 @@ describe("Hermes create_run client", () => {
         fetchImpl,
       }),
     ).resolves.toEqual({ kind: "ok", runId: "run_ok", sessionId: null });
+  });
+
+  it("polls GET /v1/runs/{id} and classifies terminal and pending statuses", async () => {
+    const completed = (async (url: string | URL | Request) => {
+      expect(String(url)).toBe("http://hermes.railway.internal:8642/v1/runs/run_abc");
+      return new Response(
+        JSON.stringify({
+          status: "completed",
+          output: "Черновик готов",
+          usage: { input_tokens: 3, output_tokens: 4 },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: completed })).resolves.toEqual({
+      kind: "completed",
+      output: "Черновик готов",
+      inputTokens: 3,
+      outputTokens: 4,
+    });
+
+    const pending = (async () =>
+      new Response(JSON.stringify({ status: "running" }), { status: 200 })) as typeof fetch;
+    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: pending })).resolves.toEqual({
+      kind: "pending",
+      status: "running",
+    });
+
+    const failed = (async () =>
+      new Response(JSON.stringify({ status: "failed", message: "boom" }), {
+        status: 200,
+      })) as typeof fetch;
+    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: failed })).resolves.toEqual({
+      kind: "failed",
+      status: "failed",
+      message: "boom",
+    });
   });
 });

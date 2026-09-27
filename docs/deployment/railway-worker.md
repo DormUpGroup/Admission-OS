@@ -57,16 +57,42 @@ npm run worker
 Hermes is a separate Railway service. Do not give it a public domain. The worker
 calls it over Railway private networking.
 
-Worker env only (the web service does not call Hermes):
+Worker env (the web service does not call Hermes):
 
 - `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8642`
 - `HERMES_API_KEY` — same value as `API_SERVER_KEY` on the Hermes service. Sent as `Authorization: Bearer` on `POST /v1/runs`.
 
-The body is `{ "input", "session_id" }`. Hermes answers `202` with `run_id`. `HERMES_MCP_KEY`, `HERMES_MCP_URL`, and `HERMES_MCP_SCOPES` are not used by this call.
+The body is `{ "input", "session_id", "instructions" }`. `instructions` carries the
+capability `grant_id` and the three tool names. Hermes answers `202` with `run_id`.
+The worker then polls `GET /v1/runs/{id}` (`hermes.poll_run`) until the run is
+`completed` or `failed`. A still-running poll is deferred without burning attempts.
+That does not send Telegram.
+
+`HERMES_MCP_KEY`, `HERMES_MCP_URL`, and `HERMES_MCP_SCOPES` are deprecated and are
+not read.
+
+Web env (the MCP route runs in the web process, not the worker):
+
+- `MCP_BOOTSTRAP_KEY` — same secret as on the Hermes service.
+
+Hermes service config (not an Admission OS env var):
+
+```yaml
+mcp_servers:
+  admission_os:
+    url: http://<web>.railway.internal:<port>/api/mcp
+    headers:
+      Authorization: "Bearer ${MCP_BOOTSTRAP_KEY}"
+```
+
+Use the web private address, not a public domain. Do not put `TELEGRAM_BOT_TOKEN`
+or `DATABASE_URL` on Hermes. Disable Hermes toolsets that can send Telegram or
+arbitrary HTTP (`terminal`, messaging); otherwise the agent can leave this MCP route.
 
 `message.received` enqueues `hermes.create_run`. The worker also sweeps `QUEUED`
 intake runs that have no `hermesRunId`. A successful call sets
-`AgentRun.status = RUNNING` and `hermesRunId`. It does not send Telegram.
+`AgentRun.status = RUNNING` and `hermesRunId`, and enqueues `hermes.poll_run`.
+Poll sets `COMPLETED` or `FAILED` and revokes the grant. It does not send Telegram.
 
 If `HERMES_API_URL` or `HERMES_API_KEY` is empty, the worker defers
 `hermes.create_run` without burning attempts and without marking the run

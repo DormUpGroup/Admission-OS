@@ -3,6 +3,7 @@ import {
   agentRunIdFromHermesEvent,
   dispatchHermesCreateRun,
 } from "@/server/automation/hermes-create-run";
+import { dispatchHermesPollRun } from "@/server/automation/hermes-poll-run";
 
 export const handleHermesCreateRun: OutboxHandler = async (db, event) => {
   const agentRunId = agentRunIdFromHermesEvent(event.payloadJson, event.aggregateId);
@@ -15,6 +16,21 @@ export const handleHermesCreateRun: OutboxHandler = async (db, event) => {
       agentRunId,
       status: result.status,
       hermesRunId: result.status === "failed" ? null : result.hermesRunId,
+    }),
+  );
+};
+
+export const handleHermesPollRun: OutboxHandler = async (db, event) => {
+  const agentRunId = agentRunIdFromHermesEvent(event.payloadJson, event.aggregateId);
+  const result = await dispatchHermesPollRun(db, agentRunId);
+  console.log(
+    JSON.stringify({
+      level: "info",
+      msg: "hermes.poll_run.dispatched",
+      eventId: event.id,
+      agentRunId,
+      status: result.status,
+      errorCode: result.status === "failed" ? result.errorCode : null,
     }),
   );
 };

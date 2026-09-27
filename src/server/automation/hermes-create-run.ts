@@ -1,11 +1,13 @@
 import type { Prisma } from "@prisma/client";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
+import { ensureCapabilityGrant, hermesRunInstructions, revokeCapabilityGrant } from "./capability-grant";
 import {
   HermesRetryableError,
   postHermesCreateRun,
   readHermesConfig,
   type HermesCreateRunBody,
 } from "./hermes-client";
+import { enqueueHermesPollRun } from "./hermes-poll-run";
 
 export const HERMES_CREATE_RUN_EVENT = "hermes.create_run";
 
@@ -111,7 +113,10 @@ export async function dispatchHermesCreateRun(
     },
   });
   if (!run) throw new HermesRetryableError(`AgentRun ${agentRunId} not found`);
-  if (run.hermesRunId) return { status: "skipped", hermesRunId: run.hermesRunId };
+  if (run.hermesRunId) {
+    if (run.status === "RUNNING") await enqueueHermesPollRun(db, run.id);
+    return { status: "skipped", hermesRunId: run.hermesRunId };
+  }
   if (run.status !== "QUEUED") return { status: "skipped", hermesRunId: null };
   if (!run.conversationId) {
     await markFailed(db, run.id, "missing_conversation", "AgentRun has no conversationId", now);
@@ -155,9 +160,15 @@ export async function dispatchHermesCreateRun(
     return { status: "failed", errorCode: "empty_text" };
   }
 
+  const grant = await ensureCapabilityGrant(db, {
+    agentRunId: run.id,
+    conversationId: conversation.id,
+    now,
+  });
   const body: HermesCreateRunBody = {
     input: text,
     session_id: sessionId,
+    instructions: hermesRunInstructions(grant.id),
   };
 
   const outcome = await postHermesCreateRun({
@@ -168,6 +179,7 @@ export async function dispatchHermesCreateRun(
   });
 
   if (outcome.kind === "terminal") {
+    await revokeCapabilityGrant(db, run.id, now);
     await markFailed(db, run.id, `http_${outcome.status}`, outcome.message, now);
     return { status: "failed", errorCode: `http_${outcome.status}` };
   }
@@ -190,11 +202,15 @@ export async function dispatchHermesCreateRun(
         where: { id: run.id },
         select: { hermesRunId: true },
       });
-      if (current?.hermesRunId) return { status: "running", hermesRunId: current.hermesRunId };
+      if (current?.hermesRunId) {
+        await enqueueHermesPollRun(db, run.id);
+        return { status: "running", hermesRunId: current.hermesRunId };
+      }
       return { status: "skipped", hermesRunId: null };
     }
   } catch (error) {
     if (isUniqueConstraint(error)) {
+      await revokeCapabilityGrant(db, run.id, now);
       await markFailed(
         db,
         run.id,
@@ -206,6 +222,8 @@ export async function dispatchHermesCreateRun(
     }
     throw error;
   }
+
+  await enqueueHermesPollRun(db, run.id);
 
   if (outcome.sessionId && outcome.sessionId !== sessionId) {
     await db.conversation.update({

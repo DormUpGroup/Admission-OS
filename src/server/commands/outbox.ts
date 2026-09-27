@@ -21,7 +21,7 @@ export const ALWAYS_ALLOWED_EVENT_TYPES = new Set([
  * ALWAYS_ALLOWED ∪ {any type when automationEnabled}). Unknown types stay
  * allowed when automation is on so handlers can register before a whitelist.
  * Catalog: agent.intake, message.received, telegram.send, calendar.upsert,
- * calendar.delete, hermes.create_run.
+ * calendar.delete, hermes.create_run, hermes.poll_run.
  */
 
 export const DEFAULT_LEASE_MS = 5 * 60 * 1000;

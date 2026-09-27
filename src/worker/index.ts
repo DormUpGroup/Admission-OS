@@ -11,7 +11,11 @@ import {
   shouldProcessOutboxEvent,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
-import { HermesNotConfiguredError } from "@/server/automation/hermes-client";
+import {
+  HERMES_POLL_DEFER_MS,
+  HermesNotConfiguredError,
+  HermesRunPendingError,
+} from "@/server/automation/hermes-client";
 import { enqueueQueuedHermesCreateRuns } from "@/server/automation/hermes-create-run";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
@@ -139,17 +143,20 @@ async function processOnce(): Promise<number> {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (error instanceof HermesNotConfiguredError) {
+      if (error instanceof HermesNotConfiguredError || error instanceof HermesRunPendingError) {
         const deferred = await deferOutboxForKillSwitch(
           prisma,
           event.id,
           event.leaseToken,
           message,
+          error instanceof HermesRunPendingError ? { deferMs: HERMES_POLL_DEFER_MS } : undefined,
         );
         console.warn(
           JSON.stringify({
             level: "warn",
-            msg: "outbox.deferred_hermes_config",
+            msg: error instanceof HermesRunPendingError
+              ? "outbox.deferred_hermes_pending"
+              : "outbox.deferred_hermes_config",
             eventId: event.id,
             eventType: event.eventType,
             deferred,

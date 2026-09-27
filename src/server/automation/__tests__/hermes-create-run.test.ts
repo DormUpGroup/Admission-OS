@@ -25,6 +25,16 @@ type RunRow = {
   queuedAt?: Date;
 };
 
+type GrantRow = {
+  id: string;
+  agentRunId: string;
+  conversationId: string;
+  allowedToolsJson: string[];
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt?: Date;
+};
+
 function harness(options: {
   run: RunRow;
   body?: string | null;
@@ -33,6 +43,7 @@ function harness(options: {
 }) {
   const outboxCreates: Array<{ eventType: string; idempotencyKey: string }> = [];
   const runUpdates: Array<Record<string, unknown>> = [];
+  const grants: GrantRow[] = [];
   let sessionId = options.hermesSessionId ?? null;
   const state = { ...options.run };
 
@@ -79,6 +90,48 @@ function harness(options: {
       findFirst: async () =>
         options.body === undefined ? { body: "Хочу поступить" } : { body: options.body },
     },
+    agentCapabilityGrant: {
+      findUnique: async ({ where }: { where: { agentRunId?: string; id?: string } }) =>
+        grants.find((row) =>
+          where.agentRunId ? row.agentRunId === where.agentRunId : row.id === where.id,
+        ) ?? null,
+      create: async ({ data }: { data: GrantRow }) => {
+        if (grants.some((row) => row.agentRunId === data.agentRunId)) {
+          const error = new Error("unique") as Error & { code?: string };
+          error.code = "P2002";
+          throw error;
+        }
+        const row = { ...data, revokedAt: data.revokedAt ?? null };
+        grants.push(row);
+        return row;
+      },
+      update: async ({
+        where,
+        data,
+      }: {
+        where: { agentRunId: string };
+        data: Partial<GrantRow>;
+      }) => {
+        const row = grants.find((item) => item.agentRunId === where.agentRunId);
+        if (!row) throw new Error("grant not found");
+        Object.assign(row, data);
+        return row;
+      },
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: { agentRunId: string; revokedAt: null };
+        data: { revokedAt: Date };
+      }) => {
+        const row = grants.find(
+          (item) => item.agentRunId === where.agentRunId && item.revokedAt == null,
+        );
+        if (!row) return { count: 0 };
+        Object.assign(row, data);
+        return { count: 1 };
+      },
+    },
   };
 
   return {
@@ -86,6 +139,7 @@ function harness(options: {
     state,
     outboxCreates,
     runUpdates,
+    grants,
     session: () => sessionId,
   };
 }
@@ -134,11 +188,15 @@ describe("hermes.create_run dispatch", () => {
       const sent = JSON.parse(String(init?.body)) as {
         input: string;
         session_id: string;
+        instructions: string;
       };
-      expect(sent).toEqual({
-        input: "Хочу поступить",
-        session_id: "conversation-1",
-      });
+      expect(sent.input).toBe("Хочу поступить");
+      expect(sent.session_id).toBe("conversation-1");
+      expect(sent.instructions).toContain("get_conversation_context");
+      expect(sent.instructions).toContain("get_contact_profile");
+      expect(sent.instructions).toContain("propose_reply");
+      expect(sent.instructions).not.toContain("send_client_message");
+      expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
       return new Response(JSON.stringify({ run_id: "hermes-9", status: "started" }), {
         status: 202,
       });
@@ -164,7 +222,10 @@ describe("hermes.create_run dispatch", () => {
     expect(fetchCalls).toBe(1);
     expect(box.state.status).toBe("RUNNING");
     expect(box.state.hermesRunId).toBe("hermes-9");
-    expect(box.outboxCreates).toEqual([]);
+    expect(box.outboxCreates).toEqual([
+      { eventType: "hermes.poll_run", idempotencyKey: "hermes.poll_run:run-1" },
+    ]);
+    expect(box.grants[0]?.revokedAt).toBeNull();
     expect(box.session()).toBe("conversation-1");
   });
 
@@ -190,6 +251,9 @@ describe("hermes.create_run dispatch", () => {
       }),
     ).resolves.toEqual({ status: "skipped", hermesRunId: "hermes-9" });
     expect(box.runUpdates).toEqual([]);
+    expect(box.outboxCreates).toEqual([
+      { eventType: "hermes.poll_run", idempotencyKey: "hermes.poll_run:run-1" },
+    ]);
   });
 
   it("leaves QUEUED on 503", async () => {
@@ -233,6 +297,7 @@ describe("hermes.create_run dispatch", () => {
     expect(box.state.status).toBe("FAILED");
     expect(box.state.hermesRunId).toBeNull();
     expect(box.outboxCreates).toEqual([]);
+    expect(box.grants[0]?.revokedAt).toEqual(now);
   });
 
   it("does not mark FAILED when Hermes is not configured", async () => {
@@ -258,5 +323,49 @@ describe("hermes.create_run dispatch", () => {
     ).rejects.toBeInstanceOf(HermesNotConfiguredError);
     expect(box.state.status).toBe("QUEUED");
     expect(box.runUpdates).toEqual([]);
+    expect(box.grants).toEqual([]);
+  });
+
+  it("reuses the same grant id when create_run is retried", async () => {
+    const bodies: string[] = [];
+    let attempts = 0;
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      attempts += 1;
+      bodies.push(String(init?.body));
+      if (attempts === 1) {
+        return new Response(JSON.stringify({ message: "unavailable" }), { status: 503 });
+      }
+      return new Response(JSON.stringify({ run_id: "hermes-9", status: "started" }), {
+        status: 202,
+      });
+    }) as typeof fetch;
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "intake",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:intake:event-1",
+        conversationId: "conversation-1",
+        inputJson: { messageId: "message-1" },
+      },
+      fetchImpl,
+    });
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", { env, fetchImpl, now }),
+    ).rejects.toBeInstanceOf(HermesRetryableError);
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", {
+        env,
+        fetchImpl,
+        now: new Date(now.getTime() + 60_000),
+      }),
+    ).resolves.toEqual({ status: "running", hermesRunId: "hermes-9" });
+    expect(box.grants).toHaveLength(1);
+    const grantId = box.grants[0]?.id ?? "";
+    expect(JSON.parse(bodies[0] ?? "{}").instructions).toContain(grantId);
+    expect(JSON.parse(bodies[1] ?? "{}").instructions).toBe(
+      JSON.parse(bodies[0] ?? "{}").instructions,
+    );
   });
 });
