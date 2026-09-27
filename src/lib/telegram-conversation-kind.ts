@@ -118,7 +118,7 @@ export function resolveConversationFolder(input: {
       hasHumanInbound: input.hasHumanInbound,
     })
   ) {
-    return "technical";
+    return "trash";
   }
   return "chats";
 }

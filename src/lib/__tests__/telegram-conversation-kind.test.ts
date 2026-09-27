@@ -132,6 +132,23 @@ describe("resolveConversationFolder", () => {
     ).toBe("trash");
   });
 
+  it("files fixtures and command-only threads in trash", () => {
+    expect(
+      resolveConversationFolder({
+        messages: [{ direction: "INBOUND", body: "/start" }],
+        contact: { title: "Start", username: "tgstart" },
+        hasHumanInbound: false,
+      }),
+    ).toBe("trash");
+    expect(
+      resolveConversationFolder({
+        messages: [{ direction: "OUTBOUND", body: "welcome" }],
+        contact: { title: "Anna Rossi", username: "annarossi" },
+        hasHumanInbound: false,
+      }),
+    ).toBe("trash");
+  });
+
   it("lets a saved folder override automatic placement", () => {
     expect(
       resolveConversationFolder({
