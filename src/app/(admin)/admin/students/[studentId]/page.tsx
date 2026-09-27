@@ -31,7 +31,6 @@ import { EmptyState } from "@/components/empty-state";
 import { GenerateProgramMatchesButton } from "@/components/generate-program-matches-button";
 import { ResetProgramMatchesButton } from "@/components/reset-program-matches-button";
 import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
-import type { CuratorMatchView } from "@/components/curator-program-match-card";
 import { CuratorProgramLevelsCard } from "@/components/admin/curator-program-levels";
 import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
 import { ShowAllMatches } from "@/components/admin/show-all-matches";
@@ -39,10 +38,8 @@ import { buildWorkQueue } from "@/server/services/work-queue/build-work-queue";
 import { inferUnknownReason } from "@/server/services/work-queue/field-reasons";
 import { curatorStageForStudent } from "@/server/services/work-queue/stage";
 import type { WorkQueueStudentInput } from "@/server/services/work-queue/types";
-import {
-  applyCuratorMatchFilters,
-  mergeDossierIntoCuratorView,
-} from "@/server/services/program-matching/curator-match-filters";
+import { applyCuratorMatchFilters } from "@/server/services/program-matching/curator-match-filters";
+import { buildCuratorMatchView } from "@/server/services/program-matching/curator-match-view";
 import { getProgramDossier } from "@/server/services/program-matching/program-dossier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,207 +182,19 @@ export default async function StudentProfilePage({
       .map((d) => [d!.programAcademicYearId, d!] as const)
   );
 
-  const curatorViewsRaw: CuratorMatchView[] = persistedMatches.map((m) => {
-    const pay = m.programAcademicYear;
-    const program = pay.program;
-    let reasons: string[] = [];
-    let risks: string[] = [];
-    let riskNotes: string[] = [];
-    let missingInformation: string[] = [];
-    let requirements: Array<{ description: string; status: string }> = [];
-    let scoreBreakdown: Record<string, number> | null = null;
-    try {
-      reasons = m.reasonsJson ? JSON.parse(m.reasonsJson) : [];
-    } catch {
-      reasons = [];
-    }
-    try {
-      const r = m.risksJson ? JSON.parse(m.risksJson) : {};
-      risks = r.flags || [];
-      riskNotes = r.notes || [];
-    } catch {
-      risks = [];
-    }
-    try {
-      missingInformation = m.missingInformationJson
-        ? JSON.parse(m.missingInformationJson)
-        : [];
-    } catch {
-      missingInformation = [];
-    }
-    try {
-      requirements = m.requirementsSummaryJson
-        ? JSON.parse(m.requirementsSummaryJson)
-        : [];
-    } catch {
-      requirements = [];
-    }
-    try {
-      scoreBreakdown = m.scoreBreakdownJson
-        ? JSON.parse(m.scoreBreakdownJson)
-        : null;
-    } catch {
-      scoreBreakdown = null;
-    }
-    let whyIncluded: string | null = null;
-    let inclusionKind: string | null = null;
-    try {
-      const meta = m.discoveryMetaJson
-        ? (JSON.parse(m.discoveryMetaJson) as {
-            whyIncluded?: string;
-            inclusion?: { kind?: string };
-          })
-        : null;
-      whyIncluded = meta?.whyIncluded ?? null;
-      inclusionKind = meta?.inclusion?.kind ?? null;
-    } catch {
-      whyIncluded = null;
-      inclusionKind = null;
-    }
-    const app = student.applications.find((a) => a.programId === program.id);
-    const teachingLanguages = (() => {
-      try {
-        const v = program.teachingLanguagesJson
-          ? JSON.parse(program.teachingLanguagesJson)
-          : [];
-        return Array.isArray(v) ? v.map(String) : [];
-      } catch {
-        return program.language ? [program.language] : [];
-      }
-    })();
-
-    const base: CuratorMatchView = {
-      matchId: m.id,
-      programId: program.id,
-      programAcademicYearId: pay.id,
-      programName: program.name,
-      universityName: program.university.name,
-      city: null,
-      universityCity: program.university.city,
-      region: null,
-      degreeLevel: program.degreeLevel,
-      language: program.language,
-      teachingLanguages,
-      languageRequirement: null,
-      publicPrivate: program.university.publicPrivate || "UNKNOWN",
-      field: program.field,
-      academicYear: pay.academicYear,
-      applicantCategory: matchingProfile?.applicantCategory ?? "UNKNOWN",
-      eligibilityStatus: m.eligibilityStatus,
-      fitScore: m.fitScore,
-      dataConfidence: m.dataConfidence,
-      curatorStatus: m.curatorStatus,
-      reasons,
-      risks,
-      riskNotes,
-      missingInformation,
-      requirements,
-      deadline: null,
-      tuitionMin: null,
-      tuitionMax: null,
-      tuitionFixed: null,
-      accessMode: "UNKNOWN",
-      selection: "UNKNOWN",
-      euSeats: null,
-      nonEuSeats: null,
-      seatsUnlimited: false,
-      exams: [],
-      examsDisplay: null,
-      careerOutcomes: null,
-      callFreshness: pay.indicativeFromYear ? "indicative" : "unknown",
-      indicativeFromYear: pay.indicativeFromYear,
-      admissionCallUrl: null,
-      extractQuality: null,
-      sourceUrls: [
-        ...new Set(
-          [
-            program.officialUrl,
-            program.universitalyUrl,
-            ...pay.facts.map((f) => f.sourceUrl).filter(Boolean),
-          ].filter(Boolean) as string[]
-        ),
-      ],
-      sourceResolved: pay.facts.some(
-        (fact) =>
-          fact.field === "PROGRAMME_SOURCE_RESOLUTION" &&
-          fact.decisionStatus === "ELIGIBLE" &&
-          fact.freshness === "CURRENT" &&
-          !fact.superseded
-      ),
-      selectionReady: pay.facts.some(
-        (fact) =>
-          [
-            "ACCESS_TYPE",
-            "ADMISSION_REGIME",
-            "SELECTION",
-            "ADMISSION_EXAMS",
-            "SEATS",
-            "APPLICATION_DEADLINE",
-          ].includes(fact.field) &&
-          fact.decisionStatus === "ELIGIBLE" &&
-          fact.freshness === "CURRENT" &&
-          !!fact.sourceUrl &&
-          !!fact.evidenceQuote &&
-          !fact.superseded
-      ),
-      alreadyApplied: !!app,
-      applicationId: app?.id,
+  const curatorViewsRaw = persistedMatches.map((m) =>
+    buildCuratorMatchView({
+      match: m,
+      dossier: dossierByPay.get(m.programAcademicYear.id) ?? null,
+      applicantCategory: matchingProfile?.applicantCategory,
+      applicationId: student.applications.find(
+        (application) =>
+          application.programId === m.programAcademicYear.program.id
+      )?.id,
       studentId,
       intake: student.intake,
-      scoreBreakdown,
-      whyIncluded,
-      inclusionKind,
-      monitoringSelected: m.monitoringSelected ?? false,
-      campuses: [],
-      criticalFacts: [],
-      aiEnrichment: (() => {
-        const run = (
-          pay as typeof pay & {
-            enrichmentRuns?: Array<{
-              finishedAt: Date | null;
-              model: string | null;
-              status: string;
-              error: string | null;
-              sourceDocumentIdsJson: string | null;
-              promptVersion: string;
-            }>;
-          }
-        ).enrichmentRuns?.[0];
-        if (!run) {
-          return {
-            date: null,
-            model: null,
-            reused: false,
-            documentCount: 0,
-            disabled: true,
-            failed: false,
-          };
-        }
-        let docCount = 0;
-        try {
-          docCount = run.sourceDocumentIdsJson
-            ? (JSON.parse(run.sourceDocumentIdsJson) as unknown[]).length
-            : 0;
-        } catch {
-          docCount = 0;
-        }
-        return {
-          date: run.finishedAt?.toISOString() ?? null,
-          model: run.model,
-          reused: run.status === "REUSED",
-          documentCount: docCount,
-          promptVersion: run.promptVersion,
-          disabled: false,
-          failed: run.status === "FAILED",
-        };
-      })(),
-    };
-
-    return mergeDossierIntoCuratorView(
-      base,
-      dossierByPay.get(pay.id) ?? null
-    );
-  });
+    })
+  );
 
   const shortlistPayIds = new Set(
     shortlist.map((item) => item.programAcademicYearId)

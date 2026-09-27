@@ -15,6 +15,7 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
    - `DATABASE_URL` (same as web)
    - `AUTOMATION_ENABLED=true` to process `message.received`, bot welcome/help, and nudges (noop / `worker.log` / curator `telegram.send` always run)
    - Phase 1+: `TELEGRAM_BOT_TOKEN` (outbound send)
+   - Hermes (worker only): `HERMES_API_URL`, `HERMES_API_KEY`, `HERMES_MCP_KEY`. See below.
 4. Web env (Phase 1): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`
    - Admin inbox replies deliver **inline** from the web process when
      `TELEGRAM_BOT_TOKEN` is set. They are not blocked by the automation
@@ -46,11 +47,33 @@ Outbox `calendar.upsert` runs only after the client confirms (Telegram) or admin
 manual confirm. Staff Telegram replies can complete without the worker; calendar
 sync **requires the worker service** to be running.
 
-
 ```bash
 npx prisma migrate deploy
 npm run worker
 ```
+
+## Hermes (private)
+
+Hermes is a separate Railway service. Do not give it a public domain. The worker
+calls it over Railway private networking.
+
+Worker env only (the web service does not call Hermes):
+
+- `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8080`
+- `HERMES_API_KEY` — bearer token for `POST /v1/runs`
+- `HERMES_MCP_KEY` — HS256 secret for the capability JWT (`allowed_tools` is inside the token)
+- `HERMES_MCP_URL` — optional; defaults to `{NEXTAUTH_URL}/api/mcp` until that route exists
+- `NEXTAUTH_URL` — used only to build that default MCP URL
+
+`HERMES_MCP_SCOPES` is unused.
+
+`message.received` enqueues `hermes.create_run`. The worker also sweeps `QUEUED`
+intake runs that have no `hermesRunId`. A successful call sets
+`AgentRun.status = RUNNING` and `hermesRunId`. It does not send Telegram.
+
+If `HERMES_API_URL`, `HERMES_API_KEY`, or `HERMES_MCP_KEY` is empty, the worker
+defers `hermes.create_run` without burning attempts and without marking the run
+`FAILED`.
 
 ## Kill-switch
 

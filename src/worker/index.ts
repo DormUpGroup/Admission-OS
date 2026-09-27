@@ -11,6 +11,8 @@ import {
   shouldProcessOutboxEvent,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
+import { HermesNotConfiguredError } from "@/server/automation/hermes-client";
+import { enqueueQueuedHermesCreateRuns } from "@/server/automation/hermes-create-run";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
 
@@ -73,6 +75,20 @@ function sleep(ms: number) {
 
 async function processOnce(): Promise<number> {
   const automationEnabled = await resolveAutomationEnabled(prisma);
+  if (automationEnabled) {
+    try {
+      await enqueueQueuedHermesCreateRuns(prisma, CLAIM_LIMIT);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "hermes.create_run.sweep_failed",
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
   const claimed = await claimOutboxEvents(prisma, {
     workerId: WORKER_ID,
     limit: CLAIM_LIMIT,
@@ -123,6 +139,25 @@ async function processOnce(): Promise<number> {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (error instanceof HermesNotConfiguredError) {
+        const deferred = await deferOutboxForKillSwitch(
+          prisma,
+          event.id,
+          event.leaseToken,
+          message,
+        );
+        console.warn(
+          JSON.stringify({
+            level: "warn",
+            msg: "outbox.deferred_hermes_config",
+            eventId: event.id,
+            eventType: event.eventType,
+            deferred,
+          }),
+        );
+        continue;
+      }
+
       const outcome = await retryOutboxEvent(
         prisma,
         event.id,

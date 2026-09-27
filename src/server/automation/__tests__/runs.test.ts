@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { queueIntakeRunForMessageReceived } from "../runs";
 
+function outboxMock() {
+  const created: string[] = [];
+  return {
+    created,
+    outboxEvent: {
+      findUnique: async ({ where }: { where: { idempotencyKey: string } }) =>
+        created.includes(where.idempotencyKey) ? { id: "outbox-existing" } : null,
+      create: async ({ data }: { data: { idempotencyKey: string; eventType: string } }) => {
+        created.push(data.idempotencyKey);
+        return { id: "outbox-1", ...data };
+      },
+    },
+  };
+}
+
 describe("Intake run queue", () => {
   it("does not queue a paused conversation", async () => {
     const db = {
@@ -24,6 +39,7 @@ describe("Intake run queue", () => {
   });
 
   it("returns the existing run for a repeated outbox event", async () => {
+    const outbox = outboxMock();
     const db = {
       conversation: {
         findUnique: async () => ({
@@ -36,18 +52,23 @@ describe("Intake run queue", () => {
       },
       agentDefinition: { upsert: async () => ({}) },
       agentRun: { findUnique: async () => ({ id: "run-existing" }) },
+      outboxEvent: outbox.outboxEvent,
     };
-    const result = await queueIntakeRunForMessageReceived(db as never, {
+    const event = {
       aggregateId: "message-1",
-      eventType: "message.received",
+      eventType: "message.received" as const,
       idempotencyKey: "event-1",
       payloadJson: { conversationId: "conversation-1", messageId: "message-1" },
-    });
+    };
+    const result = await queueIntakeRunForMessageReceived(db as never, event);
+    await queueIntakeRunForMessageReceived(db as never, event);
     expect(result).toEqual({ queued: true, agentRunId: "run-existing", duplicate: true });
+    expect(outbox.created).toEqual(["hermes.create_run:run-existing"]);
   });
 
   it("recovers a duplicate AgentRun after a unique-constraint race", async () => {
     let findCalls = 0;
+    const outbox = outboxMock();
     const db = {
       conversation: {
         findUnique: async () => ({
@@ -69,6 +90,7 @@ describe("Intake run queue", () => {
           throw error;
         },
       },
+      outboxEvent: outbox.outboxEvent,
     };
     const result = await queueIntakeRunForMessageReceived(db as never, {
       aggregateId: "message-1",
@@ -77,6 +99,7 @@ describe("Intake run queue", () => {
       payloadJson: { conversationId: "conversation-1", messageId: "message-1" },
     });
     expect(result).toEqual({ queued: true, agentRunId: "run-winner", duplicate: true });
+    expect(outbox.created).toEqual(["hermes.create_run:run-winner"]);
   });
 
   it("skips student conversations and bot commands", async () => {

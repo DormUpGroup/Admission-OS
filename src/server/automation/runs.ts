@@ -1,5 +1,6 @@
 import type { OutboxEvent } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
+import { enqueueHermesCreateRun } from "./hermes-create-run";
 import { AGENT_DEFINITIONS_BY_KEY, syncAgentDefinitions } from "./registry";
 
 function asRecord(payload: unknown): Record<string, unknown> | null {
@@ -17,8 +18,8 @@ export type QueueIntakeRunResult =
   | { queued: false; reason: string };
 
 /**
- * Persist an Intake run after inbound data is durable. This intentionally does
- * not contact Hermes; it provides the idempotent hand-off point for PR1.
+ * Persist an Intake run after inbound data is durable and enqueue
+ * hermes.create_run. This does not call Hermes or send a client message.
  */
 export async function queueIntakeRunForMessageReceived(
   db: DbClient,
@@ -60,6 +61,7 @@ export async function queueIntakeRunForMessageReceived(
   const idempotencyKey = `agent:intake:${event.idempotencyKey}`;
   const existing = await db.agentRun.findUnique({ where: { idempotencyKey } });
   if (existing) {
+    await enqueueHermesCreateRun(db, existing.id);
     return { queued: true, agentRunId: existing.id, duplicate: true };
   }
 
@@ -84,6 +86,7 @@ export async function queueIntakeRunForMessageReceived(
         policyVersion: definition.policyVersion,
       },
     });
+    await enqueueHermesCreateRun(db, run.id);
     return { queued: true, agentRunId: run.id, duplicate: false };
   } catch (error) {
     // A recovered lease can overlap a slow worker. The unique idempotency key
@@ -95,7 +98,10 @@ export async function queueIntakeRunForMessageReceived(
       (error as { code?: string }).code === "P2002"
     ) {
       const winner = await db.agentRun.findUnique({ where: { idempotencyKey } });
-      if (winner) return { queued: true, agentRunId: winner.id, duplicate: true };
+      if (winner) {
+        await enqueueHermesCreateRun(db, winner.id);
+        return { queued: true, agentRunId: winner.id, duplicate: true };
+      }
     }
     throw error;
   }

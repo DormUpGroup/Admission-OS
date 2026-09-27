@@ -14,10 +14,15 @@ describe("programme decision read boundary", () => {
     const adminView = source(
       "src/app/(admin)/admin/students/[studentId]/page.tsx"
     );
+    const curatorMatchView = source(
+      "src/server/services/program-matching/curator-match-view.ts"
+    );
     expect(matching).not.toContain("cycles[0]");
     expect(matching).not.toContain("pay.tuition");
     expect(adminView).not.toContain("cycles[0]");
     expect(adminView).not.toContain("pay.tuition");
+    expect(curatorMatchView).not.toContain("cycles[0]");
+    expect(curatorMatchView).not.toContain("pay.tuition");
   });
 
   it("Universitaly upsert never persists admission decision fields", () => {
