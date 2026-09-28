@@ -163,6 +163,14 @@ export function formatAppointmentCancelNotice(input: {
   return `Консультация «${input.title}» отменена.\n${input.whenLabel} (${input.timezone})`;
 }
 
+export function formatAppointmentBookedNotice(input: {
+  title: string;
+  whenLabel: string;
+  timezone: string;
+}): string {
+  return `Консультация назначена: ${input.title}\n${input.whenLabel} (${input.timezone})`;
+}
+
 async function resolveTelegramConversationId(
   tx: DbClient,
   appointment: {
@@ -650,6 +658,142 @@ export async function appointmentCancel(
     });
 
     return { appointment, messageId };
+  });
+
+  await deliverClientNotice(messageId);
+  return appointment;
+}
+
+/** Client picked a free slot on the site. The time is already confirmed. */
+export async function appointmentBookByClient(input: {
+  studentId: string;
+  startsAt: Date;
+}): Promise<Appointment> {
+  const student = await prisma.student.findUnique({
+    where: { id: input.studentId },
+    include: { convertedFromLead: { select: { id: true } } },
+  });
+  if (!student) throw new Error("Student not found");
+  if (!student.curatorId) throw new Error("No curator");
+  const curatorId = student.curatorId;
+
+  const endsAt = endsAtFromStart(input.startsAt);
+  assertValidInterval(input.startsAt, endsAt);
+
+  const open = await listOpenSlots({
+    curatorId,
+    from: new Date(),
+    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+  });
+  const slot = open.find((item) => item.startsAt.getTime() === input.startsAt.getTime());
+  if (!slot) throw new Error("The selected slot is no longer available");
+
+  const clientRequestId = `portal-book:${student.id}:${slot.startsAt.toISOString()}`;
+  const { appointment, messageId } = await prisma.$transaction(async (tx) => {
+    const prior = await tx.appointment.findUnique({ where: { clientRequestId } });
+    if (prior) return { appointment: prior, messageId: null as string | null };
+
+    const existing = await tx.appointment.findFirst({
+      where: {
+        studentId: student.id,
+        status: {
+          in: [
+            APPOINTMENT_STATUS.AWAITING_CLIENT,
+            APPOINTMENT_STATUS.PENDING,
+            APPOINTMENT_STATUS.CONFIRMED,
+          ],
+        },
+        endsAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    if (existing) throw new Error("Appointment already booked");
+
+    await assertNoCuratorConflict(tx, {
+      curatorId,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+    });
+
+    const leadId = student.convertedFromLead?.id ?? null;
+    const conversation = await tx.conversation.findFirst({
+      where: {
+        channel: "TELEGRAM",
+        OR: [{ studentId: student.id }, ...(leadId ? [{ leadId }] : [])],
+      },
+      orderBy: { lastInboundAt: "desc" },
+      select: { id: true },
+    });
+
+    const created = await tx.appointment.create({
+      data: {
+        clientRequestId,
+        studentId: student.id,
+        conversationId: conversation?.id ?? null,
+        assignedCuratorId: curatorId,
+        title: "Консультация",
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        timezone: APPOINTMENT_TIMEZONE,
+        status: APPOINTMENT_STATUS.PENDING,
+        clientChangeUnseen: true,
+      },
+    });
+
+    const invite = await tx.bookingInvite.findFirst({
+      where: {
+        appointmentId: null,
+        OR: [
+          { studentId: student.id },
+          ...(leadId ? [{ leadId }] : []),
+          ...(conversation ? [{ conversationId: conversation.id }] : []),
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (invite) {
+      await tx.bookingInvite.update({
+        where: { id: invite.id },
+        data: { appointmentId: created.id, studentId: student.id },
+      });
+    }
+
+    await enqueueOutbox(tx, {
+      aggregateType: "Appointment",
+      aggregateId: created.id,
+      eventType: "calendar.upsert",
+      payload: { appointmentId: created.id },
+      idempotencyKey: `calendar.upsert:${created.id}:v${created.version}`,
+    });
+
+    const whenLabel = formatSlotLabel(created.startsAt, created.timezone);
+    const who = [student.firstName, student.lastName]
+      .filter((part) => part && part !== "—")
+      .join(" ");
+    await tx.inAppNotification.create({
+      data: {
+        userId: curatorId,
+        studentId: student.id,
+        type: "appointment.booked",
+        title: "Клиент записался на консультацию",
+        body: [who, whenLabel].filter(Boolean).join("\n"),
+        metadataJson: JSON.stringify({
+          appointmentId: created.id,
+          conversationId: conversation?.id ?? null,
+        }),
+      },
+    });
+
+    const noticeId = await notifyClientOnTelegram(tx, created, {
+      body: formatAppointmentBookedNotice({
+        title: created.title,
+        whenLabel,
+        timezone: created.timezone,
+      }),
+      clientRequestId: `appt-booked:${created.id}`,
+    });
+
+    return { appointment: created, messageId: noticeId };
   });
 
   await deliverClientNotice(messageId);

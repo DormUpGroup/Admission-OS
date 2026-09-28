@@ -6,6 +6,7 @@ import {
   sendAgentClientMessage,
   updateLeadQualificationFromAgent,
 } from "./actions";
+import { sendBookingLinkForConversation } from "@/server/booking/send-link";
 import {
   capabilityGrantLogHash,
   isMcpV1Tool,
@@ -48,6 +49,10 @@ export type McpToolExecutors = {
     conversationId: string;
     reason: string;
   }) => ReturnType<typeof escalateAgentToHuman>;
+  sendBookingLink: (input: {
+    agentRunId: string;
+    conversationId: string;
+  }) => Promise<string>;
 };
 
 export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
@@ -64,6 +69,11 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
       }),
     updateQualification: (input) => updateLeadQualificationFromAgent(input),
     escalate: (input) => escalateAgentToHuman(input),
+    sendBookingLink: (input) =>
+      sendBookingLinkForConversation({
+        agentRunId: input.agentRunId,
+        conversationId: input.conversationId,
+      }),
   };
 }
 
@@ -140,6 +150,9 @@ function toolSchema(name: McpV1Tool) {
     description = "Send one Telegram reply to the client.";
     properties.body = { type: "string", description: "Message text to send." };
     required.push("body");
+  } else if (name === "send_booking_link") {
+    description =
+      "Send the client a website link to book a consultation. Do not invent the URL or offer times in chat.";
   } else if (name === "escalate_to_human") {
     description = "Pause automation on this chat and notify the curator.";
     properties.reason = { type: "string", description: "Why a curator must take over." };
@@ -421,6 +434,16 @@ async function callTool(
     }
     logLine("ok");
     return { status: 200, body: toolResult(id, "qualification_saved", false) };
+  }
+
+  if (toolName === "send_booking_link") {
+    const text = await executors.sendBookingLink({
+      agentRunId: grant.agentRunId,
+      conversationId: grant.conversationId,
+    });
+    const failed = text === "no_curator" || text.startsWith("booking_unavailable");
+    logLine(failed ? "booking_unavailable" : "ok");
+    return { status: 200, body: toolResult(id, text, failed) };
   }
 
   if (toolName === "escalate_to_human") {

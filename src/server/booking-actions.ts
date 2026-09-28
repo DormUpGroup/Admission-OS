@@ -1,0 +1,88 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { signIn } from "@/server/auth";
+import { getCurrentStudent } from "@/server/auth/guards";
+import {
+  bookingAccountView,
+  registerBookingAccount,
+} from "@/server/booking/account";
+import { appointmentBookByClient } from "@/server/commands/appointments";
+
+function isNextRedirect(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest: unknown }).digest === "string" &&
+    String((error as { digest: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
+async function signInToBooking(email: string, password: string) {
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/portal/book",
+    });
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    return { error: "Неверный email или пароль" };
+  }
+  redirect("/portal/book");
+}
+
+export async function registerFromBookingAction(formData: FormData) {
+  const email = String(formData.get("email") || "");
+  const password = String(formData.get("password") || "");
+  const result = await registerBookingAccount({
+    token: String(formData.get("token") || ""),
+    email,
+    password,
+    firstName: String(formData.get("firstName") || ""),
+    lastName: String(formData.get("lastName") || ""),
+  });
+  if (!result.ok) return { error: result.error };
+  return signInToBooking(email.trim().toLowerCase(), password);
+}
+
+export async function loginFromBookingAction(formData: FormData) {
+  const token = String(formData.get("token") || "");
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "");
+  const view = await bookingAccountView(token);
+  if (view.kind !== "login" || view.email.trim().toLowerCase() !== email) {
+    return { error: "Войдите с почтой этого кабинета." };
+  }
+  return signInToBooking(email, password);
+}
+
+export async function bookConsultationAction(
+  _prev: { error: string } | null,
+  formData: FormData,
+) {
+  const { student } = await getCurrentStudent();
+  const raw = String(formData.get("startsAt") || "");
+  const startsAt = new Date(raw);
+  if (!raw || Number.isNaN(startsAt.getTime())) {
+    return { error: "Выберите свободное время." };
+  }
+
+  try {
+    await appointmentBookByClient({ studentId: student.id, startsAt });
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    const message = error instanceof Error ? error.message : "";
+    if (message === "Appointment already booked") redirect("/portal/book");
+    if (message === "The selected slot is no longer available") {
+      return { error: "Это время уже занято. Выберите другое." };
+    }
+    if (message === "No curator") {
+      return { error: "Куратор ещё не назначен. Напишите в Telegram." };
+    }
+    return { error: "Не удалось записать консультацию." };
+  }
+
+  redirect("/portal/book");
+}

@@ -79,7 +79,7 @@ export function evaluateActionPolicy(
   }
   if (
     input.agentKey === "intake" &&
-    input.toolName === "send_client_message" &&
+    (input.toolName === "send_client_message" || input.toolName === "send_booking_link") &&
     input.conversation.consentStatus === "DENIED"
   ) {
     reasons.push("contact_opted_out");
@@ -120,6 +120,10 @@ export function evaluateActionPolicy(
   }
 
   if (input.agentKey === "intake" && input.toolName === "update_lead_qualification") {
+    return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
+  }
+
+  if (input.agentKey === "intake" && input.toolName === "send_booking_link") {
     return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
   }
 

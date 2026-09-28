@@ -214,6 +214,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("get_contact_profile");
       expect(sent.instructions).toContain("update_lead_qualification");
       expect(sent.instructions).toContain("send_client_message");
+      expect(sent.instructions).toContain("send_booking_link");
+      expect(sent.instructions).toContain("Do not offer days or times");
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("propose_reply");
       expect(sent.instructions).toContain("Do not stop after propose_reply");

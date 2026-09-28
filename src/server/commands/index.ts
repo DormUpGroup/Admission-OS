@@ -71,6 +71,7 @@ export {
 } from "./telegram-outbound";
 
 export {
+  appointmentBookByClient,
   appointmentCancel,
   appointmentConfirmByClient,
   appointmentConfirmManual,

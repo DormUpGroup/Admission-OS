@@ -49,6 +49,27 @@ describe("agent policy gate", () => {
     });
   });
 
+  it("allows the intake bot to send a booking link", () => {
+    const result = evaluateActionPolicy({
+      agentKey: "intake",
+      toolName: "send_booking_link",
+      conversation: safeConversation,
+    });
+    expect(result).toEqual({ decision: POLICY_DECISIONS.ALLOW, reasons: [] });
+  });
+
+  it("does not send a booking link to an opted-out contact", () => {
+    const result = evaluateActionPolicy({
+      agentKey: "intake",
+      toolName: "send_booking_link",
+      conversation: { ...safeConversation, consentStatus: "DENIED" },
+    });
+    expect(result).toEqual({
+      decision: POLICY_DECISIONS.DENY,
+      reasons: ["contact_opted_out"],
+    });
+  });
+
   it("allows escalation to pause automation without sending a client message", () => {
     const result = evaluateActionPolicy({
       agentKey: "intake",

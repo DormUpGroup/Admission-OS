@@ -28,6 +28,7 @@ export const AGENT_DEFINITION_SPECS: readonly AgentDefinitionSpec[] = [
       "update_lead_qualification",
       "propose_reply",
       "send_client_message",
+      "send_booking_link",
       "escalate_to_human",
     ],
     eventTypes: ["message.received"],

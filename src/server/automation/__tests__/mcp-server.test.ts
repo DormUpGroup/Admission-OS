@@ -112,6 +112,7 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
         policy: { decision: "ALLOW" as const, reasons: [] },
       };
     },
+    sendBookingLink: async () => "sent",
   };
   return { db, calls, executors, output: () => outputJson };
 }
@@ -329,5 +330,9 @@ describe("MCP capability grant", () => {
     const empty = await post(box, call("update_lead_qualification", { grant_id: "grant-secret-value" }));
     expect(JSON.stringify(empty.body)).toContain("nothing_to_save");
     expect(box.calls.patches).toHaveLength(1);
+
+    const booked = await post(box, call("send_booking_link", { grant_id: "grant-secret-value" }));
+    expect(JSON.stringify(booked.body)).toContain("sent");
+    expect((booked.body as { result: { isError: boolean } }).result.isError).toBe(false);
   });
 });

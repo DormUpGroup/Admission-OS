@@ -29,6 +29,7 @@ model User {
   assignedAppointments  Appointment[]       @relation("AppointmentAssignee")
   assignedLeads         Lead[]              @relation("LeadAssignee")
   approvedAutomationRequests ApprovalRequest[] @relation("ApprovalDecider")
+  bookingInvites        BookingInvite[]     @relation("BookingInviteCurator")
 }
 
 model Student {
@@ -75,6 +76,7 @@ model Student {
   appointments      Appointment[]
   channelIdentities ChannelIdentity[]
   convertedFromLead Lead?                 @relation("ConvertedLead")
+  bookingInvites    BookingInvite[]
 
   @@index([curatorId])
   @@index([acceptedById])
@@ -691,6 +693,7 @@ model Lead {
   channelIdentities ChannelIdentity[]
   conversations     Conversation[]
   appointments      Appointment[]
+  bookingInvites    BookingInvite[]
 
   @@index([status, createdAt])
   @@index([assignedCuratorId, status])
@@ -761,6 +764,7 @@ model Conversation {
   appointments     Appointment[]
   agentRuns        AgentRun[]
   capabilityGrants AgentCapabilityGrant[]
+  bookingInvites   BookingInvite[]
 
   @@index([leadId, status])
   @@index([studentId, status])
@@ -827,12 +831,39 @@ model Appointment {
   student         Student?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   assignedCurator User?         @relation("AppointmentAssignee", fields: [assignedCuratorId], references: [id], onDelete: SetNull)
+  bookingInvite   BookingInvite?
 
   @@index([assignedCuratorId, startsAt])
   @@index([leadId, startsAt])
   @@index([studentId, startsAt])
   @@index([status, startsAt])
   @@index([clientChangeUnseen])
+}
+
+/// One-time website link for a Telegram client to create a cabinet and pick a slot.
+/// The token is the URL secret. An open invite (no appointment yet) is unique per conversation.
+model BookingInvite {
+  id             String    @id @default(cuid())
+  token          String    @unique
+  conversationId String
+  leadId         String?
+  studentId      String?
+  curatorId      String
+  expiresAt      DateTime
+  appointmentId  String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  student      Student?     @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  curator      User         @relation("BookingInviteCurator", fields: [curatorId], references: [id], onDelete: Restrict)
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, expiresAt])
+  @@index([leadId])
+  @@index([studentId])
+  @@index([curatorId])
 }
 
 model AutomationSetting {
