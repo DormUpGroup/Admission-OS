@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronDown,
   ClipboardList,
+  Contact,
   Globe,
   LayoutList,
   Mail,
@@ -39,6 +40,7 @@ type ChannelItem = {
 const primaryItems: NavItem[] = [
   { label: "Рабочая очередь", href: "/admin", icon: LayoutList },
   { label: "Ученики", href: "/admin/students", icon: Users },
+  { label: "Лиды", href: "/admin/leads", icon: Contact },
   { label: "Заявки", href: "/admin/applications", icon: ClipboardList },
   { label: "Консультации", href: "/admin/appointments", icon: Calendar },
   { label: "Автоматика", href: "/admin/automation", icon: Zap },
@@ -135,7 +137,7 @@ export function AppSidebar({
       </div>
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="space-y-0.5">
-          {primaryItems.slice(0, 3).map((item) => {
+          {primaryItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
             return (
@@ -208,7 +210,7 @@ export function AppSidebar({
             ) : null}
           </li>
 
-          {primaryItems.slice(3).map((item) => {
+          {primaryItems.slice(4).map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
             return (
