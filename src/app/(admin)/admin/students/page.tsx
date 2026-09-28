@@ -8,8 +8,8 @@ import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { StudentAvatar } from "@/components/student-avatar";
 import { EmptyState } from "@/components/empty-state";
+import { StudentListFilters } from "@/components/admin/student-list-filters";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DataTable,
   DataTableBody,
@@ -145,7 +145,7 @@ export default async function StudentsPage({
         }
       />
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {VIEWS.map((v) => (
           <Link
             key={v.id}
@@ -160,70 +160,21 @@ export default async function StudentsPage({
             {v.label}
           </Link>
         ))}
+        <StudentListFilters
+          view={view}
+          q={sp.q}
+          intake={sp.intake}
+          studyLevel={sp.studyLevel}
+          country={sp.country}
+          curatorId={sp.curatorId}
+          intakes={intakes.map((item) => item.intake)}
+          curators={
+            session.user.role === "ADMIN"
+              ? curators.map((curator) => ({ id: curator.id, name: curator.name }))
+              : []
+          }
+        />
       </div>
-
-      <form className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
-        <input type="hidden" name="view" value={view} />
-        <div className="space-y-1 sm:col-span-2 lg:col-span-1">
-          <label className="text-[11px] text-muted-foreground">Поиск</label>
-          <Input name="q" placeholder="Имя или email" defaultValue={sp.q ?? ""} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">Набор</label>
-          <select
-            name="intake"
-            defaultValue={sp.intake ?? ""}
-            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
-          >
-            <option value="">Все</option>
-            {intakes.map((i) => (
-              <option key={i.intake} value={i.intake}>
-                {i.intake}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">Уровень</label>
-          <select
-            name="studyLevel"
-            defaultValue={sp.studyLevel ?? ""}
-            className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
-          >
-            <option value="">Все</option>
-            <option value="BACHELOR">Бакалавриат</option>
-            <option value="MASTER">Магистратура</option>
-            <option value="PHD">Аспирантура</option>
-            <option value="OTHER">Другое</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">Страна</label>
-          <Input name="country" defaultValue={sp.country ?? ""} placeholder="Любая" />
-        </div>
-        {session.user.role === "ADMIN" ? (
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Куратор</label>
-            <select
-              name="curatorId"
-              defaultValue={sp.curatorId ?? ""}
-              className="flex h-8 w-full rounded-xl border border-input bg-card px-2 text-[13px]"
-            >
-              <option value="">Все</option>
-              {curators.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        <div className="flex items-end sm:col-span-2 lg:col-span-1">
-          <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">
-            Фильтр
-          </Button>
-        </div>
-      </form>
 
       {students.length === 0 ? (
         <EmptyState
