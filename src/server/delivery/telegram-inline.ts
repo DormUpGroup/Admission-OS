@@ -12,6 +12,7 @@ import {
   callTelegramDelivery,
   finalizeTelegramDelivery,
   prepareTelegramDelivery,
+  rethrowTelegramDeliveryFailure,
   TelegramRetryableError,
 } from "@/server/delivery/telegram";
 import { notifyCuratorTelegramSendFailed } from "@/server/delivery/telegram-curator-notice";
@@ -113,10 +114,16 @@ export async function tryDeliverTelegramSendNow(
         const result = await callTelegramDelivery(prepared, env);
         await finalizeTelegramDelivery(prepared, { result });
       } catch (error) {
-        const outcome = await finalizeTelegramDelivery(prepared, { error });
-        if (outcome === "retry" || error instanceof TelegramRetryableError) {
-          throw error instanceof Error ? error : new Error(String(error));
-        }
+        await rethrowTelegramDeliveryFailure(prepared, error);
+        console.warn(
+          JSON.stringify({
+            level: "warn",
+            msg: "telegram.send.unknown_requires_review",
+            eventId: event.id,
+            messageId: prepared.messageId,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
       }
     }
 
@@ -140,7 +147,9 @@ export async function tryDeliverTelegramSendNow(
       );
       return { status: "failed", error: message };
     }
-    await retryOutboxEvent(prisma, event.id, leaseToken, message);
+    await retryOutboxEvent(prisma, event.id, leaseToken, message, {
+      delayMs: error instanceof TelegramRetryableError ? error.delayMs : undefined,
+    });
     console.warn(
       JSON.stringify({
         level: "warn",

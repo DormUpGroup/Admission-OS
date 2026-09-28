@@ -20,6 +20,7 @@ import {
 import { enqueueQueuedHermesCreateRuns } from "@/server/automation/hermes-create-run";
 import { HERMES_POLL_RUN_EVENT } from "@/server/automation/hermes-poll-run";
 import { notifyCuratorTelegramSendFailed } from "@/server/delivery/telegram-curator-notice";
+import { TelegramRetryableError } from "@/server/delivery/telegram";
 import { refreshHermesTyping } from "@/server/delivery/telegram-typing";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
@@ -227,6 +228,9 @@ async function processOnce(): Promise<number> {
         event.id,
         event.leaseToken,
         message,
+        {
+          delayMs: error instanceof TelegramRetryableError ? error.delayMs : undefined,
+        },
       );
       console.error(
         JSON.stringify({

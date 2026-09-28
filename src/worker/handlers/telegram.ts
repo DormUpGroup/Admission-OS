@@ -4,7 +4,7 @@ import {
   callTelegramDelivery,
   finalizeTelegramDelivery,
   prepareTelegramDelivery,
-  TelegramRetryableError,
+  rethrowTelegramDeliveryFailure,
 } from "@/server/delivery/telegram";
 
 export const handleTelegramSend: OutboxHandler = async (_db, event) => {
@@ -43,11 +43,7 @@ export const handleTelegramSend: OutboxHandler = async (_db, event) => {
     const result = await callTelegramDelivery(prepared);
     await finalizeTelegramDelivery(prepared, { result });
   } catch (error) {
-    const outcome = await finalizeTelegramDelivery(prepared, { error });
-    if (outcome === "retry" || error instanceof TelegramRetryableError) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
-    // Ambiguous / unknown: outbox completes without automatic resend.
+    await rethrowTelegramDeliveryFailure(prepared, error);
     console.warn(
       JSON.stringify({
         level: "warn",

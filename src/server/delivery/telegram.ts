@@ -29,10 +29,54 @@ export type TelegramCallResult = {
 };
 
 export class TelegramRetryableError extends Error {
-  constructor(message: string) {
+  readonly delayMs?: number;
+
+  constructor(message: string, delayMs?: number) {
     super(message);
     this.name = "TelegramRetryableError";
+    this.delayMs = delayMs;
   }
+}
+
+/** How many times to call Telegram when the result is unknown (timeout, fetch failed, 5xx). */
+export const AMBIGUOUS_TRANSPORT_MAX_ATTEMPTS = 4;
+
+/**
+ * Pause before the next try so a short outage can clear.
+ * The argument is the attempt that just failed (1, 2, or 3).
+ */
+export function ambiguousTransportRetryDelayMs(failedAttempt: number): number {
+  const schedule = [30_000, 120_000, 600_000];
+  const index = Math.min(Math.max(failedAttempt, 1), schedule.length) - 1;
+  return schedule[index] ?? schedule[schedule.length - 1];
+}
+
+export function shouldScheduleAmbiguousRetry(attemptNumber: number): boolean {
+  return attemptNumber < AMBIGUOUS_TRANSPORT_MAX_ATTEMPTS;
+}
+
+/** Another send is allowed only for transport failures that have not used the four tries. */
+export function canRetryAmbiguousTransport(
+  prior: { status: string; errorCode: string | null }[],
+): boolean {
+  if (prior.some((attempt) => attempt.status === DELIVERY_STATUS.PROCESSING)) return false;
+  if (
+    prior.some(
+      (attempt) =>
+        attempt.status === DELIVERY_STATUS.SENT || attempt.status === "SUCCESS",
+    )
+  ) {
+    return false;
+  }
+  const ambiguous = prior.filter((attempt) => attempt.errorCode === "AMBIGUOUS_TRANSPORT");
+  if (ambiguous.length === 0 || ambiguous.length >= AMBIGUOUS_TRANSPORT_MAX_ATTEMPTS) {
+    return false;
+  }
+  return !prior.some(
+    (attempt) =>
+      attempt.status === DELIVERY_STATUS.UNKNOWN_REQUIRES_REVIEW &&
+      attempt.errorCode !== "AMBIGUOUS_TRANSPORT",
+  );
 }
 
 function metaChatId(metadata: Prisma.JsonValue | null | undefined): string | null {
@@ -167,7 +211,7 @@ export async function prepareTelegramDelivery(
         a.status === DELIVERY_STATUS.PROCESSING ||
         a.status === DELIVERY_STATUS.UNKNOWN_REQUIRES_REVIEW,
     );
-    if (blocking) {
+    if (blocking && !canRetryAmbiguousTransport(prior)) {
       if (blocking.status === DELIVERY_STATUS.PROCESSING) {
         await tx.deliveryAttempt.update({
           where: { id: blocking.id },
@@ -348,6 +392,14 @@ export async function finalizeTelegramDelivery(
   const ambiguous = isAmbiguousTelegramError(error);
 
   if (ambiguous) {
+    const attemptRow = prepared.attemptId
+      ? await prisma.deliveryAttempt.findUnique({
+          where: { id: prepared.attemptId },
+          select: { attempt: true },
+        })
+      : null;
+    const attemptNo = attemptRow?.attempt ?? 1;
+    const retry = shouldScheduleAmbiguousRetry(attemptNo);
     await prisma.$transaction(async (tx) => {
       if (prepared.attemptId) {
         await tx.deliveryAttempt.update({
@@ -361,10 +413,14 @@ export async function finalizeTelegramDelivery(
       }
       await tx.conversationMessage.update({
         where: { id: prepared.messageId },
-        data: { deliveryStatus: DELIVERY_STATUS.UNKNOWN_REQUIRES_REVIEW },
+        data: {
+          deliveryStatus: retry
+            ? DELIVERY_STATUS.PENDING
+            : DELIVERY_STATUS.UNKNOWN_REQUIRES_REVIEW,
+        },
       });
     });
-    return "completed";
+    return retry ? "retry" : "completed";
   }
 
   await prisma.$transaction(async (tx) => {
@@ -384,4 +440,23 @@ export async function finalizeTelegramDelivery(
     });
   });
   return "retry";
+}
+
+/** Requeue a failed send. Ambiguous transport stops after four tries. */
+export async function rethrowTelegramDeliveryFailure(
+  prepared: PreparedTelegramDelivery,
+  error: unknown,
+): Promise<void> {
+  const outcome = await finalizeTelegramDelivery(prepared, { error });
+  if (outcome !== "retry") return;
+  let delayMs: number | undefined;
+  if (isAmbiguousTelegramError(error) && prepared.attemptId) {
+    const row = await prisma.deliveryAttempt.findUnique({
+      where: { id: prepared.attemptId },
+      select: { attempt: true },
+    });
+    delayMs = ambiguousTransportRetryDelayMs(row?.attempt ?? 1);
+  }
+  const text = error instanceof Error ? error.message : String(error);
+  throw new TelegramRetryableError(text, delayMs);
 }

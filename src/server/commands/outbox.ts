@@ -405,7 +405,7 @@ export async function retryOutboxEvent(
   eventId: string,
   leaseToken: string,
   errorMessage: string,
-  options?: { now?: Date },
+  options?: { now?: Date; delayMs?: number },
 ): Promise<"retried" | "dead" | "lost_lease"> {
   const now = options?.now ?? new Date();
   const current = await db.outboxEvent.findFirst({
@@ -438,7 +438,8 @@ export async function retryOutboxEvent(
     return dead.count > 0 ? "dead" : "lost_lease";
   }
 
-  const nextAttemptAt = new Date(now.getTime() + retryDelayMs(attempts));
+  const delayMs = options?.delayMs ?? retryDelayMs(attempts);
+  const nextAttemptAt = new Date(now.getTime() + delayMs);
   const retried = await db.outboxEvent.updateMany({
     where: {
       id: eventId,
