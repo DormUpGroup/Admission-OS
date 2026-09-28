@@ -6,7 +6,12 @@ import {
   sendAgentClientMessage,
   updateLeadQualificationFromAgent,
 } from "./actions";
-import { bookingLinkReplacesReply, loadBookingConsentTurn, shouldSendBookingLink } from "@/server/booking/consent";
+import {
+  bookingLinkReplacesReply,
+  loadBookingConsentTurn,
+  loadConsultationDecision,
+  shouldSendBookingLink,
+} from "@/server/booking/consent";
 import { sendBookingLinkForConversation } from "@/server/booking/send-link";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { agentSendClientRequestId } from "./deliver-draft";
@@ -57,6 +62,7 @@ export type McpToolExecutors = {
     conversationId: string;
   }) => Promise<string>;
   readBookingTurn?: (conversationId: string) => ReturnType<typeof loadBookingConsentTurn>;
+  readBookingDecision?: (conversationId: string) => ReturnType<typeof loadConsultationDecision>;
 };
 
 export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
@@ -84,14 +90,25 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
         conversationId: input.conversationId,
       }),
     readBookingTurn: (conversationId) => loadBookingConsentTurn(conversationId),
+    readBookingDecision: (conversationId) => loadConsultationDecision(conversationId),
   };
 }
 
-/** The booking page replaces a freeform reply when this turn already agreed to a consultation. */
+/** The booking page replaces a freeform reply when a consultation is already agreed. */
 async function bookingLinkInsteadOfReply(
   executors: McpToolExecutors,
   input: { agentRunId: string; conversationId: string },
 ): Promise<string | null> {
+  if (executors.readBookingDecision) {
+    const decision = await executors.readBookingDecision(input.conversationId);
+    if (!decision.agreedNow && !decision.sendBecauseAlreadyAgreed) return null;
+    const text = await executors.sendBookingLink(input);
+    if (decision.agreedNow && bookingLinkReplacesReply(text)) return text;
+    if (decision.sendBecauseAlreadyAgreed && (text === "sent" || text.startsWith("already_booked"))) {
+      return text;
+    }
+    return null;
+  }
   if (!executors.readBookingTurn) return null;
   const turn = await executors.readBookingTurn(input.conversationId);
   if (!shouldSendBookingLink(turn)) return null;
@@ -163,7 +180,8 @@ function toolSchema(name: McpV1Tool) {
   const required = ["grant_id"];
   let description = "Read recent messages and automation state for this conversation.";
   if (name === "get_contact_profile") {
-    description = "Read the lead or student linked to this conversation.";
+    description =
+      "Read the lead card. Facts the client already said are filled in. Do not ask those again.";
   } else if (name === "propose_reply") {
     description =
       "Write the one reply to the client. The server sends this text when the turn ends.";

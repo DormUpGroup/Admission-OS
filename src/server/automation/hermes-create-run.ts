@@ -1,10 +1,12 @@
 import type { Prisma } from "@prisma/client";
+import { chatFactsToSave } from "@/lib/lead-profile";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
 import {
   ensureCapabilityGrant,
   formatChatTranscript,
   formatLeadCard,
   hermesRunInstructions,
+  LEAD_FACT_FIELDS,
   revokeCapabilityGrant,
 } from "./capability-grant";
 import {
@@ -139,6 +141,7 @@ export async function dispatchHermesCreateRun(
       id: true,
       lead: {
         select: {
+          id: true,
           firstName: true,
           lastName: true,
           locale: true,
@@ -168,13 +171,33 @@ export async function dispatchHermesCreateRun(
     return { status: "failed", errorCode: "empty_text" };
   }
 
-  const recent = await db.conversationMessage.findMany({
+  const history = await db.conversationMessage.findMany({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: "desc" },
-    take: 12,
+    take: 80,
     select: { direction: true, body: true },
   });
-  const transcript = formatChatTranscript([...recent].reverse());
+  const chronological = [...history].reverse();
+  const transcript = formatChatTranscript(chronological.slice(-12));
+  const remembered = chatFactsToSave(
+    conversation.lead?.qualificationJson,
+    chronological,
+    LEAD_FACT_FIELDS,
+  );
+  let qualificationJson = conversation.lead?.qualificationJson;
+  const leadId = conversation.lead?.id;
+  const updateLead = (db as { lead?: { update?: DbClient["lead"]["update"] } }).lead?.update;
+  if (leadId && updateLead && Object.keys(remembered).length > 0) {
+    const current =
+      qualificationJson && typeof qualificationJson === "object" && !Array.isArray(qualificationJson)
+        ? qualificationJson
+        : {};
+    qualificationJson = { ...current, ...remembered };
+    await updateLead({
+      where: { id: leadId },
+      data: { qualificationJson: qualificationJson as Prisma.InputJsonValue },
+    });
+  }
 
   // Fresh Hermes memory per message, so it does not copy its previous draft.
   // The transcript above is the conversation it should continue.
@@ -192,7 +215,10 @@ export async function dispatchHermesCreateRun(
       grant.id,
       text,
       transcript,
-      formatLeadCard(conversation.lead),
+      formatLeadCard(
+        conversation.lead ? { ...conversation.lead, qualificationJson } : conversation.lead,
+        chronological,
+      ),
     ),
   };
 

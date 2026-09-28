@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "crypto";
 import type { Prisma } from "@prisma/client";
+import { buildLeadCard, consultationGate } from "@/lib/lead-profile";
+import { clientAlreadyAgreedToConsultation } from "@/server/booking/consent";
 import type { DbClient } from "@/server/commands/outbox";
 
 /** Tools Hermes may call on an intake run. */
@@ -69,35 +71,34 @@ export type LeadCardSource = {
   qualificationJson?: unknown;
 } | null;
 
-function qualificationRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-/** Known facts and the gaps the bot may ask about, one at a time. */
-export function formatLeadCard(lead: LeadCardSource | undefined): string {
+/** Known facts and the one next step. Known includes what the client already said in the chat. */
+export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatTurn[] = []): string {
   const name = [lead?.firstName, lead?.lastName].filter(Boolean).join(" ").trim() || "unknown";
   const locale = lead?.locale?.trim() || "unknown";
-  const facts = qualificationRecord(lead?.qualificationJson);
-  const known: string[] = [];
-  const missing: string[] = [];
-  for (const field of LEAD_FACT_FIELDS) {
-    const value = facts[field];
-    const text =
-      typeof value === "string"
-        ? value.trim()
-        : typeof value === "number" && Number.isFinite(value)
-          ? String(value)
-          : "";
-    if (text) known.push(`${field}: ${text.slice(0, 120)}`);
-    else missing.push(field);
+  const rows = buildLeadCard({ qualificationJson: lead?.qualificationJson, messages });
+  const byKey = new Map(rows.map((row) => [row.key, row.value]));
+  const known = rows.map((row) => `${row.key}: ${row.value.slice(0, 120)}`);
+  const missing = LEAD_FACT_FIELDS.filter((field) => !byKey.get(field)?.trim());
+  const gate = consultationGate(rows);
+  let next: string;
+  if (gate.ready && clientAlreadyAgreedToConsultation(messages)) {
+    next =
+      "Send the booking link now. The client already agreed to a consultation. Do not ask another question.";
+  } else if (gate.ready) {
+    next = "Offer a consultation now, in one short question. Do not ask any other fact first.";
+  } else if (gate.missing[0] === "apostilleTranslation" && /перевод не назван/iu.test(byKey.get("apostilleTranslation") ?? "")) {
+    next = "Ask only whether the translation exists. The apostille is already known. Do not ask any other fact.";
+  } else if (gate.missing[0] === "apostilleTranslation" && /апостиль не назван/iu.test(byKey.get("apostilleTranslation") ?? "")) {
+    next = "Ask only whether the apostille exists. The translation is already known. Do not ask any other fact.";
+  } else {
+    next = `Ask only this one missing fact: ${gate.missing[0]}. Do not ask anything listed in Known.`;
   }
   return [
     `Name: ${name}`,
     `Locale: ${locale}`,
     `Known: ${known.length > 0 ? known.join("; ") : "none"}`,
     `Missing: ${missing.length > 0 ? missing.join(", ") : "none"}`,
+    `Next: ${next}`,
   ].join("\n");
 }
 
@@ -118,19 +119,20 @@ export function hermesRunInstructions(
     "Recent chat, oldest first. These messages were already sent:",
     transcript,
     "Read the whole chat and the lead card, then make one next turn.",
+    "The lead card is the source of truth. Known facts were already said in this chat. Never ask a Known fact again, and never say that a Known fact is missing from the card.",
+    "Obey the Next line on the lead card. It is the only question or offer for this turn.",
     "Answer what the person just said and any unfinished thread: a question already asked, or a fact they already gave.",
     "If the chat already started, do not greet again and do not restart the questionnaire from the beginning.",
     "One turn only: a short human reply and at most one fitting question.",
     "The study destination is always Italy. Never ask which country they are considering, and never offer another country.",
-    "Collect missing facts over the course of the chat, never as a list of questions.",
-    "Ask citizenship, whether they already have a passport, whether they have their diplomas or school certificates, and whether those documents have an apostille and a translation. One of these per turn.",
-    "When the person states a fact from the card, save it with update_lead_qualification before you reply.",
+    "When the person states a new fact, save it with update_lead_qualification. If it is already in Known, do not ask them to repeat it.",
+    "When Next says to send the booking link, call send_booking_link once and do not ask another question. The server sends that link if you only call propose_reply.",
+    "When Next says to offer a consultation, ask that once. Do not collect another fact first.",
     "Answer a simple question about the process yourself.",
     "For a specific programme, a price, a timeline, a decision, or anything that is not on the lead card, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
     "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент спрашивает стоимость конкретной программы. Напишите цену в этот чат.",
     "Call propose_reply once with the full reply. The server sends that text when the turn ends. Do not also call send_client_message for the same text.",
-    "Do not invite a consultation until citizenship, passport, diploma, and apostilleTranslation are known. When those are known and the client agrees, whoever asked about it, call send_booking_link once instead of writing that the curator will set the time.",
-    "Do not offer days or times in the chat, and do not invent a website link. send_booking_link sends the link and its text. The server sends that same link if you only call propose_reply after the client has agreed.",
+    "Do not offer days or times in the chat, and do not invent a website link. send_booking_link sends the link and its text.",
     "If send_booking_link returns already_booked or already_sent, do not send another message.",
     "If send_booking_link returns no_curator or booking_unavailable, call escalate_to_human and do not invent a link.",
     "Do not put prices, tariffs, or timelines in the text you send.",

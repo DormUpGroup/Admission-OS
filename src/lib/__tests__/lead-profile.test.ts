@@ -103,6 +103,51 @@ describe("buildLeadCard", () => {
     expect(card).toEqual([{ key: "studyLevel", label: "Уровень", value: "магистратура" }]);
   });
 
+  it("reads a short reply to the question the bot just asked", () => {
+    const card = buildLeadCard({
+      messages: [
+        outbound("Вы хотите на бакалавриат или в магистратуру?"),
+        inbound("Бакалавр"),
+        outbound("Аттестат уже на руках?"),
+        inbound("Аттестат есть"),
+        outbound("Апостиль на аттестате уже есть?"),
+        inbound("Апостиль есть"),
+        outbound("Теперь про перевод: перевод уже готов или пока нет?"),
+        inbound("Есть есть все есть"),
+        outbound("Подскажите, какое у вас гражданство?"),
+        inbound("Украина и Израиль"),
+        outbound("Загранпаспорт. Он у вас уже есть?"),
+        inbound("Есть"),
+        outbound("Хотите, передам вас куратору?"),
+        inbound("Давайте"),
+        outbound("Подскажите, какая сфера вам интересна?"),
+        inbound("Физика и изобразительное искусство"),
+        outbound("На какой учебный год планируете старт?"),
+        inbound("27/28"),
+        outbound("На какую сумму в год вы ориентируетесь?"),
+        inbound("Учитывая обучение и жилье вместе?"),
+        outbound("Да, считаем вместе. На какую сумму в год примерно ориентируетесь?"),
+        inbound("Вообще без понятия если честно"),
+        outbound("А учиться хотите на английском или на итальянском?"),
+        inbound("Английский"),
+        outbound("Какое у вас гражданство?"),
+        inbound("Я же уже говорил"),
+      ],
+    });
+
+    expect(Object.fromEntries(card.map((row) => [row.key, row.value]))).toEqual({
+      studyLevel: "Бакалавриат",
+      targetField: "Физика, Изобразительное искусство",
+      desiredIntake: "2027/28",
+      citizenship: "Украина и Израиль",
+      passport: "есть",
+      diploma: "есть",
+      apostilleTranslation: "апостиль и перевод есть",
+      language: "английский",
+      budget: "Вообще без понятия если честно",
+    });
+  });
+
   it("stays empty when the chat is only greetings", () => {
     expect(
       buildLeadCard({

@@ -112,6 +112,9 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
     readBookingTurn: undefined as
       | undefined
       | (() => Promise<{ previousBody: string | null; clientBody: string | null }>),
+    readBookingDecision: undefined as
+      | undefined
+      | (() => Promise<{ agreedNow: boolean; sendBecauseAlreadyAgreed: boolean }>),
   };
   return { db, calls, executors, output: () => outputJson };
 }
@@ -352,5 +355,45 @@ describe("MCP capability grant", () => {
     expect(JSON.stringify(draft.body)).toContain("sent");
     expect(box.calls.bookings).toBe(1);
     expect(box.calls.sent).toEqual([]);
+  });
+
+  it("sends the overdue booking link instead of another question", async () => {
+    const box = world(grant());
+    box.executors.readBookingDecision = async () => ({
+      agreedNow: false,
+      sendBecauseAlreadyAgreed: true,
+    });
+    const draft = await post(
+      box,
+      call("propose_reply", {
+        grant_id: "grant-secret-value",
+        body: "Какое у вас гражданство?",
+      }),
+    );
+    expect(JSON.stringify(draft.body)).toContain("sent");
+    expect(box.calls.bookings).toBe(1);
+    expect(box.calls.sent).toEqual([]);
+  });
+
+  it("keeps the reply when the booking link was already sent", async () => {
+    const box = world(grant());
+    box.executors.readBookingDecision = async () => ({
+      agreedNow: false,
+      sendBecauseAlreadyAgreed: true,
+    });
+    box.executors.sendBookingLink = async () => {
+      box.calls.bookings += 1;
+      return "already_sent";
+    };
+    const draft = await post(
+      box,
+      call("propose_reply", {
+        grant_id: "grant-secret-value",
+        body: "Поняла, физика.",
+      }),
+    );
+    expect(box.calls.bookings).toBe(1);
+    expect(box.calls.sent).toEqual(["Поняла, физика."]);
+    expect(JSON.stringify(draft.body)).toContain("sent");
   });
 });

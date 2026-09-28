@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldSendBookingLink } from "../consent";
+import { clientAlreadyAgreedToConsultation, shouldSendBookingLink } from "../consent";
 
 describe("booking consent", () => {
   it("sends the link when a person asked and the client agreed", () => {
@@ -35,6 +35,32 @@ describe("booking consent", () => {
         previousBody: "Сумма в год — только обучение или уже с проживанием?",
         clientBody: "Только обучение",
       }),
+    ).toBe(false);
+  });
+
+  it("treats agreement to a curator handoff as booking consent", () => {
+    expect(
+      shouldSendBookingLink({
+        previousBody: "Хотите, передам вас куратору?",
+        clientBody: "Давайте",
+      }),
+    ).toBe(true);
+  });
+
+  it("remembers an earlier yes and drops it after a later refusal", () => {
+    const agreed = [
+      { direction: "OUTBOUND", body: "Хотите, передам вас куратору?" },
+      { direction: "INBOUND", body: "Давайте" },
+      { direction: "OUTBOUND", body: "Какая сфера?" },
+      { direction: "INBOUND", body: "Физика" },
+    ];
+    expect(clientAlreadyAgreedToConsultation(agreed)).toBe(true);
+    expect(
+      clientAlreadyAgreedToConsultation([
+        ...agreed,
+        { direction: "OUTBOUND", body: "Всё ещё хотите консультацию?" },
+        { direction: "INBOUND", body: "Нет, не надо" },
+      ]),
     ).toBe(false);
   });
 

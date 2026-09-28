@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { buildLeadCard, consultationGate } from "@/lib/lead-profile";
 
 export type BookingConsentTurn = {
   /** The message just before the client's latest one. Any sender. */
@@ -54,11 +55,18 @@ export function mentionsConsultation(text: string | null | undefined): boolean {
   return /консультац|видео\s*консультац|созвон|видеозвон|видео-звон/i.test(text);
 }
 
+/** A consultation offer, including a handoff to the curator. */
+export function offersHandoff(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return mentionsConsultation(text) || /передам\s+(вас\s+)?куратор/iu.test(text);
+}
+
 function isRefusal(text: string): boolean {
   const normalized = normalize(text);
-  return /^(нет|не надо|не хочу|не интересно|не готов|не готова|не готовы|позже|не сейчас)\b/.test(
+  // Cyrillic is not a JS word character, so \b does not see these words.
+  return /^(нет|не надо|не хочу|не интересно|не готов|не готова|не готовы|позже|не сейчас)(?:\s|$)/.test(
     normalized,
-  ) || /\b(не надо|не хочу|не интересно)\b/.test(normalized);
+  ) || /(^|\s)(не надо|не хочу|не интересно)(?:\s|$)/.test(normalized);
 }
 
 function isShortAgreement(text: string): boolean {
@@ -71,7 +79,7 @@ function isShortAgreement(text: string): boolean {
 
 function clientAskedForConsultation(text: string): boolean {
   if (!mentionsConsultation(text) || isRefusal(text)) return false;
-  return /\b(да|хочу|можно|давайте|интересно|готов|готова|готовы|согласен|согласна|запишите|записывайте)\b/i.test(
+  return /(^|\s)(да|хочу|можно|давайте|интересно|готов|готова|готовы|согласен|согласна|запишите|записывайте)(?:\s|$)/i.test(
     normalize(text),
   );
 }
@@ -83,9 +91,58 @@ function clientAskedForConsultation(text: string): boolean {
 export function shouldSendBookingLink(turn: BookingConsentTurn): boolean {
   const client = turn.clientBody?.trim() ?? "";
   if (!client || isRefusal(client)) return false;
-  const topic = mentionsConsultation(turn.previousBody) || mentionsConsultation(client);
+  const topic = offersHandoff(turn.previousBody) || mentionsConsultation(client);
   if (!topic) return false;
   return isShortAgreement(client) || clientAskedForConsultation(client);
+}
+
+export type ConsentMessage = { direction: string; body: string | null };
+
+/** True when the client agreed to a consultation and has not refused a later offer. */
+export function clientAlreadyAgreedToConsultation(messages: ConsentMessage[]): boolean {
+  let agreed = false;
+  let previous = "";
+  for (const message of messages) {
+    const body = message.body?.trim() ?? "";
+    if (!body) continue;
+    if (message.direction === "INBOUND") {
+      const aboutHandoff =
+        offersHandoff(previous) || mentionsConsultation(previous) || mentionsConsultation(body);
+      if (aboutHandoff && isRefusal(body)) agreed = false;
+      else if (shouldSendBookingLink({ previousBody: previous || null, clientBody: body })) agreed = true;
+    }
+    previous = body;
+  }
+  return agreed;
+}
+
+export async function loadConsultationDecision(conversationId: string): Promise<{
+  agreedNow: boolean;
+  sendBecauseAlreadyAgreed: boolean;
+}> {
+  const rows = await prisma.conversationMessage.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: "desc" },
+    take: 80,
+    select: { direction: true, body: true },
+  });
+  const messages = [...rows].reverse();
+  const turn = await loadBookingConsentTurn(conversationId);
+  const agreedNow = shouldSendBookingLink(turn);
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { lead: { select: { qualificationJson: true } } },
+  });
+  const ready = consultationGate(
+    buildLeadCard({
+      qualificationJson: conversation?.lead?.qualificationJson,
+      messages,
+    }),
+  ).ready;
+  return {
+    agreedNow,
+    sendBecauseAlreadyAgreed: !agreedNow && ready && clientAlreadyAgreedToConsultation(messages),
+  };
 }
 
 export async function loadBookingConsentTurn(conversationId: string): Promise<BookingConsentTurn> {

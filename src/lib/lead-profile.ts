@@ -40,8 +40,32 @@ const FIELDS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /медицин/iu, label: "Медицина" },
   { pattern: /архитектур/iu, label: "Архитектура" },
   { pattern: /дизайн/iu, label: "Дизайн" },
+  { pattern: /физик/iu, label: "Физика" },
+  { pattern: /изобразительн/iu, label: "Изобразительное искусство" },
   { pattern: /(^|[^\p{L}])it([^\p{L}]|$)|информатик|программист/iu, label: "IT" },
 ];
+
+/** Facts the bot must have before it offers a consultation. */
+export const CONSULTATION_FACT_KEYS = [
+  "citizenship",
+  "passport",
+  "diploma",
+  "apostilleTranslation",
+] as const;
+
+/** A stored phrase that still leaves the fact unanswered. */
+export function factIsKnown(key: string, value: string | null | undefined): boolean {
+  const text = value?.trim() ?? "";
+  if (!text) return false;
+  if (key === "apostilleTranslation" && /не назван|не уточн|неизвест/iu.test(text)) return false;
+  return true;
+}
+
+export function consultationGate(rows: LeadFactRow[]): { ready: boolean; missing: string[] } {
+  const byKey = new Map(rows.map((row) => [row.key, row.value]));
+  const missing = CONSULTATION_FACT_KEYS.filter((key) => !factIsKnown(key, byKey.get(key)));
+  return { ready: missing.length === 0, missing: [...missing] };
+}
 
 export type ChatTurn = {
   direction: string;
@@ -139,6 +163,7 @@ type Draft = {
   level: string | null;
   examWhen: string | null;
   languageTopic: boolean;
+  languageFree: string | null;
   budget: string[];
 };
 
@@ -158,8 +183,33 @@ function emptyDraft(): Draft {
     level: null,
     examWhen: null,
     languageTopic: false,
+    languageFree: null,
     budget: [],
   };
+}
+
+function clipAnswer(text: string): string | null {
+  const raw = text.trim();
+  if (!raw || raw.includes("?") || raw.length > 120) return null;
+  const answer = raw.replace(/[.!?…]+$/g, "").trim();
+  return answer || null;
+}
+
+function isYesBlob(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[^\p{L}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.length > 48 || /^(нет|не)\b/u.test(normalized)) return false;
+  return /^(есть|да|ага|все|имеется|конечно|давайте|давай)(\s+(есть|да|ага|все|имеется|конечно|давайте|давай))*$/u.test(
+    normalized,
+  );
+}
+
+function isMetaReply(text: string): boolean {
+  return /уже\s+(говорил|говорила|сказал|сказала|писал|писала|отвечал|отвечала)|я\s+же/iu.test(text);
 }
 
 function pushUnique(list: string[], value: string) {
@@ -235,13 +285,47 @@ function absorb(text: string, previousOutbound: string, draft: Draft) {
   if (/денег\s+нет|нет\s+денег/iu.test(text)) pushUnique(draft.budget, "денег нет");
   if (/как можно меньше/iu.test(text)) pushUnique(draft.budget, "как можно меньше");
   if (/только\s+обучени/iu.test(text)) pushUnique(draft.budget, "только обучение");
+  if (/^(английск\p{L}*|итальянск\p{L}*)[.!?…\s]*$/iu.test(text)) {
+    draft.languageFree = /итальян/iu.test(text) ? "итальянский" : "английский";
+  }
 
+  const answer = clipAnswer(text);
+  if (/гражданств/iu.test(previousOutbound) && answer && !isMetaReply(answer) && !isYesBlob(answer)) {
+    draft.citizenship = answer;
+  }
+
+  if (/перевод/iu.test(previousOutbound) && isYesBlob(text)) {
+    const apostilleAlreadyKnown =
+      /апостил/iu.test(previousOutbound) || /апостиль есть/iu.test(draft.apostilleTranslation ?? "");
+    draft.apostilleTranslation = apostilleAlreadyKnown
+      ? "апостиль и перевод есть"
+      : "перевод есть, апостиль не назван";
+  } else if (/перевод/iu.test(previousOutbound) && /^нет\b/iu.test(text)) {
+    draft.apostilleTranslation = "перевода нет";
+  }
+
+  if (
+    /сфер|направлен|специальност/iu.test(previousOutbound) &&
+    draft.fields.length === 0 &&
+    answer &&
+    !isYesBlob(answer) &&
+    !isMetaReply(answer) &&
+    !studyLevelFrom(answer) &&
+    !intakeFrom(answer)
+  ) {
+    pushUnique(draft.fields, answer);
+  }
+
+  if (/сумм|бюджет/iu.test(previousOutbound) && draft.budget.length === 0 && answer && !isYesBlob(answer)) {
+    pushUnique(draft.budget, answer);
+  }
 }
 
 function languageLine(draft: Draft): string | null {
   const parts = [...draft.exams];
   if (draft.level) parts.push(draft.level);
   if (draft.examWhen) parts.push(draft.examWhen);
+  if (draft.languageFree) parts.push(draft.languageFree);
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
@@ -282,6 +366,34 @@ function extractedFacts(messages: ChatTurn[]): Map<string, string> {
   if (draft.diploma) facts.set("diploma", draft.diploma);
   if (draft.apostilleTranslation) facts.set("apostilleTranslation", draft.apostilleTranslation);
   return facts;
+}
+
+/** Saved qualification, with empty fields filled from the chat. Saved values win. */
+export function qualificationWithChatFacts(
+  qualificationJson: unknown,
+  messages: ChatTurn[],
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...asRecord(qualificationJson) };
+  for (const row of buildLeadCard({ qualificationJson, messages })) {
+    if (!scalarText(merged[row.key])) merged[row.key] = row.value;
+  }
+  return merged;
+}
+
+/** Facts safe to write onto the lead: known, still empty, and in the allowed list. */
+export function chatFactsToSave(
+  qualificationJson: unknown,
+  messages: ChatTurn[],
+  fields: readonly string[],
+): Record<string, string> {
+  const saved = asRecord(qualificationJson);
+  const allowed = new Set(fields);
+  const patch: Record<string, string> = {};
+  for (const row of buildLeadCard({ qualificationJson, messages })) {
+    if (!allowed.has(row.key) || scalarText(saved[row.key]) || !factIsKnown(row.key, row.value)) continue;
+    patch[row.key] = row.value;
+  }
+  return patch;
 }
 
 /**

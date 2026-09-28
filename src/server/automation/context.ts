@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { qualificationWithChatFacts } from "@/lib/lead-profile";
 import { listOpenSlots } from "@/server/services/appointments/slots";
 
 const QUALIFICATION_FIELDS = new Set([
@@ -67,10 +68,23 @@ export async function getContactProfile(conversationId: string) {
       student: {
         select: { id: true, firstName: true, lastName: true, studyLevel: true, targetField: true },
       },
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 80,
+        select: { direction: true, body: true },
+      },
     },
   });
   if (!conversation) throw new Error("Conversation not found");
-  return { lead: conversation.lead, student: conversation.student };
+  const lead = conversation.lead
+    ? {
+        ...conversation.lead,
+        qualificationJson: qualificationWithChatFacts(conversation.lead.qualificationJson, [
+          ...conversation.messages,
+        ].reverse()),
+      }
+    : null;
+  return { lead, student: conversation.student };
 }
 
 export async function listAvailableSlots(input: {

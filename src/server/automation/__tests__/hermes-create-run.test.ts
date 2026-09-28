@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HermesNotConfiguredError, HermesRetryableError } from "../hermes-client";
+import { formatLeadCard } from "../capability-grant";
 import {
   dispatchHermesCreateRun,
   enqueueHermesCreateRun,
@@ -220,7 +221,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("send_client_message");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
-      expect(sent.instructions).toContain("whoever asked about it");
+      expect(sent.instructions).toContain("Next: Ask only this one missing fact: citizenship");
+      expect(sent.instructions).toContain("Never ask a Known fact again");
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("the one action the curator should take");
       expect(sent.instructions).toContain("propose_reply");
@@ -404,5 +406,49 @@ describe("hermes.create_run dispatch", () => {
     expect(JSON.parse(bodies[1] ?? "{}").instructions).toBe(
       JSON.parse(bodies[0] ?? "{}").instructions,
     );
+  });
+});
+
+describe("formatLeadCard", () => {
+  it("offers the booking link when the chat already answered and the client agreed", () => {
+    const card = formatLeadCard({ firstName: "Mike", lastName: "Bilak", locale: "ru" }, [
+      { direction: "OUTBOUND", body: "Какое у вас гражданство?" },
+      { direction: "INBOUND", body: "Украина и Израиль" },
+      { direction: "OUTBOUND", body: "Загранпаспорт уже есть?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Аттестат уже на руках?" },
+      { direction: "INBOUND", body: "Аттестат есть" },
+      { direction: "OUTBOUND", body: "Апостиль уже есть?" },
+      { direction: "INBOUND", body: "Апостиль есть" },
+      { direction: "OUTBOUND", body: "Перевод уже готов?" },
+      { direction: "INBOUND", body: "Есть есть все есть" },
+      { direction: "OUTBOUND", body: "Хотите, передам вас куратору?" },
+      { direction: "INBOUND", body: "Давайте" },
+      { direction: "OUTBOUND", body: "Какое у вас гражданство?" },
+      { direction: "INBOUND", body: "Я же уже говорил" },
+    ]);
+    expect(card).toContain("citizenship: Украина и Израиль");
+    expect(card).toContain("passport: есть");
+    expect(card).toContain("diploma: есть");
+    expect(card).toContain("apostilleTranslation: апостиль и перевод есть");
+    expect(card).toContain("Next: Send the booking link now");
+    expect(card).not.toContain("Ask only this one missing fact: citizenship");
+  });
+
+  it("asks for a consultation once the documents are known and the client has not agreed yet", () => {
+    const card = formatLeadCard(null, [
+      { direction: "OUTBOUND", body: "Какое у вас гражданство?" },
+      { direction: "INBOUND", body: "Украина" },
+      { direction: "OUTBOUND", body: "Загранпаспорт уже есть?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Аттестат уже на руках?" },
+      { direction: "INBOUND", body: "Аттестат есть" },
+      { direction: "OUTBOUND", body: "Апостиль уже есть?" },
+      { direction: "INBOUND", body: "Апостиль есть" },
+      { direction: "OUTBOUND", body: "Перевод уже готов?" },
+      { direction: "INBOUND", body: "Есть" },
+    ]);
+    expect(card).toContain("Next: Offer a consultation now");
+    expect(card).toContain("Missing:");
   });
 });
