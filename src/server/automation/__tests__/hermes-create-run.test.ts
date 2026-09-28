@@ -232,6 +232,10 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("You are a girl chatting with this new lead");
       expect(sent.instructions).toContain("поняла, передала, уточнила, написала");
       expect(sent.instructions).toContain("If Name is unknown, do not address the client by name");
+      expect(sent.instructions).toContain("answer immediately");
+      expect(sent.instructions).toContain("1599 €");
+      expect(sent.instructions).toContain("the curator will answer this");
+      expect(sent.instructions).not.toContain("Do not put prices");
       expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
       expect(sent.instructions).toContain("One list per message");
       expect(sent.instructions).toContain("<b>word</b>");

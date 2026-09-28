@@ -1,4 +1,5 @@
 import type { DbClient } from "@/server/commands/outbox";
+import { TELEGRAM_PRICES_TEXT } from "@/server/channels/telegram-copy";
 import type { AgentKey } from "./registry";
 
 export const POLICY_DECISIONS = {
@@ -101,7 +102,7 @@ export function evaluateActionPolicy(
     if (!body) {
       return { decision: POLICY_DECISIONS.DENY, reasons: ["empty_message"] };
     }
-    if (body.length > 500) {
+    if (body.length > 500 && body !== TELEGRAM_PRICES_TEXT) {
       return {
         decision: POLICY_DECISIONS.REQUIRE_APPROVAL,
         reasons: ["intake_message_too_long"],

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TELEGRAM_PRICES_TEXT } from "@/server/channels/telegram-copy";
 import {
   approvalPayloadHash,
   canonicalApprovalPayload,
@@ -77,6 +78,27 @@ describe("agent policy gate", () => {
       conversation: { ...safeConversation, automationPausedAt: new Date() },
     });
     expect(result).toEqual({ decision: POLICY_DECISIONS.ALLOW, reasons: [] });
+  });
+
+  it("sends the official price list immediately even though it is long", () => {
+    const result = evaluateActionPolicy({
+      agentKey: "intake",
+      toolName: "send_client_message",
+      body: TELEGRAM_PRICES_TEXT,
+      conversation: safeConversation,
+    });
+    expect(result.decision).toBe(POLICY_DECISIONS.ALLOW);
+  });
+
+  it("holds a long reply that is not the price list", () => {
+    const result = evaluateActionPolicy({
+      agentKey: "intake",
+      toolName: "send_client_message",
+      body: "а".repeat(501),
+      conversation: safeConversation,
+    });
+    expect(result.decision).toBe(POLICY_DECISIONS.REQUIRE_APPROVAL);
+    expect(result.reasons).toContain("intake_message_too_long");
   });
 
   it("sends a reply that only mentions price without quoting one", () => {
