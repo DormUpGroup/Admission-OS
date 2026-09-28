@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { queueIntakeRunForMessageReceived } from "../runs";
+import { isTelegramBotCommand, queueIntakeRunForMessageReceived } from "../runs";
 
 function outboxMock() {
   const created: string[] = [];
@@ -15,6 +15,17 @@ function outboxMock() {
     },
   };
 }
+
+describe("isTelegramBotCommand", () => {
+  it("treats start, help, and the price list as commands", () => {
+    expect(isTelegramBotCommand("/start")).toBe(true);
+    expect(isTelegramBotCommand("/help")).toBe(true);
+    expect(isTelegramBotCommand("/prices")).toBe(true);
+    expect(isTelegramBotCommand("/price")).toBe(true);
+    expect(isTelegramBotCommand("/pricelist@ImmigromeBot")).toBe(true);
+    expect(isTelegramBotCommand("Сколько стоит?")).toBe(false);
+  });
+});
 
 describe("Intake run queue", () => {
   it("does not queue a paused conversation", async () => {
