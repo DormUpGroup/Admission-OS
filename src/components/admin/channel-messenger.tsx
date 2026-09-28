@@ -94,7 +94,7 @@ export function ChannelMessenger({
     const id = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
       router.refresh();
-    }, 4000);
+    }, 2000);
     return () => window.clearInterval(id);
   }, [router]);
 

@@ -222,16 +222,23 @@ export function TelegramMessenger({
     [folder, loadThread, router],
   );
 
-  // New client messages are written by the webhook, not pushed to this page.
+  // The open thread is one small read. The list refresh reloads the whole admin page.
   useEffect(() => {
-    const tick = () => {
+    if (!activeId) return;
+    const id = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
-      if (activeId) void loadThread(activeId, { silent: true });
-      router.refresh();
-    };
-    const id = window.setInterval(tick, active?.hasPendingDelivery ? 2000 : 4000);
+      void loadThread(activeId, { silent: true });
+    }, 1000);
     return () => window.clearInterval(id);
-  }, [active?.hasPendingDelivery, activeId, loadThread, router]);
+  }, [activeId, loadThread]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      router.refresh();
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [router]);
 
   function folderHref(next: ConversationFolder) {
     const params = new URLSearchParams();
