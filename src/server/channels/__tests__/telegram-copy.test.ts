@@ -25,8 +25,9 @@ describe("telegram greeting name", () => {
     expect(explicitTelegramFirstName("😎")).toBeNull();
     expect(explicitTelegramFirstName("user")).toBeNull();
     expect(explicitTelegramFirstName(null)).toBeNull();
-    expect(telegramWelcomeText("user_12").startsWith("Здравствуйте.")).toBe(true);
-    expect(telegramWelcomeText("user_12").includes(",")).toBe(false);
+    const unnamed = telegramWelcomeText("user_12");
+    expect(unnamed.startsWith("Здравствуйте.\n")).toBe(true);
+    expect(unnamed.includes("user_12")).toBe(false);
     expect(explicitTelegramLeadName("nick_name")).toEqual({
       firstName: null,
       lastName: null,
