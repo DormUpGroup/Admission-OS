@@ -6,6 +6,7 @@ import {
   sendAgentClientMessage,
   updateLeadQualificationFromAgent,
 } from "./actions";
+import { bookingLinkReplacesReply, loadBookingConsentTurn, shouldSendBookingLink } from "@/server/booking/consent";
 import { sendBookingLinkForConversation } from "@/server/booking/send-link";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { agentSendClientRequestId } from "./deliver-draft";
@@ -55,6 +56,7 @@ export type McpToolExecutors = {
     agentRunId: string;
     conversationId: string;
   }) => Promise<string>;
+  readBookingTurn?: (conversationId: string) => ReturnType<typeof loadBookingConsentTurn>;
 };
 
 export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
@@ -81,7 +83,20 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
         agentRunId: input.agentRunId,
         conversationId: input.conversationId,
       }),
+    readBookingTurn: (conversationId) => loadBookingConsentTurn(conversationId),
   };
+}
+
+/** The booking page replaces a freeform reply when this turn already agreed to a consultation. */
+async function bookingLinkInsteadOfReply(
+  executors: McpToolExecutors,
+  input: { agentRunId: string; conversationId: string },
+): Promise<string | null> {
+  if (!executors.readBookingTurn) return null;
+  const turn = await executors.readBookingTurn(input.conversationId);
+  if (!shouldSendBookingLink(turn)) return null;
+  const text = await executors.sendBookingLink(input);
+  return bookingLinkReplacesReply(text) ? text : null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -393,6 +408,14 @@ async function callTool(
       logLine("empty_draft");
       return { status: 200, body: toolResult(id, "empty_draft", true) };
     }
+    const booked = await bookingLinkInsteadOfReply(executors, {
+      agentRunId: grant.agentRunId,
+      conversationId: grant.conversationId,
+    });
+    if (booked) {
+      logLine("booking_link");
+      return { status: 200, body: toolResult(id, booked, false) };
+    }
     await executors.saveDraft({ agentRunId: grant.agentRunId, body });
     const sent = await executors.sendClientMessage({
       agentRunId: grant.agentRunId,
@@ -425,6 +448,14 @@ async function callTool(
     if (!body) {
       logLine("empty_message");
       return { status: 200, body: toolResult(id, "empty_message", true) };
+    }
+    const booked = await bookingLinkInsteadOfReply(executors, {
+      agentRunId: grant.agentRunId,
+      conversationId: grant.conversationId,
+    });
+    if (booked) {
+      logLine("booking_link");
+      return { status: 200, body: toolResult(id, booked, false) };
     }
     const sent = await executors.sendClientMessage({
       agentRunId: grant.agentRunId,

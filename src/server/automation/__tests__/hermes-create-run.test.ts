@@ -216,6 +216,7 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("send_client_message");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
+      expect(sent.instructions).toContain("whoever asked about it");
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("the one action the curator should take");
       expect(sent.instructions).toContain("propose_reply");

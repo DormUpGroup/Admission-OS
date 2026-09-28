@@ -38,6 +38,7 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
     sent: [] as string[],
     patches: [] as unknown[],
     reasons: [] as string[],
+    bookings: 0,
   };
   let outputJson: unknown = { drafts: [{ body: "старый", createdAt: "2026-09-27T11:00:00.000Z" }] };
   const db = {
@@ -104,7 +105,13 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
         policy: { decision: "ALLOW" as const, reasons: [] },
       };
     },
-    sendBookingLink: async () => "sent",
+    sendBookingLink: async () => {
+      calls.bookings += 1;
+      return "sent";
+    },
+    readBookingTurn: undefined as
+      | undefined
+      | (() => Promise<{ previousBody: string | null; clientBody: string | null }>),
   };
   return { db, calls, executors, output: () => outputJson };
 }
@@ -327,5 +334,23 @@ describe("MCP capability grant", () => {
     const booked = await post(box, call("send_booking_link", { grant_id: "grant-secret-value" }));
     expect(JSON.stringify(booked.body)).toContain("sent");
     expect((booked.body as { result: { isError: boolean } }).result.isError).toBe(false);
+  });
+
+  it("sends the booking link instead of the draft when the client agreed", async () => {
+    const box = world(grant());
+    box.executors.readBookingTurn = async () => ({
+      previousBody: "Вы заинтересованы в видео консультации?",
+      clientBody: "Более чем",
+    });
+    const draft = await post(
+      box,
+      call("propose_reply", {
+        grant_id: "grant-secret-value",
+        body: "Куратор вернётся и согласует время",
+      }),
+    );
+    expect(JSON.stringify(draft.body)).toContain("sent");
+    expect(box.calls.bookings).toBe(1);
+    expect(box.calls.sent).toEqual([]);
   });
 });
