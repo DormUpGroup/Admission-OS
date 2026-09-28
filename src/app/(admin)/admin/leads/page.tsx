@@ -176,11 +176,16 @@ export default async function AdminLeadsPage({
                 <DataTableCell>{row.curator}</DataTableCell>
                 <DataTableCell>{formatDate(row.activity)}</DataTableCell>
                 <DataTableCell>
-                  {row.chatHref ? (
-                    <Link href={row.chatHref} className="text-[var(--brand)] hover:underline">
-                      Чат
+                  <span className="inline-flex gap-3">
+                    <Link href={`/admin/leads/${row.id}`} className="text-[var(--brand)] hover:underline">
+                      Профиль
                     </Link>
-                  ) : null}
+                    {row.chatHref ? (
+                      <Link href={row.chatHref} className="text-muted-foreground hover:underline">
+                        Чат
+                      </Link>
+                    ) : null}
+                  </span>
                 </DataTableCell>
               </DataTableRow>
             ))}
