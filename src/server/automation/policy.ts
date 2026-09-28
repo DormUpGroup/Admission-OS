@@ -31,9 +31,6 @@ export type EvaluateActionPolicyInput = {
 const GUARANTEE_OR_PAYMENT_PATTERN =
   /(?:guarantee(?:d)?|guaranteed admission|guaranteed visa|visa approved|admission assured|confirm(?:ed)? payment|payment received|гарантир(?:уем|овано|ую)|гарантия|гарантированн\S* поступлен|гарантированн\S* виз|виза одобрен|поступление гарант|подтвержда(?:ем|ю) оплат|оплата подтвержден)/iu;
 
-const SENSITIVE_INTAKE_PATTERN =
-  /(?:\bprice\b|\bcost\b|\bfee\b|\bquote\b|\bdiscount\b|\bdays?\b|\bweeks?\b|\bmonths?\b|срок(?:и|ов)?|стоимост\S*|цен\S*|оплат\S*|тариф\S*|скидк\S*)/iu;
-
 const READ_ONLY_TOOLS = new Set([
   "get_conversation_context",
   "get_contact_profile",
@@ -108,12 +105,6 @@ export function evaluateActionPolicy(
       return {
         decision: POLICY_DECISIONS.REQUIRE_APPROVAL,
         reasons: ["intake_message_too_long"],
-      };
-    }
-    if (SENSITIVE_INTAKE_PATTERN.test(body)) {
-      return {
-        decision: POLICY_DECISIONS.REQUIRE_APPROVAL,
-        reasons: ["intake_sensitive_claim"],
       };
     }
     return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };

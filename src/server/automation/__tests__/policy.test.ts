@@ -79,14 +79,14 @@ describe("agent policy gate", () => {
     expect(result).toEqual({ decision: POLICY_DECISIONS.ALLOW, reasons: [] });
   });
 
-  it("requires approval for sensitive Intake copy", () => {
+  it("sends a reply that only mentions price without quoting one", () => {
     const result = evaluateActionPolicy({
       agentKey: "intake",
       toolName: "send_client_message",
       body: "Расскажем о стоимости сопровождения на консультации.",
       conversation: safeConversation,
     });
-    expect(result.decision).toBe(POLICY_DECISIONS.REQUIRE_APPROVAL);
+    expect(result.decision).toBe(POLICY_DECISIONS.ALLOW);
   });
 
   it("blocks agent sends while automation is paused", () => {

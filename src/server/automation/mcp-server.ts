@@ -7,6 +7,7 @@ import {
   updateLeadQualificationFromAgent,
 } from "./actions";
 import { sendBookingLinkForConversation } from "@/server/booking/send-link";
+import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { agentSendClientRequestId } from "./deliver-draft";
 import {
   capabilityGrantLogHash,
@@ -61,13 +62,18 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
     getConversationContext: (conversationId) => getConversationContext(conversationId),
     getContactProfile: (conversationId) => getContactProfile(conversationId),
     saveDraft: (input) => saveProposeReplyDraft(db, input),
-    sendClientMessage: (input) =>
-      sendAgentClientMessage({
+    sendClientMessage: async (input) => {
+      const sent = await sendAgentClientMessage({
         agentRunId: input.agentRunId,
         conversationId: input.conversationId,
         body: input.body,
         clientRequestId: agentSendClientRequestId(input.agentRunId, input.body),
-      }),
+      });
+      if (sent.status === "ALLOWED") {
+        await tryDeliverTelegramSendNow(sent.result.messageId).catch(() => undefined);
+      }
+      return sent;
+    },
     updateQualification: (input) => updateLeadQualificationFromAgent(input),
     escalate: (input) => escalateAgentToHuman(input),
     sendBookingLink: (input) =>
@@ -388,8 +394,30 @@ async function callTool(
       return { status: 200, body: toolResult(id, "empty_draft", true) };
     }
     await executors.saveDraft({ agentRunId: grant.agentRunId, body });
+    const sent = await executors.sendClientMessage({
+      agentRunId: grant.agentRunId,
+      conversationId: grant.conversationId,
+      body,
+    });
+    if (sent.status === "DENIED") {
+      logLine("policy_denied");
+      return {
+        status: 200,
+        body: toolResult(id, `policy_denied:${sent.policy.reasons.join(",")}`, true),
+      };
+    }
+    if (sent.status === "APPROVAL_REQUIRED") {
+      logLine("approval_required");
+      return {
+        status: 200,
+        body: toolResult(id, `approval_required:${sent.policy.reasons.join(",")}`, false),
+      };
+    }
     logLine("ok");
-    return { status: 200, body: toolResult(id, "draft_stored", false) };
+    return {
+      status: 200,
+      body: toolResult(id, sent.result.duplicate ? "already_sent" : "sent", false),
+    };
   }
 
   if (toolName === "send_client_message") {

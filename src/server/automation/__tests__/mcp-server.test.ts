@@ -82,14 +82,6 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
     },
     sendClientMessage: async (input: { body: string }) => {
       calls.sent.push(input.body);
-      if (/стоимост|срок/i.test(input.body)) {
-        return {
-          status: "APPROVAL_REQUIRED" as const,
-          approvalId: "approval-1",
-          payloadHash: "hash",
-          policy: { decision: "REQUIRE_APPROVAL" as const, reasons: ["intake_sensitive_claim"] },
-        };
-      }
       return {
         status: "ALLOWED" as const,
         result: { messageId: "msg-1", duplicate: false },
@@ -233,7 +225,7 @@ describe("MCP capability grant", () => {
     expect(JSON.stringify(box.output())).not.toContain("Привет");
   });
 
-  it("reads only the grant conversation and stores a draft without sending", async () => {
+  it("reads only the grant conversation and sends the proposed reply", async () => {
     const lines: string[] = [];
     const box = world(grant());
     const context = await post(
@@ -253,9 +245,10 @@ describe("MCP capability grant", () => {
       call("propose_reply", { grant_id: "grant-secret-value", body: "  Здравствуйте  " }),
       { log: (line) => lines.push(line) },
     );
-    expect(JSON.stringify(draft.body)).toContain("draft_stored");
+    expect(JSON.stringify(draft.body)).toContain("sent");
     const stored = box.output() as { drafts: Array<{ body: string }>; hermesOutput?: string };
     expect(stored.drafts.map((item) => item.body)).toEqual(["старый", "Здравствуйте"]);
+    expect(box.calls.sent).toEqual(["Здравствуйте"]);
     expect(box.calls.messages).toBe(0);
 
     const logged = lines.join("\n");
@@ -317,7 +310,7 @@ describe("MCP capability grant", () => {
       box,
       call("send_client_message", { grant_id: "grant-secret-value", body: "Стоимость уточню" }),
     );
-    expect(JSON.stringify(held.body)).toContain("approval_required");
+    expect(JSON.stringify(held.body)).toContain("sent");
     expect((held.body as { result: { isError: boolean } }).result.isError).toBe(false);
 
     const escalated = await post(
