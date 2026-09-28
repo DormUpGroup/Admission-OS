@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
+import { MessageParagraphs } from "@/components/admin/message-paragraphs";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
 import { useReportMobileChat } from "@/components/admin/mobile-chat-screen";
 import { cn, formatDate } from "@/lib/utils";
@@ -85,7 +87,16 @@ export function ChannelMessenger({
   /** Phone shows the thread only when the URL opened a specific dialog. */
   openOnMobile?: boolean;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      router.refresh();
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [router]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -267,13 +278,13 @@ export function ChannelMessenger({
                       {!m.outbound ? avatar : null}
                       <div
                         className={cn(
-                          "max-w-[min(85%,420px)] rounded-xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
+                          "max-w-[min(85%,420px)] rounded-xl px-3 py-2 text-[14px] leading-relaxed shadow-sm",
                           m.outbound
                             ? "rounded-br-sm bg-[var(--brand-soft)] text-foreground"
                             : "rounded-bl-sm bg-white text-foreground",
                         )}
                       >
-                        <p className="whitespace-pre-wrap">{m.body || "—"}</p>
+                        <MessageParagraphs body={m.body} />
                         <div
                           className={cn(
                             "mt-0.5 flex items-center justify-end gap-1.5 text-[11px]",

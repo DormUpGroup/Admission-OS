@@ -217,6 +217,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("propose_reply");
       expect(sent.instructions).toContain("Do not stop after propose_reply");
+      expect(sent.instructions).toContain("blank line between thoughts");
+      expect(sent.instructions).toContain("at most one in a message");
       expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
       expect(sent.instructions).toContain("bullet list only when");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Bot } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
+import { MessageParagraphs } from "@/components/admin/message-paragraphs";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
 import {
   folderMoveTarget,
@@ -221,14 +222,16 @@ export function TelegramMessenger({
     [folder, loadThread, router],
   );
 
-  // Soft-poll delivery for pending outbound in the open thread.
+  // New client messages are written by the webhook, not pushed to this page.
   useEffect(() => {
-    if (!active?.hasPendingDelivery || !activeId) return;
-    const id = window.setInterval(() => {
-      void loadThread(activeId, { silent: true });
-    }, 2000);
+    const tick = () => {
+      if (document.visibilityState === "hidden") return;
+      if (activeId) void loadThread(activeId, { silent: true });
+      router.refresh();
+    };
+    const id = window.setInterval(tick, active?.hasPendingDelivery ? 2000 : 4000);
     return () => window.clearInterval(id);
-  }, [active?.hasPendingDelivery, activeId, loadThread]);
+  }, [active?.hasPendingDelivery, activeId, loadThread, router]);
 
   function folderHref(next: ConversationFolder) {
     const params = new URLSearchParams();
@@ -642,13 +645,13 @@ export function TelegramMessenger({
                     {!outbound ? avatar : null}
                     <div
                       className={cn(
-                        "max-w-[min(85%,420px)] rounded-xl px-3 py-1.5 text-[14px] leading-snug shadow-sm",
+                        "max-w-[min(85%,420px)] rounded-xl px-3 py-2 text-[14px] leading-relaxed shadow-sm",
                         outbound
                           ? "rounded-br-sm bg-[var(--brand-soft)] text-foreground"
                           : "rounded-bl-sm bg-white text-foreground",
                       )}
                     >
-                      <p className="whitespace-pre-wrap">{m.body || "—"}</p>
+                      <MessageParagraphs body={m.body} />
                       <div
                         className={cn(
                           "mt-0.5 flex items-center justify-end gap-1.5 text-[11px]",
