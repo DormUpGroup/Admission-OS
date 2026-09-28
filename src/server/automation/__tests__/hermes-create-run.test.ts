@@ -220,7 +220,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("blank line between thoughts");
       expect(sent.instructions).toContain("at most one in a message");
       expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
-      expect(sent.instructions).toContain("bullet list only when");
+      expect(sent.instructions).toContain("One list per message");
+      expect(sent.instructions).toContain("<b>word</b>");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
       return new Response(JSON.stringify({ run_id: "hermes-9", status: "started" }), {
         status: 202,

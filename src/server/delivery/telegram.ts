@@ -1,5 +1,6 @@
 import type { OutboxEvent, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { formatTelegramHtml } from "@/lib/telegram-html";
 
 export const DELIVERY_STATUS = {
   PENDING: "PENDING",
@@ -262,7 +263,8 @@ export async function callTelegramDelivery(
         },
         body: JSON.stringify({
           chat_id: prepared.chatId,
-          text: prepared.body,
+          text: formatTelegramHtml(prepared.body),
+          parse_mode: "HTML",
           disable_web_page_preview: true,
           ...(prepared.replyMarkup
             ? { reply_markup: prepared.replyMarkup }
