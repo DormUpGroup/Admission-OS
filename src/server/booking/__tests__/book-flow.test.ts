@@ -16,7 +16,6 @@ describeDb("client books a consultation from the site", () => {
   let curatorId = "";
   let leadId = "";
   let conversationId = "";
-  let studentId = "";
   const userIds: string[] = [];
 
   beforeAll(async () => {
@@ -59,7 +58,7 @@ describeDb("client books a consultation from the site", () => {
 
   afterAll(async () => {
     const appointments = await prisma.appointment.findMany({
-      where: { OR: [{ leadId }, { studentId: studentId || "__none__" }] },
+      where: { leadId },
       select: { id: true },
     });
     const messages = await prisma.conversationMessage.findMany({
@@ -80,7 +79,7 @@ describeDb("client books a consultation from the site", () => {
     });
     await prisma.bookingInvite.deleteMany({ where: { conversationId } });
     await prisma.inAppNotification.deleteMany({
-      where: { OR: [{ userId: curatorId }, { studentId: studentId || "__none__" }] },
+      where: { userId: curatorId },
     });
     await prisma.appointment.deleteMany({
       where: { id: { in: appointments.map((row) => row.id) } },
@@ -96,9 +95,6 @@ describeDb("client books a consultation from the site", () => {
         data: { convertedStudentId: null },
       }).catch(() => undefined);
       await prisma.lead.delete({ where: { id: leadId } }).catch(() => undefined);
-    }
-    if (studentId) {
-      await prisma.student.delete({ where: { id: studentId } }).catch(() => undefined);
     }
     if (userIds.length > 0) {
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
