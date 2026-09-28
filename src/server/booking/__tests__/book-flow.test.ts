@@ -17,7 +17,7 @@ describeDb("client books a consultation from the site", () => {
   let leadId = "";
   let conversationId = "";
   let studentId = "";
-  let userIds: string[] = [];
+  const userIds: string[] = [];
 
   beforeAll(async () => {
     const curator = await prisma.user.create({
