@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
 import { revokeCapabilityGrant } from "./capability-grant";
+import { sendUnsentRunDraft } from "./deliver-draft";
 import {
   getHermesRun,
   HermesRetryableError,
@@ -41,16 +42,20 @@ export async function dispatchHermesPollRun(
     env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
     fetchImpl?: typeof fetch;
     now?: Date;
+    deliverDraft?: typeof sendUnsentRunDraft;
   },
 ): Promise<DispatchHermesPollRunResult> {
   const env = options?.env ?? process.env;
   const now = options?.now ?? new Date();
+  const deliverDraft = options?.deliverDraft ?? sendUnsentRunDraft;
   const run = await db.agentRun.findUnique({
     where: { id: agentRunId },
     select: {
       id: true,
       status: true,
       hermesRunId: true,
+      conversationId: true,
+      startedAt: true,
       outputJson: true,
     },
   });
@@ -92,6 +97,15 @@ export async function dispatchHermesPollRun(
       now,
     });
     return { status: "failed", errorCode };
+  }
+
+  if (run.conversationId) {
+    await deliverDraft(db, {
+      agentRunId: run.id,
+      conversationId: run.conversationId,
+      outputJson: run.outputJson,
+      startedAt: run.startedAt,
+    });
   }
 
   await finishRun(db, run.id, run.outputJson, {

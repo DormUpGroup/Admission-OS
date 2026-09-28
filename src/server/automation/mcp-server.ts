@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
 import type { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 import {
@@ -7,6 +7,7 @@ import {
   updateLeadQualificationFromAgent,
 } from "./actions";
 import { sendBookingLinkForConversation } from "@/server/booking/send-link";
+import { agentSendClientRequestId } from "./deliver-draft";
 import {
   capabilityGrantLogHash,
   isMcpV1Tool,
@@ -65,7 +66,7 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
         agentRunId: input.agentRunId,
         conversationId: input.conversationId,
         body: input.body,
-        clientRequestId: `agent-send:${input.agentRunId}:${createHash("sha256").update(input.body).digest("hex").slice(0, 16)}`,
+        clientRequestId: agentSendClientRequestId(input.agentRunId, input.body),
       }),
     updateQualification: (input) => updateLeadQualificationFromAgent(input),
     escalate: (input) => escalateAgentToHuman(input),
@@ -143,8 +144,12 @@ function toolSchema(name: McpV1Tool) {
   if (name === "get_contact_profile") {
     description = "Read the lead or student linked to this conversation.";
   } else if (name === "propose_reply") {
-    description = "Store a draft reply for staff. Does not message the client.";
-    properties.body = { type: "string", description: "Draft reply. This does not send it." };
+    description =
+      "Write the one reply to the client. The server sends this text when the turn ends.";
+    properties.body = {
+      type: "string",
+      description: "Full reply the client should receive. Call this once.",
+    };
     required.push("body");
   } else if (name === "send_client_message") {
     description = "Send one Telegram reply to the client.";

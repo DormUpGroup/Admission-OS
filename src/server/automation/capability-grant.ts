@@ -122,7 +122,7 @@ export function hermesRunInstructions(
     "Answer a simple question about the process yourself.",
     "For a specific programme, a price, a timeline, a decision, or anything that is not on the lead card, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
     "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент спрашивает стоимость конкретной программы. Напишите цену в этот чат.",
-    "Send that reply with send_client_message. Do not stop after propose_reply.",
+    "Call propose_reply once with the full reply. The server sends that text when the turn ends. Do not also call send_client_message for the same text.",
     "When the person agrees to a consultation, or you are inviting them to book one, call send_booking_link once instead of send_client_message.",
     "Do not offer days or times in the chat, and do not invent a website link. send_booking_link sends the link itself.",
     "If send_booking_link returns already_booked or already_sent, do not send another message.",
