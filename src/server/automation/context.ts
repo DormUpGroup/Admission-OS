@@ -9,6 +9,10 @@ const QUALIFICATION_FIELDS = new Set([
   "desiredIntake",
   "studyLevel",
   "targetField",
+  "citizenship",
+  "passport",
+  "diploma",
+  "apostilleTranslation",
 ]);
 
 function asRecord(value: Prisma.JsonValue | null): Record<string, Prisma.JsonValue> {

@@ -209,7 +209,11 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("one next turn");
       expect(sent.instructions).toContain("Name: Аня");
       expect(sent.instructions).toContain("studyLevel: бакалавриат");
-      expect(sent.instructions).toContain("Missing: educationLevel, targetField, desiredIntake, preferredCountry, budget");
+      expect(sent.instructions).toContain(
+        "Missing: educationLevel, targetField, desiredIntake, citizenship, passport, diploma, apostilleTranslation, budget",
+      );
+      expect(sent.instructions).toContain("The study destination is always Italy");
+      expect(sent.instructions).not.toContain("preferredCountry");
       expect(sent.instructions).toContain("get_conversation_context");
       expect(sent.instructions).toContain("get_contact_profile");
       expect(sent.instructions).toContain("update_lead_qualification");

@@ -3,10 +3,13 @@ import { isBotCommandBody } from "@/lib/telegram-conversation-kind";
 export const LEAD_PROFILE_FACTS: Array<{ key: string; label: string }> = [
   { key: "studyLevel", label: "Уровень" },
   { key: "targetField", label: "Направление" },
-  { key: "preferredCountry", label: "Страна" },
   { key: "cities", label: "Города" },
   { key: "desiredIntake", label: "Набор" },
   { key: "educationLevel", label: "Образование" },
+  { key: "citizenship", label: "Гражданство" },
+  { key: "passport", label: "Паспорт" },
+  { key: "diploma", label: "Дипломы" },
+  { key: "apostilleTranslation", label: "Апостиль и перевод" },
   { key: "language", label: "Язык" },
   { key: "budget", label: "Бюджет" },
   { key: "documents", label: "Документы" },
@@ -24,13 +27,6 @@ const PLACES: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /венеци/iu, label: "Венеция" },
   { pattern: /неапол/iu, label: "Неаполь" },
   { pattern: /рим(?!ини)/iu, label: "Рим" },
-];
-
-const COUNTRIES: Array<{ pattern: RegExp; label: string }> = [
-  { pattern: /итали/iu, label: "Италия" },
-  { pattern: /герман/iu, label: "Германия" },
-  { pattern: /франц/iu, label: "Франция" },
-  { pattern: /испан/iu, label: "Испания" },
 ];
 
 const FIELDS: Array<{ pattern: RegExp; label: string }> = [
@@ -131,9 +127,11 @@ function educationFrom(text: string): string | null {
 type Draft = {
   studyLevel: string | null;
   fields: string[];
-  country: string | null;
-  italyFromPlace: boolean;
   places: string[];
+  citizenship: string | null;
+  passport: string | null;
+  diploma: string | null;
+  apostilleTranslation: string | null;
   remote: boolean;
   intake: string | null;
   education: string | null;
@@ -142,16 +140,17 @@ type Draft = {
   examWhen: string | null;
   languageTopic: boolean;
   budget: string[];
-  documents: string[];
 };
 
 function emptyDraft(): Draft {
   return {
     studyLevel: null,
     fields: [],
-    country: null,
-    italyFromPlace: false,
     places: [],
+    citizenship: null,
+    passport: null,
+    diploma: null,
+    apostilleTranslation: null,
     remote: false,
     intake: null,
     education: null,
@@ -160,7 +159,6 @@ function emptyDraft(): Draft {
     examWhen: null,
     languageTopic: false,
     budget: [],
-    documents: [],
   };
 }
 
@@ -176,15 +174,31 @@ function absorb(text: string, previousOutbound: string, draft: Draft) {
     if (field.pattern.test(text)) pushUnique(draft.fields, field.label);
   }
 
-  for (const country of COUNTRIES) {
-    if (country.pattern.test(text)) draft.country = country.label;
+  for (const place of PLACES) {
+    if (place.pattern.test(text)) pushUnique(draft.places, place.label);
   }
 
-  for (const place of PLACES) {
-    if (place.pattern.test(text)) {
-      pushUnique(draft.places, place.label);
-      draft.italyFromPlace = true;
-    }
+  const citizenship = text.match(/гражданств[ао]?\s+([^\n,.!]{2,40})/iu);
+  if (citizenship?.[1]) draft.citizenship = citizenship[1].trim();
+
+  if (/^(есть|да|ага|нет)[.!?…\s]*$/iu.test(text) && /паспорт/iu.test(previousOutbound)) {
+    draft.passport = /нет/iu.test(text) ? "нет" : "есть";
+  } else if (/паспорт/iu.test(text) && /есть|на руках|имеется/iu.test(text)) {
+    draft.passport = "есть";
+  } else if (/паспорт/iu.test(text) && /нет/iu.test(text)) {
+    draft.passport = "нет";
+  }
+
+  if (/диплом|аттестат/iu.test(text) && /есть|на руках|имеется/iu.test(text)) {
+    draft.diploma = "есть";
+  } else if (/диплом|аттестат/iu.test(text) && /нет/iu.test(text)) {
+    draft.diploma = "нет";
+  }
+
+  if (/апостил/iu.test(text)) {
+    draft.apostilleTranslation = /перевед/iu.test(text)
+      ? "апостиль и перевод есть"
+      : "апостиль есть, перевод не назван";
   }
   if (/удал[её]н/iu.test(text)) draft.remote = true;
 
@@ -222,16 +236,6 @@ function absorb(text: string, previousOutbound: string, draft: Draft) {
   if (/как можно меньше/iu.test(text)) pushUnique(draft.budget, "как можно меньше");
   if (/только\s+обучени/iu.test(text)) pushUnique(draft.budget, "только обучение");
 
-  if (/апостил/iu.test(text)) {
-    pushUnique(
-      draft.documents,
-      /перевед/iu.test(text) ? "апостиль и перевод, на руках" : "апостиль, на руках",
-    );
-  }
-
-  if (/^(есть|да|ага)[.!?…\s]*$/iu.test(text) && /загран/iu.test(previousOutbound)) {
-    pushUnique(draft.documents, "загранпаспорт на руках");
-  }
 }
 
 function languageLine(draft: Draft): string | null {
@@ -266,8 +270,6 @@ function extractedFacts(messages: ChatTurn[]): Map<string, string> {
   const facts = new Map<string, string>();
   if (draft.studyLevel) facts.set("studyLevel", draft.studyLevel);
   if (draft.fields.length > 0) facts.set("targetField", draft.fields.join(", "));
-  const country = draft.country ?? (draft.italyFromPlace ? "Италия" : null);
-  if (country) facts.set("preferredCountry", country);
   const cities = citiesLine(draft);
   if (cities) facts.set("cities", cities);
   if (draft.intake) facts.set("desiredIntake", draft.intake);
@@ -275,7 +277,10 @@ function extractedFacts(messages: ChatTurn[]): Map<string, string> {
   const language = languageLine(draft);
   if (language) facts.set("language", language);
   if (draft.budget.length > 0) facts.set("budget", draft.budget.join(", "));
-  if (draft.documents.length > 0) facts.set("documents", draft.documents.join(", "));
+  if (draft.citizenship) facts.set("citizenship", draft.citizenship);
+  if (draft.passport) facts.set("passport", draft.passport);
+  if (draft.diploma) facts.set("diploma", draft.diploma);
+  if (draft.apostilleTranslation) facts.set("apostilleTranslation", draft.apostilleTranslation);
   return facts;
 }
 

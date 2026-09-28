@@ -60,13 +60,13 @@ describe("buildLeadCard", () => {
     expect(Object.fromEntries(card.map((row) => [row.key, row.value]))).toEqual({
       studyLevel: "Бакалавриат",
       targetField: "Бизнес, Финансы, International Law, Право",
-      preferredCountry: "Италия",
       cities: "Пьемонт, Турин, Римини, удалённо",
       desiredIntake: "2027/28",
       educationLevel: "12 классов",
+      passport: "есть",
+      apostilleTranslation: "апостиль и перевод есть",
       language: "IELTS, около B2, сдача в декабре",
       budget: "нужна стипендия, денег нет, только обучение",
-      documents: "апостиль и перевод, на руках, загранпаспорт на руках",
     });
     expect(card.some((row) => row.value.includes("вместушки"))).toBe(false);
   });
@@ -89,7 +89,6 @@ describe("buildLeadCard", () => {
     expect(Object.fromEntries(card.map((row) => [row.key, row.value]))).toEqual({
       studyLevel: "Бакалавриат",
       targetField: "Биология",
-      preferredCountry: "Италия",
       desiredIntake: "следующий набор",
       educationLevel: "12 классов",
       budget: "как можно меньше",
