@@ -25,7 +25,8 @@ export class HermesRunPendingError extends Error {
   }
 }
 
-export const HERMES_POLL_DEFER_MS = 5_000;
+/** How soon to ask Hermes again while the run is still writing. */
+export const HERMES_POLL_DEFER_MS = 1_000;
 
 /** Body accepted by Nous hermes-agent POST /v1/runs. */
 export type HermesCreateRunBody = {

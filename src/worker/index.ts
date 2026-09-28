@@ -18,7 +18,9 @@ import {
   HermesRunPendingError,
 } from "@/server/automation/hermes-client";
 import { enqueueQueuedHermesCreateRuns } from "@/server/automation/hermes-create-run";
+import { HERMES_POLL_RUN_EVENT } from "@/server/automation/hermes-poll-run";
 import { notifyCuratorTelegramSendFailed } from "@/server/delivery/telegram-curator-notice";
+import { refreshHermesTyping } from "@/server/delivery/telegram-typing";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
 
@@ -72,6 +74,8 @@ const CLAIM_LIMIT = Number(process.env.WORKER_CLAIM_LIMIT ?? 25);
 const WORKER_ID =
   process.env.WORKER_ID?.trim() ||
   `worker-${process.env.RAILWAY_REPLICA_ID ?? randomUUID().slice(0, 8)}`;
+
+const hermesTypingAt = new Map<string, number>();
 
 let shuttingDown = false;
 
@@ -146,6 +150,18 @@ async function processOnce(): Promise<number> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof HermesNotConfiguredError || error instanceof HermesRunPendingError) {
+        if (error instanceof HermesRunPendingError && event.eventType === HERMES_POLL_RUN_EVENT) {
+          await refreshHermesTyping(prisma, event.aggregateId, hermesTypingAt).catch((typingError) => {
+            console.warn(
+              JSON.stringify({
+                level: "warn",
+                msg: "telegram.typing.failed",
+                eventId: event.id,
+                error: typingError instanceof Error ? typingError.message : String(typingError),
+              }),
+            );
+          });
+        }
         const deferred = await deferOutboxForKillSwitch(
           prisma,
           event.id,

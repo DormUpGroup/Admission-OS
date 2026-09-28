@@ -9,7 +9,7 @@ function asRecord(payload: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function isTelegramBotCommand(body: string | null): boolean {
+export function isTelegramBotCommand(body: string | null): boolean {
   return /^\s*\/(?:start|help)(?:\s|$)/iu.test(body ?? "");
 }
 

@@ -4,6 +4,7 @@ import { normalizeTelegramUpdate } from "@/server/channels/telegram";
 import { handleAppointmentCallback } from "@/server/commands/appointment-callbacks";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
+import { maybeSendIntakeTyping } from "@/server/delivery/telegram-typing";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,21 @@ export async function POST(request: Request) {
       message: update,
     });
     if (!result.duplicate) {
+      await maybeSendIntakeTyping({
+        db: prisma,
+        conversationId: result.conversationId,
+        chatId: update.externalChatId,
+        text: update.text,
+      }).catch((error) => {
+        console.warn(
+          JSON.stringify({
+            level: "warn",
+            msg: "telegram.typing.failed",
+            conversationId: result.conversationId,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      });
       const pending = await prisma.conversationMessage.findMany({
         where: {
           conversationId: result.conversationId,
