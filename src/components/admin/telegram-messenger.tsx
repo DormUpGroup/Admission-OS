@@ -42,6 +42,7 @@ export type TelegramListItem = {
   undelivered: boolean;
   deliveryStatus: string | null;
   unread: boolean;
+  automationPaused: boolean;
 };
 
 export type TelegramThreadMessage = {
@@ -246,6 +247,11 @@ export function TelegramMessenger({
         cacheRef.current.set(activeId, next);
         return next;
       });
+      setList((prev) =>
+        prev.map((item) =>
+          item.id === activeId ? { ...item, automationPaused: !turnOn } : item,
+        ),
+      );
       router.refresh();
     } finally {
       setResuming(false);
@@ -437,14 +443,26 @@ export function TelegramMessenger({
                 >
                   <StudentAvatar name={c.title} size="lg" className="mt-0.5" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span
-                        className={cn(
-                          "truncate text-[15px] text-foreground",
-                          c.unread ? "font-semibold" : "font-medium",
-                        )}
-                      >
-                        {c.title}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "truncate text-[15px] text-foreground",
+                            c.unread ? "font-semibold" : "font-medium",
+                          )}
+                        >
+                          {c.title}
+                        </span>
+                        <span
+                          className={cn(
+                            "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white",
+                            c.automationPaused ? "bg-neutral-300" : "bg-emerald-500",
+                          )}
+                          title={c.automationPaused ? "Бот выключен" : "Бот включён"}
+                          aria-label={c.automationPaused ? "Бот выключен" : "Бот включён"}
+                        >
+                          <Bot className="h-2.5 w-2.5" strokeWidth={2.25} aria-hidden />
+                        </span>
                       </span>
                       <span
                         className={cn(

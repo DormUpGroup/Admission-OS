@@ -17,6 +17,7 @@ export type TelegramListItemDto = {
   deliveryStatus: string | null;
   /** Matches the sidebar badge: open client thread with inbound after the last open. */
   unread: boolean;
+  automationPaused: boolean;
 };
 
 export type TelegramThreadMessageDto = {
@@ -248,6 +249,7 @@ export async function listTelegramConversations(): Promise<{
           staffLastReadAt: c.staffLastReadAt,
         }) &&
         !isFixtureContact({ title: baseName, username }),
+      automationPaused: !!c.automationPausedAt,
     };
     if (folder === "trash") trash.push(item);
     else if (folder === "technical") technical.push(item);
