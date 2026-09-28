@@ -7,7 +7,7 @@ import {
   bookingAccountView,
   registerBookingAccount,
 } from "@/server/booking/account";
-import { appointmentBookByClient } from "@/server/commands/appointments";
+import { appointmentBookByClient, appointmentBookByGuest } from "@/server/commands/appointments";
 
 function isNextRedirect(error: unknown) {
   return (
@@ -85,4 +85,44 @@ export async function bookConsultationAction(
   }
 
   redirect("/portal/book");
+}
+
+export async function bookGuestConsultationAction(
+  _prev: { error: string } | null,
+  formData: FormData,
+) {
+  const token = String(formData.get("token") || "").trim();
+  const guestName = String(formData.get("guestName") || "");
+  const guestEmail = String(formData.get("guestEmail") || "");
+  const raw = String(formData.get("startsAt") || "");
+  const startsAt = new Date(raw);
+  if (!token) return { error: "Ссылка недействительна." };
+  if (!guestName.trim()) return { error: "Укажите имя." };
+  if (!guestEmail.trim()) return { error: "Укажите почту." };
+  if (!raw || Number.isNaN(startsAt.getTime())) {
+    return { error: "Выберите свободное время." };
+  }
+
+  try {
+    await appointmentBookByGuest({ token, guestName, guestEmail, startsAt });
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    const message = error instanceof Error ? error.message : "";
+    if (message === "Appointment already booked") {
+      redirect(`/book/${encodeURIComponent(token)}`);
+    }
+    if (message === "The selected slot is no longer available") {
+      return { error: "Это время уже занято. Выберите другое." };
+    }
+    if (message === "Email required") {
+      return { error: "Укажите почту, на неё придёт ссылка на звонок." };
+    }
+    if (message === "Name required") return { error: "Укажите имя." };
+    if (message === "Invite invalid") {
+      return { error: "Ссылка устарела. Напишите в Telegram, и мы пришлём новую." };
+    }
+    return { error: "Не удалось записать консультацию." };
+  }
+
+  redirect(`/book/${encodeURIComponent(token)}`);
 }

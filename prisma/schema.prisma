@@ -73,10 +73,11 @@ model Student {
   shortlistItems StudentShortlistItem[]
   notifications     InAppNotification[]
   conversations     Conversation[]
-  appointments      Appointment[]
-  channelIdentities ChannelIdentity[]
-  convertedFromLead Lead?                 @relation("ConvertedLead")
-  bookingInvites    BookingInvite[]
+  appointments        Appointment[]
+  channelIdentities   ChannelIdentity[]
+  convertedFromLead   Lead?                 @relation("ConvertedLead")
+  bookingInvites      BookingInvite[]
+  registrationInvites RegistrationInvite[]
 
   @@index([curatorId])
   @@index([acceptedById])
@@ -824,6 +825,12 @@ model Appointment {
   curatorNudgeSentAt       DateTime?
   /// Client confirmed or picked a time. Cleared when staff opens the appointment.
   clientChangeUnseen       Boolean   @default(false)
+  /// Name typed on the public booking form. The lead stays a lead until promotion.
+  guestName                String?
+  /// Mailbox that receives the call invite and, later, the cabinet registration link.
+  guestEmail               String?
+  /// Google Meet URL once Calendar creates the conference.
+  meetingUrl               String?
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -840,7 +847,7 @@ model Appointment {
   @@index([clientChangeUnseen])
 }
 
-/// One-time website link for a Telegram client to create a cabinet and pick a slot.
+/// One-time website link for a Telegram client to pick a consultation slot without an account.
 /// The token is the URL secret. An open invite (no appointment yet) is unique per conversation.
 model BookingInvite {
   id             String    @id @default(cuid())
@@ -864,6 +871,24 @@ model BookingInvite {
   @@index([leadId])
   @@index([studentId])
   @@index([curatorId])
+}
+
+/// Password-setup link emailed after a curator promotes a lead. The token is the URL secret.
+/// One unconsumed invite per student. A second click reuses it until it expires or is used.
+model RegistrationInvite {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  studentId  String
+  email      String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([email])
 }
 
 model AutomationSetting {

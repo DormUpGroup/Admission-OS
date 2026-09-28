@@ -1,4 +1,5 @@
 import type { OutboxHandler } from "../dispatch";
+import { deliverMeetingLinkNotice } from "@/server/commands/appointments";
 import {
   callCalendarDelete,
   callCalendarUpsert,
@@ -22,7 +23,14 @@ export const handleCalendarUpsert: OutboxHandler = async (_db, event) => {
     return;
   }
   const result = await callCalendarUpsert(prepared);
-  const saved = await finalizeCalendarUpsert(prepared.appointment.id, result.googleEventId);
+  const saved = await finalizeCalendarUpsert(
+    prepared.appointment.id,
+    result.googleEventId,
+    result.meetingUrl,
+  );
+  if (saved?.meetingUrl) {
+    await deliverMeetingLinkNotice(saved.id);
+  }
   if (!saved) {
     console.warn(
       JSON.stringify({

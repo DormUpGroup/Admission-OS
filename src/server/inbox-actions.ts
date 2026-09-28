@@ -14,6 +14,8 @@ import {
 } from "@/server/telegram-inbox-query";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
+import { resolveConsultationEmail } from "@/server/registration/contact";
+import { sendRegistrationInviteOnce } from "@/server/registration/invite";
 
 export type SendTelegramInboxReplyResult = {
   messageId: string;
@@ -221,7 +223,10 @@ export async function promoteLeadToStudentAction(
   if (!conversation || conversation.channel !== "TELEGRAM") {
     throw new Error("Диалог не найден");
   }
-  if (conversation.studentId) return { studentId: conversation.studentId };
+  if (conversation.studentId) {
+    await sendRegistrationInviteOnce(conversation.studentId);
+    return { studentId: conversation.studentId };
+  }
 
   const lead = conversation.lead;
   if (!lead) throw new Error("У этого диалога нет лида");
@@ -230,6 +235,7 @@ export async function promoteLeadToStudentAction(
       where: { leadId: lead.id },
       data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
     });
+    await sendRegistrationInviteOnce(lead.convertedStudentId);
     return { studentId: lead.convertedStudentId };
   }
 
@@ -239,11 +245,13 @@ export async function promoteLeadToStudentAction(
   const lastName =
     lead.lastName?.trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "—");
   const intake = factText(lead.qualificationJson, "desiredIntake") ?? "не указан";
-  const preferredEmail = lead.email?.trim().toLowerCase() || null;
-  const emailTaken = preferredEmail
-    ? await prisma.student.findUnique({ where: { email: preferredEmail }, select: { id: true } })
-    : null;
-  const email = preferredEmail && !emailTaken ? preferredEmail : `lead.${lead.id}@leads.immigrome.invalid`;
+  const email = await resolveConsultationEmail(lead.id);
+  if (!email) throw new Error("На заявке нет почты. Сначала запишите консультацию.");
+  const emailTaken = await prisma.student.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (emailTaken) throw new Error("Эта почта уже есть у другого ученика.");
 
   const student = await prisma.$transaction(async (tx) => {
     const created = await tx.student.create({
@@ -283,5 +291,6 @@ export async function promoteLeadToStudentAction(
     return created;
   });
 
+  await sendRegistrationInviteOnce(student.id);
   return { studentId: student.id };
 }

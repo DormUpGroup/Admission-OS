@@ -9,6 +9,8 @@ export type ServiceAccountCredentials = {
   client_email: string;
   private_key: string;
   token_uri?: string;
+  /** Workspace user to impersonate. Required for Google Meet. */
+  subject?: string;
 };
 
 export type PreparedCalendarUpsert = {
@@ -70,6 +72,16 @@ export function parseServiceAccountJson(
   };
 }
 
+export function calendarCredentials(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+): ServiceAccountCredentials {
+  const subject = env.GOOGLE_CALENDAR_SUBJECT?.trim().replace(/\r/g, "");
+  if (!subject) {
+    throw new Error("GOOGLE_CALENDAR_SUBJECT is not configured");
+  }
+  return { ...parseServiceAccountJson(env.GOOGLE_SERVICE_ACCOUNT_JSON), subject };
+}
+
 /** Accept escaped \\n, real newlines, or a compacted one-line PEM. */
 export function normalizePemPrivateKey(raw: string): string {
   const key = raw.replace(/\\n/g, "\n").trim();
@@ -108,6 +120,7 @@ export async function getGoogleAccessToken(
       aud: tokenUri,
       iat: now,
       exp: now + 55 * 60,
+      ...(credentials.subject ? { sub: credentials.subject } : {}),
     }),
   );
   const unsigned = `${header}.${claim}`;
@@ -137,15 +150,43 @@ export async function getGoogleAccessToken(
   return data.access_token;
 }
 
-function calendarEventsUrl(calendarId: string, eventId?: string): string {
+function calendarEventsUrl(
+  calendarId: string,
+  eventId?: string,
+  options?: { conference?: boolean; sendUpdates?: boolean },
+): string {
   const base = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
-  return eventId ? `${base}/${encodeURIComponent(eventId)}` : base;
+  const url = new URL(eventId ? `${base}/${encodeURIComponent(eventId)}` : base);
+  if (options?.conference) url.searchParams.set("conferenceDataVersion", "1");
+  if (options?.sendUpdates) url.searchParams.set("sendUpdates", "all");
+  return url.toString();
 }
 
-function eventBody(appointment: Appointment, providerEventId: string) {
-  return {
+export type CalendarConferenceEvent = {
+  hangoutLink?: string;
+  conferenceData?: {
+    entryPoints?: Array<{ entryPointType?: string; uri?: string }>;
+  };
+};
+
+export function meetingUrlFromCalendarEvent(
+  data: CalendarConferenceEvent | null | undefined,
+): string | null {
+  const hangout = data?.hangoutLink?.trim();
+  if (hangout) return hangout;
+  const video = data?.conferenceData?.entryPoints?.find(
+    (point) => point.entryPointType === "video" && point.uri?.trim(),
+  );
+  return video?.uri?.trim() || null;
+}
+
+export function buildCalendarEventBody(appointment: Appointment, providerEventId: string) {
+  const summary = appointment.guestName?.trim()
+    ? `${appointment.title}: ${appointment.guestName.trim()}`
+    : appointment.title;
+  const body: Record<string, unknown> = {
     id: providerEventId,
-    summary: appointment.title,
+    summary,
     start: {
       dateTime: appointment.startsAt.toISOString(),
       timeZone: appointment.timezone,
@@ -160,6 +201,32 @@ function eventBody(appointment: Appointment, providerEventId: string) {
       },
     },
   };
+  if (appointment.guestEmail?.trim()) {
+    body.attendees = [{ email: appointment.guestEmail.trim() }];
+    const who = [appointment.guestName?.trim(), appointment.guestEmail.trim()]
+      .filter(Boolean)
+      .join("\n");
+    body.description = who;
+  }
+  if (!appointment.meetingUrl) {
+    body.conferenceData = {
+      createRequest: {
+        requestId: appointment.id,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    };
+  }
+  return body;
+}
+
+function requireMeetingUrl(
+  data: CalendarConferenceEvent & { id?: string },
+  fallback: string | null,
+): { googleEventId: string; meetingUrl: string } {
+  if (!data.id) throw new Error("Google Calendar returned no event id");
+  const meetingUrl = meetingUrlFromCalendarEvent(data) ?? fallback;
+  if (!meetingUrl) throw new Error("Google Calendar event has no Meet link");
+  return { googleEventId: String(data.id), meetingUrl };
 }
 
 export async function prepareCalendarUpsert(
@@ -206,7 +273,7 @@ export async function prepareCalendarUpsert(
   if (!calendarId) {
     throw new Error("GOOGLE_CALENDAR_ID is not configured");
   }
-  const credentials = parseServiceAccountJson(env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const credentials = calendarCredentials(env);
   const providerEventId =
     appointment.googleEventId ?? deterministicGoogleEventId(appointment.id);
 
@@ -235,33 +302,38 @@ export async function prepareCalendarUpsert(
 export async function callCalendarUpsert(
   prepared: PreparedCalendarUpsert,
   fetchImpl: typeof fetch = fetch,
-): Promise<{ googleEventId: string }> {
+): Promise<{ googleEventId: string; meetingUrl: string }> {
   if (prepared.action === "skip" || !prepared.appointment) {
     throw new Error("callCalendarUpsert requires an appointment");
   }
   const token = await getGoogleAccessToken(prepared.credentials, fetchImpl);
-  const body = eventBody(prepared.appointment, prepared.providerEventId);
+  const body = buildCalendarEventBody(prepared.appointment, prepared.providerEventId);
+  const sendUpdates = Boolean(prepared.appointment.guestEmail?.trim());
+  const writeUrl = (eventId?: string) =>
+    calendarEventsUrl(prepared.calendarId, eventId, {
+      conference: true,
+      sendUpdates,
+    });
+  const fallbackMeetingUrl = prepared.appointment.meetingUrl;
 
   if (prepared.action === "patch" && prepared.appointment.googleEventId) {
     const response = await fetchImpl(
-      calendarEventsUrl(prepared.calendarId, prepared.appointment.googleEventId),
+      writeUrl(prepared.appointment.googleEventId),
       {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          summary: body.summary,
-          start: body.start,
-          end: body.end,
-          extendedProperties: body.extendedProperties,
-        }),
+        body: JSON.stringify({ ...body, id: undefined }),
       },
     );
     if (response.ok) {
-      const data = (await response.json()) as { id?: string };
-      return { googleEventId: String(data.id ?? prepared.appointment.googleEventId) };
+      const data = (await response.json()) as CalendarConferenceEvent & { id?: string };
+      return requireMeetingUrl(
+        { ...data, id: data.id ?? prepared.appointment.googleEventId },
+        fallbackMeetingUrl,
+      );
     }
     if (response.status !== 404 && response.status !== 410) {
       throw new Error(`Google Calendar PATCH failed (${response.status})`);
@@ -269,7 +341,7 @@ export async function callCalendarUpsert(
     // Fall through to create if patch target missing / gone.
   }
 
-  const insertWithId = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
+  const insertWithId = await fetchImpl(writeUrl(), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -280,17 +352,20 @@ export async function callCalendarUpsert(
 
   if (insertWithId.status === 409) {
     const getResponse = await fetchImpl(
-      calendarEventsUrl(prepared.calendarId, prepared.providerEventId),
+      calendarEventsUrl(prepared.calendarId, prepared.providerEventId, {
+        conference: true,
+      }),
       {
         headers: { Authorization: `Bearer ${token}` },
       },
     );
     if (getResponse.ok) {
-      const data = (await getResponse.json()) as { id?: string };
-      if (data.id) return { googleEventId: String(data.id) };
+      const data = (await getResponse.json()) as CalendarConferenceEvent & { id?: string };
+      if (data.id) return requireMeetingUrl(data, fallbackMeetingUrl);
     }
 
     const search = new URL(calendarEventsUrl(prepared.calendarId));
+    search.searchParams.set("conferenceDataVersion", "1");
     search.searchParams.set(
       "privateExtendedProperty",
       `immigromeAppointmentId=${prepared.appointment.id}`,
@@ -302,25 +377,22 @@ export async function callCalendarUpsert(
     });
     if (searchResponse.ok) {
       const data = (await searchResponse.json()) as {
-        items?: Array<{ id?: string }>;
+        items?: Array<CalendarConferenceEvent & { id?: string }>;
       };
-      const found = data.items?.[0]?.id;
-      if (found) return { googleEventId: String(found) };
+      const found = data.items?.[0];
+      if (found?.id) return requireMeetingUrl(found, fallbackMeetingUrl);
     }
     throw new Error("Google Calendar 409 conflict and recovery failed");
   }
 
   if (insertWithId.ok) {
-    const data = (await insertWithId.json()) as { id?: string };
-    if (!data.id) {
-      throw new Error("Google Calendar INSERT returned no event id");
-    }
-    return { googleEventId: String(data.id) };
+    const data = (await insertWithId.json()) as CalendarConferenceEvent & { id?: string };
+    return requireMeetingUrl(data, fallbackMeetingUrl);
   }
 
   // Deleted deterministic ids return 404/410 and cannot be reused — insert without id.
   if (insertWithId.status === 404 || insertWithId.status === 410) {
-    const retry = await fetchImpl(calendarEventsUrl(prepared.calendarId), {
+    const retry = await fetchImpl(writeUrl(), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -333,11 +405,8 @@ export async function callCalendarUpsert(
         `Google Calendar INSERT failed (${insertWithId.status}, retry ${retry.status})`,
       );
     }
-    const data = (await retry.json()) as { id?: string };
-    if (!data.id) {
-      throw new Error("Google Calendar INSERT retry returned no event id");
-    }
-    return { googleEventId: String(data.id) };
+    const data = (await retry.json()) as CalendarConferenceEvent & { id?: string };
+    return requireMeetingUrl(data, fallbackMeetingUrl);
   }
 
   throw new Error(`Google Calendar INSERT failed (${insertWithId.status})`);
@@ -346,6 +415,7 @@ export async function callCalendarUpsert(
 export async function finalizeCalendarUpsert(
   appointmentId: string,
   googleEventId: string,
+  meetingUrl?: string | null,
 ): Promise<Appointment | null> {
   // Client already confirmed via Telegram/admin; calendar sync marks CONFIRMED.
   // updateMany does not throw when the row was deleted after the Google call.
@@ -354,6 +424,7 @@ export async function finalizeCalendarUpsert(
     data: {
       googleEventId,
       status: "CONFIRMED",
+      ...(meetingUrl ? { meetingUrl } : {}),
     },
   });
   if (updated.count === 0) return null;
@@ -408,7 +479,7 @@ export async function prepareCalendarDelete(
   if (!calendarId) {
     throw new Error("GOOGLE_CALENDAR_ID is not configured");
   }
-  const credentials = parseServiceAccountJson(env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const credentials = calendarCredentials(env);
 
   return {
     action: "delete",

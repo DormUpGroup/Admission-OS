@@ -1,17 +1,30 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { auth } from "@/server/auth";
+import { bookGuestConsultationAction } from "@/server/booking-actions";
 import {
   bookingAccountView,
   bookingInviteMatchesStudent,
   loadBookingInvite,
 } from "@/server/booking/account";
 import { BookingAccountForm } from "@/components/booking/account-form";
+import { BookingCalendar } from "@/components/portal/booking-calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { listOpenSlots, formatSlotLabel } from "@/server/services/appointments/slots";
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  wide = false,
+}: {
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="surface-card w-full max-w-md rounded-[28px] p-8">{children}</div>
+      <div className={`surface-card w-full rounded-[28px] p-8 ${wide ? "max-w-4xl" : "max-w-md"}`}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -37,7 +50,35 @@ export default async function BookInvitePage({
     );
   }
 
+  if (invite.appointmentId) {
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: invite.appointmentId },
+    });
+    if (appointment && appointment.status !== "CANCELLED") {
+      const email = appointment.guestEmail?.trim();
+      return (
+        <Shell>
+          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            IMMIGROME
+          </p>
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Заявка отправлена</h1>
+          <p className="mt-2 text-[20px] font-semibold tracking-tight">
+            {formatSlotLabel(appointment.startsAt, appointment.timezone)}
+          </p>
+          <p className="mt-3 text-[15px] text-muted-foreground">
+            {email
+              ? `Ссылку на звонок пришлём в Telegram и на ${email}.`
+              : "Ссылку на звонок пришлём в Telegram."}
+          </p>
+        </Shell>
+      );
+    }
+  }
+
   const session = await auth();
+  const accountStudent =
+    invite.student ?? invite.conversation.student ?? invite.lead?.convertedStudent ?? null;
+
   if (session?.user?.role === "STUDENT") {
     const student = await prisma.student.findFirst({
       where: {
@@ -68,29 +109,66 @@ export default async function BookInvitePage({
     );
   }
 
-  const view = await bookingAccountView(invite.token);
-  if (view.kind === "invalid") {
-    return (
-      <Shell>
-        <h1 className="text-[24px] font-semibold tracking-tight">Ссылка недействительна</h1>
-      </Shell>
-    );
+  if (accountStudent?.userId) {
+    const view = await bookingAccountView(invite.token);
+    if (view.kind === "login") {
+      return (
+        <Shell>
+          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            IMMIGROME
+          </p>
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
+            Войдите в кабинет
+          </h1>
+          <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
+            После входа откроется запись на консультацию.
+          </p>
+          <BookingAccountForm view={view} />
+        </Shell>
+      );
+    }
   }
 
+  const slots = await listOpenSlots({
+    curatorId: invite.curatorId,
+    from: new Date(),
+    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+  });
+
   return (
-    <Shell>
+    <Shell wide>
       <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
         IMMIGROME
       </p>
       <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
-        {view.kind === "login" ? "Войдите в кабинет" : "Создайте кабинет"}
+        Запись на консультацию
       </h1>
       <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
-        {view.kind === "login"
-          ? "После входа откроется запись на консультацию."
-          : "Почта станет входом в кабинет. Дальше вы выберете время консультации."}
+        Аккаунт не нужен. Выберите свободное время куратора.
       </p>
-      <BookingAccountForm view={view} />
+      <BookingCalendar
+        slots={slots.map((slot) => ({ startsAt: slot.startsAt.toISOString() }))}
+        action={bookGuestConsultationAction}
+      >
+        <input type="hidden" name="token" value={invite.token} />
+        <div className="space-y-2">
+          <Label htmlFor="guestName">Имя</Label>
+          <Input id="guestName" name="guestName" required autoComplete="name" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="guestEmail">Почта</Label>
+          <Input
+            id="guestEmail"
+            name="guestEmail"
+            type="email"
+            required
+            autoComplete="email"
+          />
+          <p className="text-[13px] text-muted-foreground">
+            На эту почту придёт ссылка с приглашением в звонок.
+          </p>
+        </div>
+      </BookingCalendar>
     </Shell>
   );
 }

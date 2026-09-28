@@ -16,10 +16,12 @@ describe("booking link", () => {
     expect(() => bookingPageUrl("abc", {})).toThrow(/AUTH_URL/);
   });
 
-  it("sends the site link and does not ask the client to pick a time in chat", () => {
+  it("sends the site link and says the call link will arrive in chat and email", () => {
     const body = bookingInviteMessage("https://example.test/book/abc");
+    expect(body).toContain("выбрать время консультации");
     expect(body).toContain("https://example.test/book/abc");
-    expect(body).not.toMatch(/09:00|слот/i);
+    expect(body).toContain("Ссылку на звонок пришлём в этот чат и на почту, которую укажете в форме.");
+    expect(body).not.toContain("личный кабинет");
   });
 
   it("uses the assigned curator, or the only curator account", () => {

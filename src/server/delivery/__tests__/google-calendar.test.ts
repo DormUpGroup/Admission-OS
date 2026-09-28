@@ -7,9 +7,12 @@ import {
   appointmentCreate,
 } from "@/server/commands/appointments";
 import {
+  buildCalendarEventBody,
+  calendarCredentials,
   callCalendarUpsert,
   deterministicGoogleEventId,
   finalizeCalendarUpsert,
+  meetingUrlFromCalendarEvent,
   parseServiceAccountJson,
 } from "@/server/delivery/google-calendar";
 import type { Appointment } from "@prisma/client";
@@ -74,6 +77,9 @@ describe("google calendar helpers (unit)", () => {
       lastClientNudgeAt: null,
       curatorNudgeSentAt: null,
       clientChangeUnseen: false,
+      guestName: "Аня Тест",
+      guestEmail: "guest@example.com",
+      meetingUrl: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     } satisfies Appointment;
@@ -88,15 +94,27 @@ describe("google calendar helpers (unit)", () => {
         });
       }
       if (url.includes("/calendar/v3/calendars/") && init?.method === "POST") {
+        expect(url).toContain("conferenceDataVersion=1");
+        expect(url).toContain("sendUpdates=all");
         const body = JSON.parse(String(init.body));
         expect(body.id).toBe(providerEventId);
+        expect(body.attendees).toEqual([{ email: "guest@example.com" }]);
+        expect(body.conferenceData.createRequest.conferenceSolutionKey.type).toBe(
+          "hangoutsMeet",
+        );
         expect(body.extendedProperties.private.immigromeAppointmentId).toBe(
           appointment.id,
         );
-        return new Response(JSON.stringify({ id: providerEventId }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            id: providerEventId,
+            hangoutLink: "https://meet.google.com/abc-defg-hij",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
       return new Response("not found", { status: 404 });
     });
@@ -116,7 +134,122 @@ describe("google calendar helpers (unit)", () => {
     );
 
     expect(result.googleEventId).toBe(providerEventId);
+    expect(result.meetingUrl).toBe("https://meet.google.com/abc-defg-hij");
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it("does not treat a calendar event as booked without a Meet link", async () => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const appointment = {
+      id: "appt-no-meet",
+      clientRequestId: "c2",
+      leadId: null,
+      studentId: null,
+      conversationId: null,
+      assignedCuratorId: null,
+      title: "Консультация",
+      startsAt: new Date("2026-10-01T10:00:00.000Z"),
+      endsAt: new Date("2026-10-01T11:00:00.000Z"),
+      timezone: "Europe/Rome",
+      status: "PENDING",
+      googleEventId: null,
+      participantsJson: null,
+      version: 1,
+      pendingStartsAt: null,
+      pendingEndsAt: null,
+      confirmationToken: null,
+      confirmationRequestedAt: null,
+      lastClientNudgeAt: null,
+      curatorNudgeSentAt: null,
+      clientChangeUnseen: false,
+      guestName: null,
+      guestEmail: "guest@example.com",
+      meetingUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } satisfies Appointment;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("oauth2.googleapis.com/token")) {
+        return new Response(JSON.stringify({ access_token: "tok" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ id: "evt" }), { status: 200 });
+    });
+    await expect(
+      callCalendarUpsert(
+        {
+          action: "create",
+          appointment,
+          providerEventId: deterministicGoogleEventId(appointment.id),
+          calendarId: "primary",
+          credentials: {
+            client_email: "bot@example.iam.gserviceaccount.com",
+            private_key: pem,
+          },
+        },
+        fetchMock as unknown as typeof fetch,
+      ),
+    ).rejects.toThrow(/Meet link/);
+  });
+
+  it("reads a Meet link from hangoutLink or a video entry point", () => {
+    expect(meetingUrlFromCalendarEvent({ hangoutLink: " https://meet.google.com/a " })).toBe(
+      "https://meet.google.com/a",
+    );
+    expect(
+      meetingUrlFromCalendarEvent({
+        conferenceData: {
+          entryPoints: [{ entryPointType: "video", uri: "https://meet.google.com/b" }],
+        },
+      }),
+    ).toBe("https://meet.google.com/b");
+    expect(meetingUrlFromCalendarEvent({})).toBeNull();
+  });
+
+  it("asks Calendar to create Meet for the guest email", () => {
+    const body = buildCalendarEventBody(
+      {
+        id: "appt1",
+        clientRequestId: "c1",
+        leadId: null,
+        studentId: null,
+        conversationId: null,
+        assignedCuratorId: null,
+        title: "Консультация",
+        startsAt: new Date("2026-10-01T10:00:00.000Z"),
+        endsAt: new Date("2026-10-01T11:00:00.000Z"),
+        timezone: "Europe/Rome",
+        status: "PENDING",
+        googleEventId: null,
+        participantsJson: null,
+        version: 1,
+        pendingStartsAt: null,
+        pendingEndsAt: null,
+        confirmationToken: null,
+        confirmationRequestedAt: null,
+        lastClientNudgeAt: null,
+        curatorNudgeSentAt: null,
+        clientChangeUnseen: false,
+        guestName: "Аня",
+        guestEmail: "anya@example.com",
+        meetingUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      "event-id",
+    );
+    expect(body.attendees).toEqual([{ email: "anya@example.com" }]);
+    expect(body.conferenceData).toEqual({
+      createRequest: {
+        requestId: "appt1",
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    });
+  });
+
+  it("requires the Workspace user to impersonate", () => {
+    expect(() => calendarCredentials({})).toThrow(/GOOGLE_CALENDAR_SUBJECT/);
   });
 });
 

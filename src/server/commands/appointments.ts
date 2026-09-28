@@ -7,6 +7,7 @@ import {
   type TelegramInlineKeyboard,
 } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
+import { normalizeGuestEmail, splitGuestName } from "@/server/booking/guest";
 import {
   APPOINTMENT_TIMEZONE,
   endsAtFromStart,
@@ -167,8 +168,24 @@ export function formatAppointmentBookedNotice(input: {
   title: string;
   whenLabel: string;
   timezone: string;
+  email?: string | null;
 }): string {
-  return `Консультация назначена: ${input.title}\n${input.whenLabel} (${input.timezone})`;
+  const lines = [
+    `Консультация назначена: ${input.title}`,
+    `${input.whenLabel} (${input.timezone})`,
+  ];
+  const email = input.email?.trim();
+  if (email) {
+    lines.push("", `Ссылку на звонок пришлём в этот чат и на почту ${email}.`);
+  }
+  return lines.join("\n");
+}
+
+export function formatMeetingLinkNotice(input: {
+  meetingUrl: string;
+  whenLabel: string;
+}): string {
+  return `Ссылка на звонок:\n${input.meetingUrl}\n${input.whenLabel}`;
 }
 
 async function resolveTelegramConversationId(
@@ -798,4 +815,173 @@ export async function appointmentBookByClient(input: {
 
   await deliverClientNotice(messageId);
   return appointment;
+}
+
+/** Public booking page: name, email, and a slot. Does not create a cabinet. */
+export async function appointmentBookByGuest(input: {
+  token: string;
+  guestName: string;
+  guestEmail: string;
+  startsAt: Date;
+}): Promise<Appointment> {
+  const names = splitGuestName(input.guestName);
+  const guestEmail = normalizeGuestEmail(input.guestEmail);
+  if (!names.firstName) throw new Error("Name required");
+  if (!guestEmail) throw new Error("Email required");
+
+  const invite = await prisma.bookingInvite.findUnique({
+    where: { token: input.token.trim() },
+    include: {
+      lead: {
+        select: {
+          id: true,
+          lastName: true,
+          convertedStudentId: true,
+          assignedCuratorId: true,
+        },
+      },
+    },
+  });
+  if (!invite || invite.expiresAt <= new Date()) throw new Error("Invite invalid");
+  if (invite.appointmentId) throw new Error("Appointment already booked");
+  if (!invite.leadId || !invite.lead) throw new Error("Invite invalid");
+  if (invite.lead.convertedStudentId) throw new Error("Already a student");
+
+  const curatorId = invite.curatorId;
+  const endsAt = endsAtFromStart(input.startsAt);
+  assertValidInterval(input.startsAt, endsAt);
+
+  const open = await listOpenSlots({
+    curatorId,
+    from: new Date(),
+    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+  });
+  const slot = open.find((item) => item.startsAt.getTime() === input.startsAt.getTime());
+  if (!slot) throw new Error("The selected slot is no longer available");
+
+  const clientRequestId = `guest-book:${invite.id}:${slot.startsAt.toISOString()}`;
+  const { appointment, messageId } = await prisma.$transaction(async (tx) => {
+    const prior = await tx.appointment.findUnique({ where: { clientRequestId } });
+    if (prior) return { appointment: prior, messageId: null as string | null };
+
+    const currentInvite = await tx.bookingInvite.findUnique({
+      where: { id: invite.id },
+      select: { appointmentId: true },
+    });
+    if (currentInvite?.appointmentId) throw new Error("Appointment already booked");
+
+    const existing = await tx.appointment.findFirst({
+      where: {
+        leadId: invite.leadId,
+        status: {
+          in: [
+            APPOINTMENT_STATUS.AWAITING_CLIENT,
+            APPOINTMENT_STATUS.PENDING,
+            APPOINTMENT_STATUS.CONFIRMED,
+          ],
+        },
+        endsAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    if (existing) throw new Error("Appointment already booked");
+
+    await assertNoCuratorConflict(tx, {
+      curatorId,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+    });
+
+    await tx.lead.update({
+      where: { id: invite.leadId! },
+      data: {
+        firstName: names.firstName,
+        lastName: names.lastName || invite.lead?.lastName || null,
+        email: guestEmail,
+        assignedCuratorId: invite.lead?.assignedCuratorId ?? curatorId,
+      },
+    });
+
+    const created = await tx.appointment.create({
+      data: {
+        clientRequestId,
+        leadId: invite.leadId,
+        conversationId: invite.conversationId,
+        assignedCuratorId: curatorId,
+        title: "Консультация",
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        timezone: APPOINTMENT_TIMEZONE,
+        status: APPOINTMENT_STATUS.PENDING,
+        clientChangeUnseen: true,
+        guestName: names.guestName,
+        guestEmail,
+      },
+    });
+
+    await tx.bookingInvite.update({
+      where: { id: invite.id },
+      data: { appointmentId: created.id },
+    });
+
+    await enqueueOutbox(tx, {
+      aggregateType: "Appointment",
+      aggregateId: created.id,
+      eventType: "calendar.upsert",
+      payload: { appointmentId: created.id },
+      idempotencyKey: `calendar.upsert:${created.id}:v${created.version}`,
+    });
+
+    const whenLabel = formatSlotLabel(created.startsAt, created.timezone);
+    await tx.inAppNotification.create({
+      data: {
+        userId: curatorId,
+        type: "appointment.booked",
+        title: "Клиент записался на консультацию",
+        body: [names.guestName, guestEmail, whenLabel].filter(Boolean).join("\n"),
+        metadataJson: JSON.stringify({
+          appointmentId: created.id,
+          conversationId: invite.conversationId,
+        }),
+      },
+    });
+
+    const noticeId = await notifyClientOnTelegram(tx, created, {
+      body: formatAppointmentBookedNotice({
+        title: created.title,
+        whenLabel,
+        timezone: created.timezone,
+        email: guestEmail,
+      }),
+      clientRequestId: `appt-booked:${created.id}`,
+    });
+
+    return { appointment: created, messageId: noticeId };
+  });
+
+  await deliverClientNotice(messageId);
+  return appointment;
+}
+
+/** Telegram the Meet URL once Calendar has created it. Duplicate sends are ignored. */
+export async function deliverMeetingLinkNotice(appointmentId: string): Promise<void> {
+  const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  if (!appointment?.meetingUrl) return;
+  const whenLabel = formatSlotLabel(appointment.startsAt, appointment.timezone);
+  const messageId = await prisma.$transaction(async (tx) => {
+    const conversationId = await resolveTelegramConversationId(tx, appointment);
+    if (!conversationId) return null;
+    const sent = await requestTelegramSend({
+      tx,
+      conversationId,
+      body: formatMeetingLinkNotice({
+        meetingUrl: appointment.meetingUrl!,
+        whenLabel,
+      }),
+      clientRequestId: `appt-meet:${appointment.id}`,
+    });
+    if (sent.duplicate) return null;
+    return sent.message.id;
+  });
+  await deliverClientNotice(messageId);
 }

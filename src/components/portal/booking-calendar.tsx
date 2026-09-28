@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { bookConsultationAction } from "@/server/booking-actions";
+import { bookConsultationAction, bookGuestConsultationAction } from "@/server/booking-actions";
 import { Button } from "@/components/ui/button";
 import {
   SLOT_DAY_END_HOUR,
@@ -52,10 +52,18 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
   );
 }
 
-export function BookingCalendar({ slots }: { slots: OpenSlotDto[] }) {
+export function BookingCalendar({
+  slots,
+  action = bookConsultationAction,
+  children,
+}: {
+  slots: OpenSlotDto[];
+  action?: typeof bookGuestConsultationAction;
+  children?: React.ReactNode;
+}) {
   const [startsAt, setStartsAt] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
-  const [state, formAction] = useActionState(bookConsultationAction, null);
+  const [state, formAction] = useActionState(action, null);
 
   const workdayColumns = useMemo(() => {
     return [...new Set(slots.map((slot) => romeParts(slot.startsAt).ymd))].sort();
@@ -95,6 +103,7 @@ export function BookingCalendar({ slots }: { slots: OpenSlotDto[] }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      {children}
       <input type="hidden" name="startsAt" value={startsAt} />
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">

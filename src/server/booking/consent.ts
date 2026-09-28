@@ -55,10 +55,19 @@ export function mentionsConsultation(text: string | null | undefined): boolean {
   return /консультац|видео\s*консультац|созвон|видеозвон|видео-звон/i.test(text);
 }
 
-/** A consultation offer, including a handoff to the curator. */
-export function offersHandoff(text: string | null | undefined): boolean {
-  if (!text) return false;
-  return mentionsConsultation(text) || /передам\s+(вас\s+)?куратор/iu.test(text);
+/** The one question that must be answered before the booking link goes out. */
+export function consultationOfferMessage(): string {
+  return "Хотите консультацию?";
+}
+
+/** After a no: why it helps, then the same question once more. */
+export function consultationDeclineMessage(): string {
+  return "Так вы сможете лучше разобраться: куратор посмотрит ваши документы и скажет, что подходит.\n\nХотите консультацию?";
+}
+
+/** After a second no, stop asking. */
+export function consultationCloseMessage(): string {
+  return "Хорошо. Если захотите разобраться подробнее, просто напишите.";
 }
 
 function isRefusal(text: string): boolean {
@@ -91,12 +100,56 @@ function clientAskedForConsultation(text: string): boolean {
 export function shouldSendBookingLink(turn: BookingConsentTurn): boolean {
   const client = turn.clientBody?.trim() ?? "";
   if (!client || isRefusal(client)) return false;
-  const topic = offersHandoff(turn.previousBody) || mentionsConsultation(client);
+  const topic = mentionsConsultation(turn.previousBody) || mentionsConsultation(client);
   if (!topic) return false;
   return isShortAgreement(client) || clientAskedForConsultation(client);
 }
 
 export type ConsentMessage = { direction: string; body: string | null };
+
+export function latestConsentTurn(messages: ConsentMessage[]): BookingConsentTurn {
+  let clientIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.direction === "INBOUND" && messages[i]?.body?.trim()) {
+      clientIndex = i;
+      break;
+    }
+  }
+  if (clientIndex < 0) return { previousBody: null, clientBody: null };
+  let previousBody: string | null = null;
+  for (let i = clientIndex - 1; i >= 0; i--) {
+    const body = messages[i]?.body?.trim();
+    if (body) {
+      previousBody = body;
+      break;
+    }
+  }
+  return { previousBody, clientBody: messages[clientIndex]?.body ?? null };
+}
+
+/** The client said no to a consultation question. */
+export function declinedConsultation(turn: BookingConsentTurn): boolean {
+  const client = turn.clientBody?.trim() ?? "";
+  if (!client || !mentionsConsultation(turn.previousBody)) return false;
+  return isRefusal(client);
+}
+
+export function consultationDeclineCount(messages: ConsentMessage[]): number {
+  let count = 0;
+  let previous = "";
+  for (const message of messages) {
+    const body = message.body?.trim() ?? "";
+    if (!body) continue;
+    if (
+      message.direction === "INBOUND" &&
+      declinedConsultation({ previousBody: previous || null, clientBody: body })
+    ) {
+      count += 1;
+    }
+    previous = body;
+  }
+  return count;
+}
 
 /** True when the client agreed to a consultation and has not refused a later offer. */
 export function clientAlreadyAgreedToConsultation(messages: ConsentMessage[]): boolean {
@@ -106,9 +159,8 @@ export function clientAlreadyAgreedToConsultation(messages: ConsentMessage[]): b
     const body = message.body?.trim() ?? "";
     if (!body) continue;
     if (message.direction === "INBOUND") {
-      const aboutHandoff =
-        offersHandoff(previous) || mentionsConsultation(previous) || mentionsConsultation(body);
-      if (aboutHandoff && isRefusal(body)) agreed = false;
+      const aboutConsultation = mentionsConsultation(previous) || mentionsConsultation(body);
+      if (aboutConsultation && isRefusal(body)) agreed = false;
       else if (shouldSendBookingLink({ previousBody: previous || null, clientBody: body })) agreed = true;
     }
     previous = body;
@@ -116,10 +168,18 @@ export function clientAlreadyAgreedToConsultation(messages: ConsentMessage[]): b
   return agreed;
 }
 
-export async function loadConsultationDecision(conversationId: string): Promise<{
+export type ConsultationDecision = {
   agreedNow: boolean;
   sendBecauseAlreadyAgreed: boolean;
-}> {
+  /** Facts are ready and the consultation question has not been answered yet. */
+  offerNow: boolean;
+  /** First no: explain and ask once more. */
+  declinedNow: boolean;
+  /** Second no: stop asking. */
+  closeNow: boolean;
+};
+
+export async function loadConsultationDecision(conversationId: string): Promise<ConsultationDecision> {
   const rows = await prisma.conversationMessage.findMany({
     where: { conversationId },
     orderBy: { createdAt: "desc" },
@@ -127,8 +187,11 @@ export async function loadConsultationDecision(conversationId: string): Promise<
     select: { direction: true, body: true },
   });
   const messages = [...rows].reverse();
-  const turn = await loadBookingConsentTurn(conversationId);
+  const turn = latestConsentTurn(messages);
   const agreedNow = shouldSendBookingLink(turn);
+  const declined = declinedConsultation(turn);
+  const declines = consultationDeclineCount(messages);
+  const alreadyAgreed = clientAlreadyAgreedToConsultation(messages);
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     select: { lead: { select: { qualificationJson: true } } },
@@ -141,7 +204,10 @@ export async function loadConsultationDecision(conversationId: string): Promise<
   ).ready;
   return {
     agreedNow,
-    sendBecauseAlreadyAgreed: !agreedNow && ready && clientAlreadyAgreedToConsultation(messages),
+    sendBecauseAlreadyAgreed: !agreedNow && !declined && ready && alreadyAgreed,
+    offerNow: ready && !agreedNow && !alreadyAgreed && !declined,
+    declinedNow: declined && declines < 2,
+    closeNow: declined && declines >= 2,
   };
 }
 
@@ -173,5 +239,11 @@ export async function loadBookingConsentTurn(conversationId: string): Promise<Bo
 }
 
 export function bookingLinkReplacesReply(result: string): boolean {
-  return result === "sent" || result === "already_sent" || result.startsWith("already_booked");
+  return (
+    result === "sent" ||
+    result === "already_sent" ||
+    result === "offer_sent" ||
+    result === "declined_sent" ||
+    result.startsWith("already_booked")
+  );
 }

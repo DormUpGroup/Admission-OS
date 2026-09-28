@@ -8,6 +8,9 @@ import {
 } from "./actions";
 import {
   bookingLinkReplacesReply,
+  consultationCloseMessage,
+  consultationDeclineMessage,
+  consultationOfferMessage,
   loadBookingConsentTurn,
   loadConsultationDecision,
   shouldSendBookingLink,
@@ -94,13 +97,32 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
   };
 }
 
-/** The booking page replaces a freeform reply when a consultation is already agreed. */
+async function sendFixedReply(
+  executors: McpToolExecutors,
+  input: { agentRunId: string; conversationId: string },
+  body: string,
+  token: "offer_sent" | "declined_sent",
+): Promise<string | null> {
+  const sent = await executors.sendClientMessage({ ...input, body });
+  return sent.status === "ALLOWED" ? token : null;
+}
+
+/** Ask first. The booking page replaces the reply only after a yes. */
 async function bookingLinkInsteadOfReply(
   executors: McpToolExecutors,
   input: { agentRunId: string; conversationId: string },
 ): Promise<string | null> {
   if (executors.readBookingDecision) {
     const decision = await executors.readBookingDecision(input.conversationId);
+    if (decision.closeNow) {
+      return sendFixedReply(executors, input, consultationCloseMessage(), "declined_sent");
+    }
+    if (decision.declinedNow) {
+      return sendFixedReply(executors, input, consultationDeclineMessage(), "declined_sent");
+    }
+    if (decision.offerNow) {
+      return sendFixedReply(executors, input, consultationOfferMessage(), "offer_sent");
+    }
     if (!decision.agreedNow && !decision.sendBecauseAlreadyAgreed) return null;
     const text = await executors.sendBookingLink(input);
     if (decision.agreedNow && bookingLinkReplacesReply(text)) return text;

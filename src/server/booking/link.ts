@@ -12,7 +12,12 @@ export function bookingPageUrl(
 }
 
 export function bookingInviteMessage(url: string): string {
-  return `Запишитесь на консультацию на сайте:\n${url}`;
+  return [
+    "Вот ссылка, чтобы выбрать время консультации:",
+    url,
+    "",
+    "Ссылку на звонок пришлём в этот чат и на почту, которую укажете в форме.",
+  ].join("\n");
 }
 
 /** Assigned curator wins. Otherwise the only CURATOR account in the system. */

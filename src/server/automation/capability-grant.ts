@@ -1,7 +1,13 @@
 import { createHash, randomBytes } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { buildLeadCard, consultationGate } from "@/lib/lead-profile";
-import { clientAlreadyAgreedToConsultation } from "@/server/booking/consent";
+import {
+  clientAlreadyAgreedToConsultation,
+  consultationDeclineCount,
+  declinedConsultation,
+  latestConsentTurn,
+  shouldSendBookingLink,
+} from "@/server/booking/consent";
 import type { DbClient } from "@/server/commands/outbox";
 
 /** Tools Hermes may call on an intake run. */
@@ -80,12 +86,22 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
   const known = rows.map((row) => `${row.key}: ${row.value.slice(0, 120)}`);
   const missing = LEAD_FACT_FIELDS.filter((field) => !byKey.get(field)?.trim());
   const gate = consultationGate(rows);
+  const turn = latestConsentTurn(messages);
+  const agreed = shouldSendBookingLink(turn) || clientAlreadyAgreedToConsultation(messages);
+  const declined = declinedConsultation(turn);
   let next: string;
-  if (gate.ready && clientAlreadyAgreedToConsultation(messages)) {
+  if (gate.ready && agreed) {
     next =
-      "Send the booking link now. The client already agreed to a consultation. Do not ask another question.";
+      "Send the booking link now. The client agreed to a consultation. Do not ask another question.";
+  } else if (gate.ready && declined && consultationDeclineCount(messages) >= 2) {
+    next =
+      "The client declined a consultation again. Accept it in one short sentence and do not ask a third time. Do not send the link.";
+  } else if (gate.ready && declined) {
+    next =
+      "The client declined. Explain that a consultation is how they can understand their case better, then ask once more: Хотите консультацию? Do not send the link.";
   } else if (gate.ready) {
-    next = "Offer a consultation now, in one short question. Do not ask any other fact first.";
+    next =
+      "Ask whether they want a consultation, in one short question: Хотите консультацию? Do not send the booking link until they say yes. Do not ask another fact.";
   } else if (gate.missing[0] === "apostilleTranslation" && /перевод не назван/iu.test(byKey.get("apostilleTranslation") ?? "")) {
     next = "Ask only whether the translation exists. The apostille is already known. Do not ask any other fact.";
   } else if (gate.missing[0] === "apostilleTranslation" && /апостиль не назван/iu.test(byKey.get("apostilleTranslation") ?? "")) {
@@ -126,8 +142,9 @@ export function hermesRunInstructions(
     "One turn only: a short human reply and at most one fitting question.",
     "The study destination is always Italy. Never ask which country they are considering, and never offer another country.",
     "When the person states a new fact, save it with update_lead_qualification. If it is already in Known, do not ask them to repeat it.",
-    "When Next says to send the booking link, call send_booking_link once and do not ask another question. The server sends that link if you only call propose_reply.",
-    "When Next says to offer a consultation, ask that once. Do not collect another fact first.",
+    "When Next says to ask whether they want a consultation, ask only that. Do not send the booking link until they say yes.",
+    "When Next says the client declined, explain that a consultation is how they can understand their case better, then ask once more. Do not send the link.",
+    "When Next says to send the booking link, call send_booking_link once and do not ask another question. The link opens a page to pick a consultation time. No account is required. The server sends that link if you only call propose_reply.",
     "Answer a simple question about the process yourself.",
     "For a specific programme, a price, a timeline, a decision, or anything that is not on the lead card, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
     "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент спрашивает стоимость конкретной программы. Напишите цену в этот чат.",

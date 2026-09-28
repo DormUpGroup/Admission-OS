@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
-import { registerBookingAccount } from "@/server/booking/account";
 import { sendBookingLinkForConversation } from "@/server/booking/send-link";
-import { appointmentBookByClient } from "@/server/commands/appointments";
+import { appointmentBookByGuest } from "@/server/commands/appointments";
+import { resolveConsultationEmail } from "@/server/registration/contact";
 import { listOpenSlots } from "@/server/services/appointments/slots";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
@@ -106,7 +106,7 @@ describeDb("client books a consultation from the site", () => {
     await prisma.$disconnect();
   });
 
-  it("sends a site link, opens a cabinet, and books the curator's free slot", async () => {
+  it("sends a site link and books a slot without opening a cabinet", async () => {
     const sent = await sendBookingLinkForConversation({
       conversationId,
       env: { AUTH_URL: "https://admission-os-production.up.railway.app" },
@@ -125,30 +125,13 @@ describeDb("client books a consultation from the site", () => {
     });
     expect(message?.body).toContain(`/book/${invite?.token}`);
     expect(message?.body).toContain("admission-os-production.up.railway.app");
+    expect(message?.body).toContain("на почту, которую укажете в форме");
 
     const again = await sendBookingLinkForConversation({
       conversationId,
       env: { AUTH_URL: "https://admission-os-production.up.railway.app" },
     });
     expect(again).toBe("already_sent");
-
-    const registered = await registerBookingAccount({
-      token: invite!.token,
-      email,
-      password: "password123",
-      firstName: "Аня",
-      lastName: "Тест",
-    });
-    expect(registered).toEqual({ ok: true });
-
-    const student = await prisma.student.findUnique({ where: { email } });
-    expect(student?.curatorId).toBe(curatorId);
-    expect(student?.userId).toBeTruthy();
-    studentId = student!.id;
-    userIds.push(student!.userId!);
-
-    const lead = await prisma.lead.findUnique({ where: { id: leadId } });
-    expect(lead?.convertedStudentId).toBe(studentId);
 
     const slots = await listOpenSlots({
       curatorId,
@@ -157,13 +140,26 @@ describeDb("client books a consultation from the site", () => {
     });
     expect(slots.length).toBeGreaterThan(0);
 
-    const appointment = await appointmentBookByClient({
-      studentId,
+    const appointment = await appointmentBookByGuest({
+      token: invite!.token,
+      guestName: "Аня Тест",
+      guestEmail: email,
       startsAt: slots[0].startsAt,
     });
     expect(appointment.status).toBe("PENDING");
     expect(appointment.assignedCuratorId).toBe(curatorId);
+    expect(appointment.studentId).toBeNull();
+    expect(appointment.leadId).toBe(leadId);
+    expect(appointment.guestEmail).toBe(email);
     expect(appointment.confirmationToken).toBeNull();
+
+    const student = await prisma.student.findUnique({ where: { email } });
+    expect(student).toBeNull();
+
+    const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+    expect(lead?.convertedStudentId).toBeNull();
+    expect(lead?.email).toBe(email);
+    expect(await resolveConsultationEmail(leadId)).toBe(email);
 
     const calendar = await prisma.outboxEvent.findFirst({
       where: { aggregateId: appointment.id, eventType: "calendar.upsert" },
@@ -174,11 +170,14 @@ describeDb("client books a consultation from the site", () => {
       where: { conversationId, body: { contains: "Консультация назначена" } },
     });
     expect(notice?.body).toContain("Консультация назначена");
+    expect(notice?.body).toContain(email);
+    expect(notice?.body).toContain("пришлём в этот чат и на почту");
 
     const notification = await prisma.inAppNotification.findFirst({
       where: { userId: curatorId, type: "appointment.booked" },
     });
-    expect(notification?.studentId).toBe(studentId);
+    expect(notification?.studentId ?? null).toBeNull();
+    expect(notification?.body).toContain(email);
 
     const consumed = await prisma.bookingInvite.findUnique({ where: { id: invite!.id } });
     expect(consumed?.appointmentId).toBe(appointment.id);

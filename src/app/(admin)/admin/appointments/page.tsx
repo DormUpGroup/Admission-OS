@@ -336,7 +336,9 @@ export default async function AdminAppointmentsPage({
   const calendarAppointments = appointments.map((a) => {
     const person = a.lead ?? a.student;
     let subjectLabel = "—";
-    if (a.lead) {
+    if (a.guestName?.trim()) {
+      subjectLabel = a.guestName.trim();
+    } else if (a.lead) {
       subjectLabel = personLabel(
         a.lead.firstName,
         a.lead.lastName,

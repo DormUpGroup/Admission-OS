@@ -38,19 +38,34 @@ describe("booking consent", () => {
     ).toBe(false);
   });
 
-  it("treats agreement to a curator handoff as booking consent", () => {
+  it("does not treat a curator handoff as a yes to a consultation", () => {
     expect(
       shouldSendBookingLink({
         previousBody: "Хотите, передам вас куратору?",
         clientBody: "Давайте",
       }),
+    ).toBe(false);
+  });
+
+  it("sends the link only after a yes to the consultation question", () => {
+    expect(
+      shouldSendBookingLink({
+        previousBody: "Хотите консультацию?",
+        clientBody: "Да",
+      }),
     ).toBe(true);
+    expect(
+      shouldSendBookingLink({
+        previousBody: "Хотите консультацию?",
+        clientBody: "Нет",
+      }),
+    ).toBe(false);
   });
 
   it("remembers an earlier yes and drops it after a later refusal", () => {
     const agreed = [
-      { direction: "OUTBOUND", body: "Хотите, передам вас куратору?" },
-      { direction: "INBOUND", body: "Давайте" },
+      { direction: "OUTBOUND", body: "Хотите консультацию?" },
+      { direction: "INBOUND", body: "Да" },
       { direction: "OUTBOUND", body: "Какая сфера?" },
       { direction: "INBOUND", body: "Физика" },
     ];

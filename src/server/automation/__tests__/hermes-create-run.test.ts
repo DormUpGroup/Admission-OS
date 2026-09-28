@@ -431,8 +431,47 @@ describe("formatLeadCard", () => {
     expect(card).toContain("passport: есть");
     expect(card).toContain("diploma: есть");
     expect(card).toContain("apostilleTranslation: апостиль и перевод есть");
+    expect(card).toContain("Хотите консультацию?");
+    expect(card).toContain("Do not send the booking link until they say yes");
+    expect(card).not.toContain("Next: Send the booking link now");
+  });
+
+  it("sends the link only after the client says yes to a consultation", () => {
+    const card = formatLeadCard(null, [
+      { direction: "OUTBOUND", body: "Какое у вас гражданство?" },
+      { direction: "INBOUND", body: "Украина" },
+      { direction: "OUTBOUND", body: "Загранпаспорт уже есть?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Аттестат уже на руках?" },
+      { direction: "INBOUND", body: "Аттестат есть" },
+      { direction: "OUTBOUND", body: "Апостиль уже есть?" },
+      { direction: "INBOUND", body: "Апостиль есть" },
+      { direction: "OUTBOUND", body: "Перевод уже готов?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Хотите консультацию?" },
+      { direction: "INBOUND", body: "Да" },
+    ]);
     expect(card).toContain("Next: Send the booking link now");
-    expect(card).not.toContain("Ask only this one missing fact: citizenship");
+  });
+
+  it("explains and asks again when the client declines", () => {
+    const card = formatLeadCard(null, [
+      { direction: "OUTBOUND", body: "Какое у вас гражданство?" },
+      { direction: "INBOUND", body: "Украина" },
+      { direction: "OUTBOUND", body: "Загранпаспорт уже есть?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Аттестат уже на руках?" },
+      { direction: "INBOUND", body: "Аттестат есть" },
+      { direction: "OUTBOUND", body: "Апостиль уже есть?" },
+      { direction: "INBOUND", body: "Апостиль есть" },
+      { direction: "OUTBOUND", body: "Перевод уже готов?" },
+      { direction: "INBOUND", body: "Есть" },
+      { direction: "OUTBOUND", body: "Хотите консультацию?" },
+      { direction: "INBOUND", body: "Нет" },
+    ]);
+    expect(card).toContain("The client declined");
+    expect(card).toContain("ask once more");
+    expect(card).not.toContain("Next: Send the booking link now");
   });
 
   it("asks for a consultation once the documents are known and the client has not agreed yet", () => {
@@ -448,7 +487,8 @@ describe("formatLeadCard", () => {
       { direction: "OUTBOUND", body: "Перевод уже готов?" },
       { direction: "INBOUND", body: "Есть" },
     ]);
-    expect(card).toContain("Next: Offer a consultation now");
+    expect(card).toContain("Хотите консультацию?");
+    expect(card).toContain("Do not send the booking link until they say yes");
     expect(card).toContain("Missing:");
   });
 });

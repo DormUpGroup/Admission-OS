@@ -114,7 +114,13 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
       | (() => Promise<{ previousBody: string | null; clientBody: string | null }>),
     readBookingDecision: undefined as
       | undefined
-      | (() => Promise<{ agreedNow: boolean; sendBecauseAlreadyAgreed: boolean }>),
+      | (() => Promise<{
+          agreedNow: boolean;
+          sendBecauseAlreadyAgreed: boolean;
+          offerNow?: boolean;
+          declinedNow?: boolean;
+          closeNow?: boolean;
+        }>),
   };
   return { db, calls, executors, output: () => outputJson };
 }
@@ -395,5 +401,44 @@ describe("MCP capability grant", () => {
     expect(box.calls.bookings).toBe(1);
     expect(box.calls.sent).toEqual(["Поняла, физика."]);
     expect(JSON.stringify(draft.body)).toContain("sent");
+  });
+
+  it("asks about a consultation before sending the link", async () => {
+    const box = world(grant());
+    box.executors.readBookingDecision = async () => ({
+      agreedNow: false,
+      sendBecauseAlreadyAgreed: false,
+      offerNow: true,
+    });
+    const draft = await post(
+      box,
+      call("propose_reply", {
+        grant_id: "grant-secret-value",
+        body: "Какое у вас гражданство?",
+      }),
+    );
+    expect(JSON.stringify(draft.body)).toContain("offer_sent");
+    expect(box.calls.bookings).toBe(0);
+    expect(box.calls.sent).toEqual(["Хотите консультацию?"]);
+  });
+
+  it("explains and asks again when the client declines", async () => {
+    const box = world(grant());
+    box.executors.readBookingDecision = async () => ({
+      agreedNow: false,
+      sendBecauseAlreadyAgreed: false,
+      declinedNow: true,
+    });
+    const draft = await post(
+      box,
+      call("propose_reply", {
+        grant_id: "grant-secret-value",
+        body: "Хорошо, тогда позже",
+      }),
+    );
+    expect(JSON.stringify(draft.body)).toContain("declined_sent");
+    expect(box.calls.bookings).toBe(0);
+    expect(box.calls.sent[0]).toContain("лучше разобраться");
+    expect(box.calls.sent[0]).toContain("Хотите консультацию?");
   });
 });
