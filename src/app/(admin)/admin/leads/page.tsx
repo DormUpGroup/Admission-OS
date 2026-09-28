@@ -12,6 +12,7 @@ import {
   DataTableHeader,
   DataTableRow,
 } from "@/components/data-table";
+import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -156,6 +157,7 @@ export default async function AdminLeadsPage({
           <DataTableHeader>
             <DataTableRow>
               <DataTableHead>Человек</DataTableHead>
+              <DataTableHead>Кабинет</DataTableHead>
               <DataTableHead>Канал</DataTableHead>
               <DataTableHead>Контакт</DataTableHead>
               <DataTableHead>Куратор</DataTableHead>
@@ -170,6 +172,10 @@ export default async function AdminLeadsPage({
                   <Link href={`/admin/leads/${row.id}`} className="hover:underline">
                     {row.title}
                   </Link>
+                </DataTableCell>
+                <DataTableCell>
+                  {/* Signup from this chat converts the lead, so this list is guests. */}
+                  <PlatformPresenceBadge hasAccount={false} />
                 </DataTableCell>
                 <DataTableCell>{row.channel}</DataTableCell>
                 <DataTableCell>{row.contact}</DataTableCell>

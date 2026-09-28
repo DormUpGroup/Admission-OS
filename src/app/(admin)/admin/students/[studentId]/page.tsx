@@ -20,6 +20,8 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
+import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
+import { hasPlatformAccount } from "@/lib/platform-presence";
 import { ApplicationCard } from "@/components/application-card";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { InAppNotificationsPanel } from "@/components/in-app-notifications";
@@ -384,6 +386,7 @@ export default async function StudentProfilePage({
             } · Анкета: ${questionnaireDone ? "заполнена" : "не заполнена"}`}
             actions={
               <>
+                <PlatformPresenceBadge hasAccount={hasPlatformAccount(student.userId)} />
                 <StatusBadge status={student.status} kind="student" />
                 <RiskBadge level={student.riskLevel} />
                 <Button asChild size="sm" variant="outline">

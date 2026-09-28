@@ -6,6 +6,8 @@ import { parseNextAction } from "@/server/services/readiness";
 import { PageHeader } from "@/components/page-header";
 import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
+import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
+import { hasPlatformAccount } from "@/lib/platform-presence";
 import { StudentAvatar } from "@/components/student-avatar";
 import { EmptyState } from "@/components/empty-state";
 import { StudentListFilters } from "@/components/admin/student-list-filters";
@@ -216,6 +218,7 @@ export default async function StudentsPage({
                     <RiskBadge level={s.riskLevel} />
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <PlatformPresenceBadge hasAccount={hasPlatformAccount(s.userId)} />
                     <StatusBadge status={s.journeyStage} />
                     <span className="text-[12px] text-muted-foreground">
                       Набор {s.intake} · подачи {s.applications.length} ·
@@ -235,6 +238,7 @@ export default async function StudentsPage({
           <DataTableHeader>
             <DataTableRow>
               <DataTableHead>Студент</DataTableHead>
+              <DataTableHead>Кабинет</DataTableHead>
               <DataTableHead>Набор</DataTableHead>
               <DataTableHead>Текущий этап</DataTableHead>
               <DataTableHead>Куратор</DataTableHead>
@@ -270,6 +274,9 @@ export default async function StudentsPage({
                         </span>
                       </span>
                     </Link>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <PlatformPresenceBadge hasAccount={hasPlatformAccount(s.userId)} />
                   </DataTableCell>
                   <DataTableCell className="tabular-nums">{s.intake}</DataTableCell>
                   <DataTableCell>

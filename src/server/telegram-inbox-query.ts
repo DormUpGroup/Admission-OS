@@ -18,6 +18,8 @@ export type TelegramListItemDto = {
   /** Matches the sidebar badge: open client thread with inbound after the last open. */
   unread: boolean;
   automationPaused: boolean;
+  /** Cabinet created from the booking link of this chat. */
+  onPlatform: boolean;
 };
 
 export type TelegramThreadMessageDto = {
@@ -36,6 +38,7 @@ export type TelegramThreadDto = {
   contactName: string;
   leadId: string | null;
   studentId: string | null;
+  onPlatform: boolean;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   /** Latest Hermes draft that has not been sent yet. */
@@ -245,6 +248,7 @@ export async function listTelegramConversations(): Promise<{
       student: {
         select: {
           id: true,
+          userId: true,
           firstName: true,
           lastName: true,
           channelIdentities: identitySelect,
@@ -304,6 +308,7 @@ export async function listTelegramConversations(): Promise<{
         }) &&
         !isFixtureContact({ title: baseName, username }),
       automationPaused: !!c.automationPausedAt,
+      onPlatform: Boolean(c.student?.userId),
     };
     if (folder === "trash") trash.push(item);
     else if (folder === "technical") technical.push(item);
@@ -343,6 +348,7 @@ export async function loadTelegramThread(
       student: {
         select: {
           id: true,
+          userId: true,
           firstName: true,
           lastName: true,
           channelIdentities: identitySelect,
@@ -404,6 +410,7 @@ export async function loadTelegramThread(
     contactName,
     leadId: row.studentId ? null : row.leadId,
     studentId: row.studentId,
+    onPlatform: Boolean(row.student?.userId),
     automationPaused: !!row.automationPausedAt,
     replyDraft,
     hasPendingDelivery: row.messages.some(

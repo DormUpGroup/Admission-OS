@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { Bot } from "lucide-react";
+import { platformPresenceLabel } from "@/lib/platform-presence";
 import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
 import { MessageParagraphs } from "@/components/admin/message-paragraphs";
@@ -47,6 +48,7 @@ export type TelegramListItem = {
   deliveryStatus: string | null;
   unread: boolean;
   automationPaused: boolean;
+  onPlatform: boolean;
 };
 
 export type TelegramThreadMessage = {
@@ -67,6 +69,7 @@ export type TelegramActiveThread = {
   contactName?: string;
   leadId?: string | null;
   studentId?: string | null;
+  onPlatform?: boolean;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   replyDraft?: string | null;
@@ -696,6 +699,9 @@ export function TelegramMessenger({
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center gap-2">
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                        {platformPresenceLabel(c.onPlatform)}
+                      </span>
                       <p className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
                         {c.preview || "—"}
                       </p>
@@ -772,6 +778,8 @@ export function TelegramMessenger({
                 <p className="text-[12px] text-muted-foreground">
                   Telegram
                   {active.studentId ? " · ученик" : active.leadId ? " · лид" : ""}
+                  {" · "}
+                  {platformPresenceLabel(Boolean(active.onPlatform))}
                   {active.automationPaused ? " · автоответы на паузе" : ""}
                   {folder === "trash" ? " · мусор" : ""}
                   {threadLoading ? " · …" : ""}

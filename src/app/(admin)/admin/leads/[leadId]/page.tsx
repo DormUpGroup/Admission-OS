@@ -7,6 +7,7 @@ import { buildLeadCard } from "@/lib/lead-profile";
 import { PageHeader } from "@/components/page-header";
 import { StudentAvatar } from "@/components/student-avatar";
 import { PromoteLeadButton } from "@/components/admin/promote-lead-button";
+import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -112,11 +113,14 @@ export default async function LeadProfilePage({
       >
         <div className="flex items-center gap-3">
           <StudentAvatar name={name} size="lg" />
-          <p className="text-[13px] text-muted-foreground">
-            {username ? `@${username}` : "Telegram без username"}
-            {" · "}
-            куратор {lead.assignedCurator?.name ?? "не назначен"}
-          </p>
+          <div className="space-y-1">
+            <PlatformPresenceBadge hasAccount={false} />
+            <p className="text-[13px] text-muted-foreground">
+              {username ? `@${username}` : "Telegram без username"}
+              {" · "}
+              куратор {lead.assignedCurator?.name ?? "не назначен"}
+            </p>
+          </div>
         </div>
       </PageHeader>
 
