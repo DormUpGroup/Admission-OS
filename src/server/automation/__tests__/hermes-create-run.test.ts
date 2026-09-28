@@ -222,6 +222,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("The server sends that text when the turn ends");
       expect(sent.instructions).toContain("blank line between thoughts");
       expect(sent.instructions).toContain("at most one in a message");
+      expect(sent.instructions).toContain("You are a girl chatting with this new lead");
+      expect(sent.instructions).toContain("поняла, передала, уточнила, написала");
       expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
       expect(sent.instructions).toContain("One list per message");
       expect(sent.instructions).toContain("<b>word</b>");

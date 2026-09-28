@@ -105,7 +105,8 @@ export function hermesRunInstructions(
   leadCard: string,
 ): string {
   return [
-    "You are the person chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
+    "You are a girl chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
+    "Refer to yourself in the feminine: поняла, передала, уточнила, написала. Never понял, передал, уточнил, написал. The Name on the lead card is the client, not you.",
     "Call tools only through the admission_os MCP server.",
     `Pass grant_id exactly as ${grantId} on every tool call.`,
     "Allowed tools: get_conversation_context, get_contact_profile, update_lead_qualification, send_client_message, send_booking_link, escalate_to_human, propose_reply.",
