@@ -7,6 +7,7 @@ import {
   completeOutboxEvent,
   deadLetterOutboxEvent,
   deferOutboxForKillSwitch,
+  OutboxTerminalError,
   resolveAutomationEnabled,
   shouldProcessOutboxEvent,
   retryOutboxEvent,
@@ -17,6 +18,7 @@ import {
   HermesRunPendingError,
 } from "@/server/automation/hermes-client";
 import { enqueueQueuedHermesCreateRuns } from "@/server/automation/hermes-create-run";
+import { notifyCuratorTelegramSendFailed } from "@/server/delivery/telegram-curator-notice";
 import { dispatchOutboxEvent } from "./dispatch";
 import { registerBuiltinHandlers } from "./handlers";
 
@@ -160,6 +162,45 @@ async function processOnce(): Promise<number> {
             eventId: event.id,
             eventType: event.eventType,
             deferred,
+          }),
+        );
+        continue;
+      }
+
+      if (error instanceof OutboxTerminalError) {
+        const dead = await deadLetterOutboxEvent(
+          prisma,
+          event.id,
+          event.leaseToken,
+          message,
+        );
+        if (dead && event.eventType === "telegram.send") {
+          const payload = event.payloadJson;
+          const messageId =
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? String((payload as { messageId?: unknown }).messageId ?? "")
+              : "";
+          if (messageId) {
+            await notifyCuratorTelegramSendFailed(messageId).catch((noticeError) => {
+              console.error(
+                JSON.stringify({
+                  level: "error",
+                  msg: "telegram.send.curator_notice_failed",
+                  eventId: event.id,
+                  error: noticeError instanceof Error ? noticeError.message : String(noticeError),
+                }),
+              );
+            });
+          }
+        }
+        console.error(
+          JSON.stringify({
+            level: "error",
+            msg: "outbox.handler_failed",
+            eventId: event.id,
+            eventType: event.eventType,
+            outcome: dead ? "dead" : "lost_lease",
+            error: message,
           }),
         );
         continue;

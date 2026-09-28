@@ -13,7 +13,7 @@ export type ServiceAccountCredentials = {
 
 export type PreparedCalendarUpsert = {
   action: "create" | "patch" | "skip";
-  appointment: Appointment;
+  appointment: Appointment | null;
   providerEventId: string;
   calendarId: string;
   credentials: ServiceAccountCredentials;
@@ -181,7 +181,13 @@ export async function prepareCalendarUpsert(
     where: { id: appointmentId },
   });
   if (!appointment) {
-    throw new Error(`Appointment ${appointmentId} not found`);
+    return {
+      action: "skip",
+      appointment: null,
+      providerEventId: "",
+      calendarId: "",
+      credentials: { client_email: "", private_key: "" },
+    };
   }
   if (appointment.status === "CANCELLED") {
     return {
@@ -230,6 +236,9 @@ export async function callCalendarUpsert(
   prepared: PreparedCalendarUpsert,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ googleEventId: string }> {
+  if (prepared.action === "skip" || !prepared.appointment) {
+    throw new Error("callCalendarUpsert requires an appointment");
+  }
   const token = await getGoogleAccessToken(prepared.credentials, fetchImpl);
   const body = eventBody(prepared.appointment, prepared.providerEventId);
 
@@ -337,15 +346,18 @@ export async function callCalendarUpsert(
 export async function finalizeCalendarUpsert(
   appointmentId: string,
   googleEventId: string,
-): Promise<Appointment> {
+): Promise<Appointment | null> {
   // Client already confirmed via Telegram/admin; calendar sync marks CONFIRMED.
-  return prisma.appointment.update({
+  // updateMany does not throw when the row was deleted after the Google call.
+  const updated = await prisma.appointment.updateMany({
     where: { id: appointmentId },
     data: {
       googleEventId,
       status: "CONFIRMED",
     },
   });
+  if (updated.count === 0) return null;
+  return prisma.appointment.findUnique({ where: { id: appointmentId } });
 }
 
 export async function prepareCalendarDelete(

@@ -10,11 +10,31 @@ import {
 
 export const handleCalendarUpsert: OutboxHandler = async (_db, event) => {
   const prepared = await prepareCalendarUpsert(event);
-  if (prepared.action === "skip") {
+  if (prepared.action === "skip" || !prepared.appointment) {
+    console.log(
+      JSON.stringify({
+        level: "info",
+        msg: "calendar.upsert.skipped",
+        eventId: event.id,
+        reason: prepared.appointment ? "cancelled" : "missing",
+      }),
+    );
     return;
   }
   const result = await callCalendarUpsert(prepared);
-  await finalizeCalendarUpsert(prepared.appointment.id, result.googleEventId);
+  const saved = await finalizeCalendarUpsert(prepared.appointment.id, result.googleEventId);
+  if (!saved) {
+    console.warn(
+      JSON.stringify({
+        level: "warn",
+        msg: "calendar.upsert.appointment_missing",
+        eventId: event.id,
+        appointmentId: prepared.appointment.id,
+        googleEventId: result.googleEventId,
+      }),
+    );
+    return;
+  }
   console.log(
     JSON.stringify({
       level: "info",

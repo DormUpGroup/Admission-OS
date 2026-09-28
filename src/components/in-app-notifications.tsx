@@ -33,7 +33,7 @@ export function InAppNotificationsPanel({
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-medium">{n.title}</p>
-              <p className="mt-0.5 text-muted-foreground">{n.body}</p>
+              <p className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{n.body}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {formatDate(n.createdAt)}
               </p>

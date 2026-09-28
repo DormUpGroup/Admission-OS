@@ -2,8 +2,10 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import {
   completeOutboxEvent,
+  deadLetterOutboxEvent,
   DEFAULT_LEASE_MS,
   OUTBOX_STATUS,
+  OutboxTerminalError,
   retryOutboxEvent,
 } from "@/server/commands/outbox";
 import {
@@ -12,11 +14,13 @@ import {
   prepareTelegramDelivery,
   TelegramRetryableError,
 } from "@/server/delivery/telegram";
+import { notifyCuratorTelegramSendFailed } from "@/server/delivery/telegram-curator-notice";
 
 export type InlineDeliverResult =
   | { status: "skipped"; reason: "no_token" | "not_found" | "lost_lease" }
   | { status: "delivered" }
-  | { status: "deferred"; error: string };
+  | { status: "deferred"; error: string }
+  | { status: "failed"; error: string };
 
 /**
  * Claim a pending telegram.send outbox row and deliver immediately from the web
@@ -86,6 +90,20 @@ export async function tryDeliverTelegramSendNow(
   try {
     const prepared = await prepareTelegramDelivery(event);
 
+    if (prepared.action === "skip_missing") {
+      await completeOutboxEvent(prisma, event.id, leaseToken, { now: new Date() });
+      console.log(
+        JSON.stringify({
+          level: "info",
+          msg: "telegram.send.skipped",
+          eventId: event.id,
+          messageId: prepared.messageId,
+          action: prepared.action,
+        }),
+      );
+      return { status: "skipped", reason: "not_found" };
+    }
+
     if (prepared.action === "skip_success" || prepared.action === "skip_unknown") {
       await finalizeTelegramDelivery(prepared, {
         skip: prepared.action === "skip_success" ? "success" : "unknown",
@@ -106,6 +124,22 @@ export async function tryDeliverTelegramSendNow(
     return { status: "delivered" };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof OutboxTerminalError) {
+      const dead = await deadLetterOutboxEvent(prisma, event.id, leaseToken, message);
+      if (dead) {
+        await notifyCuratorTelegramSendFailed(messageId).catch(() => undefined);
+      }
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          msg: "telegram.send.dead",
+          messageId,
+          eventId: event.id,
+          error: message,
+        }),
+      );
+      return { status: "failed", error: message };
+    }
     await retryOutboxEvent(prisma, event.id, leaseToken, message);
     console.warn(
       JSON.stringify({

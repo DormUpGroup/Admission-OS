@@ -155,7 +155,11 @@ function toolSchema(name: McpV1Tool) {
       "Send the client a website link to book a consultation. Do not invent the URL or offer times in chat.";
   } else if (name === "escalate_to_human") {
     description = "Pause automation on this chat and notify the curator.";
-    properties.reason = { type: "string", description: "Why a curator must take over." };
+    properties.reason = {
+      type: "string",
+      description:
+        "The problem, then the one action the curator must take. Example: Клиент спрашивает стоимость программы. Напишите цену в этот чат.",
+    };
     required.push("reason");
   } else if (name === "update_lead_qualification") {
     description = "Save a fact the client just stated.";

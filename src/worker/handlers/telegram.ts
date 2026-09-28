@@ -10,6 +10,19 @@ import {
 export const handleTelegramSend: OutboxHandler = async (_db, event) => {
   const prepared = await prepareTelegramDelivery(event);
 
+  if (prepared.action === "skip_missing") {
+    console.log(
+      JSON.stringify({
+        level: "info",
+        msg: "telegram.send.skipped",
+        eventId: event.id,
+        messageId: prepared.messageId,
+        action: prepared.action,
+      }),
+    );
+    return;
+  }
+
   if (prepared.action === "skip_success" || prepared.action === "skip_unknown") {
     await finalizeTelegramDelivery(prepared, {
       skip: prepared.action === "skip_success" ? "success" : "unknown",

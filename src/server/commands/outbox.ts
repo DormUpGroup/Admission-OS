@@ -10,6 +10,14 @@ export const OUTBOX_STATUS = {
 
 export type OutboxStatus = (typeof OUTBOX_STATUS)[keyof typeof OUTBOX_STATUS];
 
+/** A handler failure that will not succeed on retry. The worker dead-letters it once. */
+export class OutboxTerminalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OutboxTerminalError";
+  }
+}
+
 /** Event types that always run (scaffold / diagnostics). */
 export const ALWAYS_ALLOWED_EVENT_TYPES = new Set([
   "noop",

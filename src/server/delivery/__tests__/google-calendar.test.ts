@@ -252,7 +252,7 @@ describeDb("appointments commands (db)", () => {
 
     const eventId = deterministicGoogleEventId(appointment.id);
     const updated = await finalizeCalendarUpsert(appointment.id, eventId);
-    expect(updated.googleEventId).toBe(eventId);
-    expect(updated.status).toBe("CONFIRMED");
+    expect(updated?.googleEventId).toBe(eventId);
+    expect(updated?.status).toBe("CONFIRMED");
   });
 });

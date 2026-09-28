@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { formatCuratorAutomationNotice } from "@/server/automation/curator-notice";
 import { createApprovalRequest } from "./approval";
 import { updateLeadQualification } from "./context";
 import {
@@ -110,7 +111,7 @@ export async function escalateAgentToHuman(input: {
       },
     });
     if (!conversation) throw new Error("Conversation not found");
-    const reason = input.reason.trim() || "Agent requested human review";
+    const reason = input.reason.trim() || "Бот не смог продолжить этот чат.";
     await tx.conversation.update({
       where: { id: conversation.id },
       data: { automationPausedAt: new Date(), automationPauseReason: reason },
@@ -121,13 +122,17 @@ export async function escalateAgentToHuman(input: {
       conversation.student?.curatorId ??
       null;
     if (!curatorId) return { notifiedCurator: false };
+    const notice = formatCuratorAutomationNotice({
+      problem: reason,
+      action: "откройте переписку и ответьте клиенту сами. Бот в этом чате остановлен.",
+    });
     await tx.inAppNotification.create({
       data: {
         userId: curatorId,
         studentId: conversation.student?.id ?? null,
         type: "automation.escalated",
-        title: "Нужна проверка куратора",
-        body: reason,
+        title: notice.title,
+        body: notice.body,
         metadataJson: JSON.stringify({ conversationId: conversation.id, source: "intake" }),
       },
     });

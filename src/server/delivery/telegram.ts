@@ -1,5 +1,6 @@
 import type { OutboxEvent, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { OutboxTerminalError } from "@/server/commands/outbox";
 import { formatTelegramHtml } from "@/lib/telegram-html";
 
 export const DELIVERY_STATUS = {
@@ -10,7 +11,7 @@ export const DELIVERY_STATUS = {
   UNKNOWN_REQUIRES_REVIEW: "UNKNOWN_REQUIRES_REVIEW",
 } as const;
 
-export type TelegramPrepareAction = "send" | "skip_success" | "skip_unknown";
+export type TelegramPrepareAction = "send" | "skip_success" | "skip_unknown" | "skip_missing";
 
 export type PreparedTelegramDelivery = {
   action: TelegramPrepareAction;
@@ -106,7 +107,16 @@ export async function prepareTelegramDelivery(
       include: { conversation: true },
     });
     if (!message) {
-      throw new Error(`ConversationMessage ${messageId} not found`);
+      return {
+        action: "skip_missing" as const,
+        messageId,
+        conversationId: "",
+        chatId: null,
+        body: null,
+        replyMarkup: null,
+        attemptId: null,
+        idempotencyKey: event.idempotencyKey,
+      };
     }
 
     const idempotencyKey = event.idempotencyKey;
@@ -201,7 +211,7 @@ export async function prepareTelegramDelivery(
 
     const chatId = metaChatId(identity?.metadataJson ?? null);
     if (!chatId) {
-      throw new TelegramRetryableError(
+      throw new OutboxTerminalError(
         "No Telegram chat_id on ChannelIdentity metadata",
       );
     }
