@@ -9,7 +9,8 @@ import {
 import {
   parseTelegramBotCommand,
   TELEGRAM_HELP_TEXT,
-  TELEGRAM_WELCOME_TEXT,
+  TELEGRAM_PRICES_TEXT,
+  telegramWelcomeText,
 } from "@/server/channels/telegram-copy";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 import {
@@ -292,7 +293,7 @@ describeDb("telegram ingest + prepare (db)", () => {
       });
       expect(welcomeMsg).not.toBeNull();
       expect(welcomeMsg!.direction).toBe("OUTBOUND");
-      expect(welcomeMsg!.body).toBe(TELEGRAM_WELCOME_TEXT);
+      expect(welcomeMsg!.body).toBe(telegramWelcomeText("Start"));
 
       const sendOutbox = await prisma.outboxEvent.findUnique({
         where: { idempotencyKey: `telegram.send:${welcomeMsg!.id}` },
@@ -428,6 +429,52 @@ describeDb("telegram ingest + prepare (db)", () => {
         },
       });
       expect(welcome).toBeNull();
+    } finally {
+      if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
+      else process.env.AUTOMATION_ENABLED = prev;
+    }
+  });
+
+  it("/prices enqueues the price list and does not greet", async () => {
+    const prev = process.env.AUTOMATION_ENABLED;
+    process.env.AUTOMATION_ENABLED = "true";
+    await setGlobalAutomationEnabled(prisma, {
+      enabled: true,
+      actorId: "test-telegram",
+      reason: "per-test enable",
+    });
+    try {
+      const updateId = `${prefix}-prices-${Date.now()}`;
+      const userId = 555040 + Math.floor(Math.random() * 1000);
+      const payload = {
+        update_id: updateId,
+        message: {
+          message_id: 9401,
+          text: "/prices",
+          from: { id: userId, first_name: "user_12", username: "tgprices" },
+          chat: { id: userId, type: "private" },
+        },
+      };
+      const ingested = await ingestTelegramUpdate({
+        rawPayload: payload,
+        message: asMessage(normalizeTelegramUpdate(payload)),
+      });
+      expect(ingested.duplicate).toBe(false);
+      if (ingested.duplicate) return;
+
+      const pricesMsg = await prisma.conversationMessage.findUnique({
+        where: { clientRequestId: `telegram:prices:${updateId}` },
+      });
+      expect(pricesMsg).not.toBeNull();
+      expect(pricesMsg!.body).toBe(TELEGRAM_PRICES_TEXT);
+
+      const welcome = await prisma.conversationMessage.findUnique({
+        where: { clientRequestId: `telegram:welcome:${ingested.conversationId}` },
+      });
+      expect(welcome).toBeNull();
+
+      const lead = await prisma.lead.findUnique({ where: { id: ingested.leadId! } });
+      expect(lead?.firstName).toBeNull();
     } finally {
       if (prev === undefined) delete process.env.AUTOMATION_ENABLED;
       else process.env.AUTOMATION_ENABLED = prev;

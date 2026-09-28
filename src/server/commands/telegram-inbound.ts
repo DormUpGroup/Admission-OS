@@ -5,9 +5,12 @@ import {
   type NormalizedTelegramMessage,
 } from "@/server/channels/telegram";
 import {
+  explicitTelegramLeadName,
+  isTelegramPriceCommand,
   parseTelegramBotCommand,
   TELEGRAM_HELP_TEXT,
-  TELEGRAM_WELCOME_TEXT,
+  TELEGRAM_PRICES_TEXT,
+  telegramWelcomeText,
 } from "@/server/channels/telegram-copy";
 import { enqueueOutbox, resolveAutomationEnabled } from "@/server/commands/outbox";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
@@ -83,11 +86,11 @@ export async function ingestTelegramUpdate(input: {
     let studentId: string | null = null;
 
     if (!identity) {
-      const nameParts = (message.displayName ?? "").split(/\s+/).filter(Boolean);
+      const leadName = explicitTelegramLeadName(message.displayName);
       const lead = await tx.lead.create({
         data: {
-          firstName: nameParts[0] ?? null,
-          lastName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : null,
+          firstName: leadName.firstName,
+          lastName: leadName.lastName,
           status: "NEW",
           source: CHANNEL,
           consentStatus: "UNKNOWN",
@@ -203,8 +206,16 @@ export async function ingestTelegramUpdate(input: {
         const sent = await requestTelegramSend({
           tx,
           conversationId: conversation.id,
-          body: TELEGRAM_WELCOME_TEXT,
+          body: telegramWelcomeText(message.displayName),
           clientRequestId: `telegram:welcome:${conversation.id}`,
+        });
+        outboundMessageIds.push(sent.message.id);
+      } else if (isTelegramPriceCommand(command)) {
+        const sent = await requestTelegramSend({
+          tx,
+          conversationId: conversation.id,
+          body: TELEGRAM_PRICES_TEXT,
+          clientRequestId: `telegram:prices:${message.providerEventId}`,
         });
         outboundMessageIds.push(sent.message.id);
       }

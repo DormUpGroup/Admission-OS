@@ -28,6 +28,7 @@ Immigrome: поступление в Италию. Пишите куратору
 ```
 start - Начать / связаться с Immigrome
 help - Что умеет бот сейчас
+prices - Услуги и цены
 ```
 
 ## Avatar (`/setuserpic`)
@@ -44,8 +45,9 @@ help - Что умеет бот сейчас
 
 ## Поведение приложения
 
-- `/start` и первое сообщение в разговоре → одно приветствие через outbox `telegram.send` (если `AUTOMATION_ENABLED=true`).
+- `/start` → одно приветствие через outbox `telegram.send` (если `AUTOMATION_ENABLED=true`). Если в Telegram явное имя, приветствие обращается по нему. Ник, цифры и пустой профиль — приветствие без имени.
 - `/help` → короткая подсказка через outbox.
+- `/prices` (также `/price` и `/pricelist`) → тарифы и разовые услуги с ценами с https://immigrome.ru/. Ссылка на сайт стоит в блоке тарифов.
 - При `AUTOMATION_ENABLED=false` inbound сохраняется, автоответы не ставятся в outbox.
 
 Webhook и worker: см. [deployment/railway-worker.md](deployment/railway-worker.md).

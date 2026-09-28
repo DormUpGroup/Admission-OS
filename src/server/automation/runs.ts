@@ -10,7 +10,9 @@ function asRecord(payload: unknown): Record<string, unknown> | null {
 }
 
 export function isTelegramBotCommand(body: string | null): boolean {
-  return /^\s*\/(?:start|help)(?:\s|$)/iu.test(body ?? "");
+  return /^\s*\/(?:start|help|prices|price|pricelist)(?:@[A-Za-z0-9_]+)?(?:\s|$)/iu.test(
+    body ?? "",
+  );
 }
 
 export type QueueIntakeRunResult =

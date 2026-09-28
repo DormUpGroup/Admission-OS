@@ -27,7 +27,7 @@ export const FIXTURE_USERNAMES = new Set([
 
 /**
  * Parse a bot command from message text.
- * Supports `/start`, `/start@BotName`, `/help payload`.
+ * Supports `/start`, `/start@BotName`, `/help payload`, `/prices`.
  */
 export function parseTelegramBotCommand(text: string): string | null {
   const trimmed = text.trim();
