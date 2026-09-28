@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { MobileChatScreenProvider } from "@/components/admin/mobile-chat-screen";
 import { logoutAction } from "@/server/auth-actions";
 import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileChat, setMobileChat] = useState(false);
+  const reportMobileChat = useCallback((open: boolean) => setMobileChat(open), []);
   const edgeToEdge = pathname.startsWith("/admin/messages");
 
   useEffect(() => {
@@ -66,7 +69,12 @@ export function AdminShell({
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="surface-glass z-20 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-black/5 px-3 pt-[env(safe-area-inset-top)] md:px-6">
+        <header
+          className={cn(
+            "surface-glass z-20 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-black/5 px-3 pt-[env(safe-area-inset-top)] md:px-6",
+            mobileChat && "max-md:hidden",
+          )}
+        >
           <div className="flex min-w-0 items-center gap-1">
             <button
               type="button"
@@ -104,7 +112,9 @@ export function AdminShell({
               : "overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6",
           )}
         >
-          {children}
+          <MobileChatScreenProvider onOpenChange={reportMobileChat}>
+            {children}
+          </MobileChatScreenProvider>
         </main>
       </div>
     </div>

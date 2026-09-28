@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { StudentAvatar } from "@/components/student-avatar";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
+import { useReportMobileChat } from "@/components/admin/mobile-chat-screen";
 import { cn, formatDate } from "@/lib/utils";
 
 export type ChannelListItem = {
@@ -105,6 +106,7 @@ export function ChannelMessenger({
     queryIndex === -1 ? conversationHref : conversationHref.slice(0, queryIndex)
   ).replace("{id}", "");
   const threadOnPhone = Boolean(active) && openOnMobile;
+  useReportMobileChat(threadOnPhone);
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-[#eef2f5]">
@@ -185,7 +187,7 @@ export function ChannelMessenger({
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2.5 sm:gap-3 sm:px-4">
+            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2.5">
               <Link
                 href={listHref}
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"

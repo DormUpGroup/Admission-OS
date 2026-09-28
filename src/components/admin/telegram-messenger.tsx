@@ -26,6 +26,7 @@ import {
   setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
 } from "@/server/inbox-actions";
+import { useReportMobileChat } from "@/components/admin/mobile-chat-screen";
 import { UnreadBadge } from "@/components/unread-badge";
 import { Button } from "@/components/ui/button";
 import { useFormStatus } from "react-dom";
@@ -136,6 +137,7 @@ export function TelegramMessenger({
   );
   const [threadLoading, setThreadLoading] = useState(false);
   const [openOnMobile, setOpenOnMobile] = useState(openedFromUrl);
+  useReportMobileChat(openOnMobile);
   const [moving, setMoving] = useState(false);
   const [resuming, setResuming] = useState(false);
   const [list, setList] = useState(conversations);
@@ -517,7 +519,7 @@ export function TelegramMessenger({
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 sm:gap-3 sm:px-4">
+            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2">
               <button
                 type="button"
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"
