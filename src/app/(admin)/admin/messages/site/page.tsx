@@ -5,6 +5,8 @@ import { SiteMessenger } from "@/components/admin/site-messenger";
 import type { ChannelListItem } from "@/components/admin/channel-messenger";
 import { fullName } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 type MessageMeta = {
   note?: string;
   channel?: string;

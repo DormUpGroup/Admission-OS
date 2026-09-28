@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { latestUnsentReplyDraft } from "@/server/telegram-inbox-query";
+import {
+  applyReplyDraftRevision,
+  latestUnsentReplyDraft,
+  locateLatestReplyDraft,
+} from "@/server/telegram-inbox-query";
 
 const draftAt = "2026-09-27T11:18:42.000Z";
 
@@ -44,6 +48,24 @@ describe("latestUnsentReplyDraft", () => {
     ).toBeNull();
   });
 
+  it("skips a draft the curator discarded", () => {
+    expect(
+      latestUnsentReplyDraft(
+        [
+          {
+            outputJson: {
+              drafts: [
+                { body: "старый", createdAt: "2026-09-27T11:00:00.000Z" },
+                { body: "Здравствуйте", createdAt: draftAt, discarded: true },
+              ],
+            },
+          },
+        ],
+        [],
+      ),
+    ).toBeNull();
+  });
+
   it("keeps a draft when the only outbound is older", () => {
     expect(
       latestUnsentReplyDraft([run("Здравствуйте")], [
@@ -54,5 +76,28 @@ describe("latestUnsentReplyDraft", () => {
         },
       ]),
     ).toBe("Здравствуйте");
+  });
+});
+
+describe("reply draft revision", () => {
+  const output = { drafts: [{ body: "Здравствуйте", createdAt: draftAt }] };
+
+  it("finds the newest stored draft", () => {
+    expect(locateLatestReplyDraft([{ id: "run-1", outputJson: output }])).toEqual({
+      runId: "run-1",
+      draftIndex: 0,
+    });
+  });
+
+  it("replaces the draft text", () => {
+    expect(applyReplyDraftRevision(output, 0, "  Новый текст  ")).toEqual({
+      drafts: [{ body: "Новый текст", createdAt: draftAt, discarded: false }],
+    });
+  });
+
+  it("discards the draft when the text is empty", () => {
+    expect(applyReplyDraftRevision(output, 0, "  ")).toEqual({
+      drafts: [{ body: "Здравствуйте", createdAt: draftAt, discarded: true }],
+    });
   });
 });

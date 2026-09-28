@@ -8,6 +8,8 @@ import {
   loadTelegramThread,
 } from "@/server/telegram-inbox-query";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminTelegramMessagesPage({
   searchParams,
 }: {

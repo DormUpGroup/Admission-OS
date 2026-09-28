@@ -23,6 +23,7 @@ import { cn, formatDate } from "@/lib/utils";
 import {
   pauseTelegramAutomationAction,
   resumeTelegramAutomationAction,
+  saveTelegramReplyDraftAction,
   sendTelegramInboxReplyAction,
   setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
@@ -72,6 +73,68 @@ export type TelegramActiveThread = {
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+function mergeThreadMessages(
+  local: TelegramThreadMessage[],
+  server: TelegramThreadMessage[],
+): TelegramThreadMessage[] {
+  const serverIds = new Set(server.map((message) => message.id));
+  const extras = local.filter(
+    (message) => message.id.startsWith("temp:") && !serverIds.has(message.id),
+  );
+  const localReal = [...local].reverse().find((message) => !message.id.startsWith("temp:"));
+  const serverLast = server[server.length - 1];
+  const localAhead =
+    localReal != null &&
+    !serverIds.has(localReal.id) &&
+    Date.parse(localReal.createdAt) > (serverLast ? Date.parse(serverLast.createdAt) : 0);
+  if (!localAhead) return extras.length > 0 ? [...server, ...extras] : server;
+  const localIds = new Set(local.map((message) => message.id));
+  const fromServer = server.filter((message) => !localIds.has(message.id));
+  return [...local, ...fromServer].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+  );
+}
+
+function pinnedReplyDraft(
+  serverDraft: string | null | undefined,
+  localDraft: string | null | undefined,
+  keepLocal: boolean,
+  pin: { current: { body: string | null; until: number } | null },
+): string | null {
+  if (keepLocal) return localDraft ?? null;
+  const held = pin.current;
+  if (!held || Date.now() > held.until) {
+    pin.current = null;
+    return serverDraft ?? null;
+  }
+  if ((serverDraft ?? null) === held.body) {
+    pin.current = null;
+    return serverDraft ?? null;
+  }
+  return held.body;
+}
+
+function mergeVisibleThread(
+  local: TelegramActiveThread | null,
+  server: TelegramActiveThread,
+  keepDraft: boolean,
+): TelegramActiveThread {
+  if (!local || local.id !== server.id) return server;
+  const messages = mergeThreadMessages(local.messages, server.messages);
+  return {
+    ...server,
+    messages,
+    hasPendingDelivery:
+      server.hasPendingDelivery ||
+      messages.some(
+        (message) =>
+          message.direction === "OUTBOUND" &&
+          (message.deliveryStatus === "PENDING" || message.deliveryStatus === "PROCESSING"),
+      ),
+    replyDraft: keepDraft ? (local.replyDraft ?? null) : server.replyDraft,
+  };
 }
 
 function formatListTime(iso: string | null) {
@@ -143,25 +206,68 @@ export function TelegramMessenger({
   const [resuming, setResuming] = useState(false);
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
+  const [composer, setComposer] = useState(initialActive?.replyDraft ?? "");
   const cacheRef = useRef<Map<string, TelegramActiveThread>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const inflightRef = useRef<{ id: string; ac: AbortController } | null>(null);
+  const draftLock = useRef<"idle" | "editing" | "saving">("idle");
+  const draftWrite = useRef(0);
+  const draftOverride = useRef<{ body: string | null; until: number } | null>(null);
+  const composerFor = useRef<string | null>(initialActive?.id ?? null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setList(conversations);
   }, [conversations]);
 
   useEffect(() => {
-    if (initialActive) {
-      cacheRef.current.set(initialActive.id, initialActive);
-    }
+    if (!initialActive) return;
+    setActive((current) => {
+      if (!current || current.id !== initialActive.id) {
+        cacheRef.current.set(initialActive.id, initialActive);
+        return current;
+      }
+      const merged = mergeVisibleThread(
+        current,
+        initialActive,
+        draftLock.current !== "idle",
+      );
+      merged.replyDraft = pinnedReplyDraft(
+        initialActive.replyDraft,
+        current.replyDraft,
+        draftLock.current !== "idle",
+        draftOverride,
+      );
+      cacheRef.current.set(initialActive.id, merged);
+      return merged;
+    });
   }, [initialActive]);
+
+  useEffect(() => {
+    if (composerFor.current !== (active?.id ?? null)) {
+      composerFor.current = active?.id ?? null;
+      draftLock.current = "idle";
+      draftWrite.current += 1;
+      draftOverride.current = null;
+      setComposer(active?.replyDraft ?? "");
+      return;
+    }
+    if (draftLock.current !== "idle") return;
+    setComposer(active?.replyDraft ?? "");
+  }, [active?.id, active?.replyDraft]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [active?.id, active?.messages.length]);
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [composer, active?.id]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -173,35 +279,71 @@ export function TelegramMessenger({
     );
   }, [list, query]);
 
+  const applyThread = useCallback((id: string, data: TelegramActiveThread) => {
+    const cached = cacheRef.current.get(id) ?? null;
+    const merged = mergeVisibleThread(cached, data, draftLock.current !== "idle");
+    merged.replyDraft = pinnedReplyDraft(
+      data.replyDraft,
+      cached?.replyDraft,
+      draftLock.current !== "idle",
+      draftOverride,
+    );
+    cacheRef.current.set(id, merged);
+    setActive((current) => (current?.id === id ? merged : current));
+    const last = merged.messages[merged.messages.length - 1];
+    if (!last) return;
+    const outbound = last.direction === "OUTBOUND";
+    setList((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              preview: last.body || "—",
+              previewAt: last.createdAt,
+              undelivered:
+                outbound &&
+                (last.deliveryStatus === "PENDING" ||
+                  last.deliveryStatus === "PROCESSING" ||
+                  last.deliveryStatus === "FAILED" ||
+                  last.deliveryStatus === "UNKNOWN_REQUIRES_REVIEW"),
+              deliveryStatus: outbound ? last.deliveryStatus : null,
+              automationPaused: merged.automationPaused,
+            }
+          : item,
+      ),
+    );
+  }, []);
+
   const loadThread = useCallback(
     async (id: string, opts?: { silent?: boolean }) => {
       const cached = cacheRef.current.get(id);
       if (cached && !opts?.silent) {
         setActive(cached);
       }
-      abortRef.current?.abort();
+      if (opts?.silent && inflightRef.current?.id === id) return;
+      if (inflightRef.current && inflightRef.current.id !== id) {
+        inflightRef.current.ac.abort();
+      }
       const ac = new AbortController();
-      abortRef.current = ac;
+      inflightRef.current = { id, ac };
       if (!opts?.silent && !cached) setThreadLoading(true);
       try {
         const res = await fetch(
-          `/api/admin/telegram/conversations/${encodeURIComponent(id)}`,
+          `/api/admin/telegram/conversations/${encodeURIComponent(id)}?t=${Date.now()}`,
           { signal: ac.signal, cache: "no-store" },
         );
         if (!res.ok) throw new Error(`thread ${res.status}`);
         const data = (await res.json()) as TelegramActiveThread;
-        cacheRef.current.set(id, data);
-        setActiveId((currentId) => {
-          if (currentId === id) setActive(data);
-          return currentId;
-        });
+        if (ac.signal.aborted) return;
+        applyThread(id, data);
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
       } finally {
+        if (inflightRef.current?.ac === ac) inflightRef.current = null;
         if (!ac.signal.aborted) setThreadLoading(false);
       }
     },
-    [],
+    [applyThread],
   );
 
   const selectConversation = useCallback(
@@ -222,21 +364,34 @@ export function TelegramMessenger({
     [folder, loadThread, router],
   );
 
-  // The open thread is one small read. The list refresh reloads the whole admin page.
+  // Wait for the thread request to finish, then read again. Aborting it every
+  // second dropped the response whenever the database was slower than the timer.
   useEffect(() => {
     if (!activeId) return;
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void loadThread(activeId, { silent: true });
-    }, 1000);
-    return () => window.clearInterval(id);
+    let cancelled = false;
+    let timer = 0;
+    const tick = () => {
+      if (cancelled) return;
+      if (document.visibilityState === "hidden") {
+        timer = window.setTimeout(tick, 1000);
+        return;
+      }
+      void loadThread(activeId, { silent: true }).finally(() => {
+        if (!cancelled) timer = window.setTimeout(tick, 1000);
+      });
+    };
+    timer = window.setTimeout(tick, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [activeId, loadThread]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
       router.refresh();
-    }, 2000);
+    }, 5000);
     return () => window.clearInterval(id);
   }, [router]);
 
@@ -290,6 +445,9 @@ export function TelegramMessenger({
     const body = String(formData.get("body") ?? "").trim();
     if (!activeId || !body || !active) return;
     const draftBeforeSend = active.replyDraft ?? null;
+    draftWrite.current += 1;
+    draftLock.current = "idle";
+    setComposer("");
 
     const tempId = `temp:${Date.now()}`;
     const optimistic: TelegramThreadMessage = {
@@ -330,15 +488,6 @@ export function TelegramMessenger({
       );
     });
 
-    // Reset textarea immediately (form action may keep values otherwise).
-    const textarea = document.querySelector<HTMLTextAreaElement>(
-      `textarea[name="body"]`,
-    );
-    if (textarea) {
-      textarea.value = "";
-      textarea.style.height = "auto";
-    }
-
     try {
       const result: SendTelegramInboxReplyResult =
         await sendTelegramInboxReplyAction(formData);
@@ -357,7 +506,7 @@ export function TelegramMessenger({
               }
             : m,
         );
-        return {
+        const next = {
           ...prev,
           hasPendingDelivery: messages.some(
             (m) =>
@@ -367,12 +516,15 @@ export function TelegramMessenger({
           ),
           messages,
         };
+        cacheRef.current.set(activeId, next);
+        return next;
       });
       window.setTimeout(() => {
         void loadThread(activeId, { silent: true });
         router.refresh();
       }, 800);
     } catch {
+      setComposer(draftBeforeSend ?? "");
       setActive((prev) => {
         if (!prev) return prev;
         const next = {
@@ -383,6 +535,51 @@ export function TelegramMessenger({
         cacheRef.current.set(activeId, next);
         return next;
       });
+    }
+  }
+
+  async function persistDraft(text: string) {
+    if (!activeId || draftLock.current !== "editing") return;
+    const next = text.trim();
+    const current = (active?.replyDraft ?? "").trim();
+    if (next === current) {
+      draftLock.current = "idle";
+      return;
+    }
+    const write = ++draftWrite.current;
+    draftLock.current = "saving";
+    draftOverride.current = { body: next || null, until: Date.now() + 8000 };
+    try {
+      await saveTelegramReplyDraftAction(activeId, next);
+      if (draftWrite.current !== write) return;
+      setActive((prev) => {
+        if (!prev || prev.id !== activeId) return prev;
+        const updated = { ...prev, replyDraft: next || null };
+        cacheRef.current.set(activeId, updated);
+        return updated;
+      });
+      setComposer(next);
+    } finally {
+      if (draftWrite.current === write) draftLock.current = "idle";
+    }
+  }
+
+  async function deleteDraft() {
+    if (!activeId) return;
+    const write = ++draftWrite.current;
+    draftLock.current = "saving";
+    draftOverride.current = { body: null, until: Date.now() + 8000 };
+    setComposer("");
+    setActive((prev) => {
+      if (!prev || prev.id !== activeId) return prev;
+      const updated = { ...prev, replyDraft: null };
+      cacheRef.current.set(activeId, updated);
+      return updated;
+    });
+    try {
+      await saveTelegramReplyDraftAction(activeId, "");
+    } finally {
+      if (draftWrite.current === write) draftLock.current = "idle";
     }
   }
 
@@ -686,9 +883,19 @@ export function TelegramMessenger({
 
             <div className="border-t border-black/10 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               {active.replyDraft ? (
-                <p className="mb-1 px-1 text-[11px] text-muted-foreground">
-                  Черновик Hermes — проверьте и отправьте
-                </p>
+                <div className="mb-1 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] text-muted-foreground">
+                    Черновик — измените текст или удалите
+                  </p>
+                  <button
+                    type="button"
+                    className="shrink-0 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => void deleteDraft()}
+                  >
+                    Удалить
+                  </button>
+                </div>
               ) : null}
               <form action={handleSend} className="flex items-end gap-2">
                 <input
@@ -697,22 +904,22 @@ export function TelegramMessenger({
                   value={active.id}
                 />
                 <textarea
-                  key={`${active.id}:${active.replyDraft ?? ""}`}
                   name="body"
                   rows={1}
                   required
-                  defaultValue={active.replyDraft ?? ""}
+                  value={composer}
                   placeholder="Напишите клиенту…"
                   className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-base outline-none placeholder:text-muted-foreground focus:bg-muted md:min-h-9 md:text-sm"
-                  ref={(el) => {
-                    if (!el) return;
-                    el.style.height = "auto";
-                    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
-                  }}
-                  onInput={(e) => {
+                  ref={composerRef}
+                  onChange={(e) => {
+                    draftLock.current = "editing";
+                    setComposer(e.target.value);
                     const el = e.currentTarget;
                     el.style.height = "auto";
                     el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+                  }}
+                  onBlur={(e) => {
+                    void persistDraft(e.target.value);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {

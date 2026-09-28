@@ -73,7 +73,25 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-/** Newest propose_reply body, unless staff already sent it or replied later. */
+function newestDraftDecision(
+  drafts: unknown[],
+): { body: string; createdAt: string | null; index: number } | "discarded" | null {
+  for (let i = drafts.length - 1; i >= 0; i--) {
+    const item = asRecord(drafts[i]);
+    if (!item) continue;
+    const body = typeof item.body === "string" ? item.body.trim() : "";
+    if (!body) continue;
+    if (item.discarded === true) return "discarded";
+    return {
+      body,
+      createdAt: typeof item.createdAt === "string" ? item.createdAt : null,
+      index: i,
+    };
+  }
+  return null;
+}
+
+/** Newest propose_reply body, unless staff already sent it, replied later, or discarded it. */
 export function latestUnsentReplyDraft(
   runs: Array<{ outputJson: unknown }>,
   messages: Array<{ direction: string; body: string | null; createdAt: Date | string }>,
@@ -83,16 +101,12 @@ export function latestUnsentReplyDraft(
   for (const run of runs) {
     const drafts = asRecord(run.outputJson)?.drafts;
     if (!Array.isArray(drafts)) continue;
-    for (let i = drafts.length - 1; i >= 0; i--) {
-      const item = asRecord(drafts[i]);
-      const body = typeof item?.body === "string" ? item.body.trim() : "";
-      if (!body) continue;
-      draftBody = body;
-      draftTime =
-        typeof item?.createdAt === "string" ? Date.parse(item.createdAt) : Number.NaN;
-      break;
-    }
-    if (draftBody) break;
+    const decision = newestDraftDecision(drafts);
+    if (decision === "discarded") return null;
+    if (!decision) continue;
+    draftBody = decision.body;
+    draftTime = decision.createdAt ? Date.parse(decision.createdAt) : Number.NaN;
+    break;
   }
   if (!draftBody) return null;
 
@@ -104,6 +118,43 @@ export function latestUnsentReplyDraft(
     if (Number.isFinite(draftTime) && sentAt >= draftTime) return null;
   }
   return draftBody;
+}
+
+/** The draft `latestUnsentReplyDraft` would show, so a curator can edit or discard it. */
+export function locateLatestReplyDraft(
+  runs: Array<{ id: string; outputJson: unknown }>,
+): { runId: string; draftIndex: number } | null {
+  for (const run of runs) {
+    const drafts = asRecord(run.outputJson)?.drafts;
+    if (!Array.isArray(drafts)) continue;
+    const decision = newestDraftDecision(drafts);
+    if (decision === "discarded") return null;
+    if (decision) return { runId: run.id, draftIndex: decision.index };
+  }
+  return null;
+}
+
+/** Empty text discards the draft. A new text replaces it. Returns null when nothing changes. */
+export function applyReplyDraftRevision(
+  outputJson: unknown,
+  draftIndex: number,
+  nextBody: string | null,
+): Record<string, unknown> | null {
+  const existing = asRecord(outputJson);
+  if (!existing || !Array.isArray(existing.drafts)) return null;
+  const current = asRecord(existing.drafts[draftIndex]);
+  if (!current) return null;
+  const trimmed = nextBody?.trim() ?? "";
+  const drafts = existing.drafts.slice();
+  if (!trimmed) {
+    if (current.discarded === true) return null;
+    drafts[draftIndex] = { ...current, discarded: true };
+  } else {
+    const body = typeof current.body === "string" ? current.body.trim() : "";
+    if (body === trimmed && current.discarded !== true) return null;
+    drafts[draftIndex] = { ...current, body: trimmed, discarded: false };
+  }
+  return { ...existing, drafts };
 }
 
 function primaryIdentity(c: TitleSource): IdentityBits | null {

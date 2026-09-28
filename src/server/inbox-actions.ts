@@ -1,11 +1,16 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   parseInboxFolderOverride,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 import { requireStaff } from "@/server/auth/guards";
+import {
+  applyReplyDraftRevision,
+  locateLatestReplyDraft,
+} from "@/server/telegram-inbox-query";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 
@@ -120,5 +125,41 @@ export async function resumeTelegramAutomationAction(conversationId: string): Pr
   await prisma.conversation.update({
     where: { id: conversation.id },
     data: { automationPausedAt: null, automationPauseReason: null },
+  });
+}
+
+/** Empty body discards the Hermes draft. Any other text replaces it. */
+export async function saveTelegramReplyDraftAction(
+  conversationId: string,
+  body: string,
+): Promise<void> {
+  await requireStaff();
+  const id = conversationId.trim();
+  if (!id) throw new Error("Диалог не найден");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id },
+    select: { id: true, channel: true },
+  });
+  if (!conversation || conversation.channel !== "TELEGRAM") {
+    throw new Error("Диалог не найден");
+  }
+
+  const runs = await prisma.agentRun.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    select: { id: true, outputJson: true },
+  });
+  const located = locateLatestReplyDraft(runs);
+  if (!located) return;
+  const run = runs.find((item) => item.id === located.runId);
+  if (!run) return;
+  const next = applyReplyDraftRevision(run.outputJson, located.draftIndex, body);
+  if (!next) return;
+
+  await prisma.agentRun.update({
+    where: { id: run.id },
+    data: { outputJson: next as Prisma.InputJsonValue },
   });
 }
