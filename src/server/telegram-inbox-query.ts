@@ -34,6 +34,8 @@ export type TelegramThreadDto = {
   id: string;
   title: string;
   contactName: string;
+  leadId: string | null;
+  studentId: string | null;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   /** Latest Hermes draft that has not been sent yet. */
@@ -279,6 +281,7 @@ export async function listTelegramConversations(): Promise<{
       contact: { title: baseName, username },
       hasHumanInbound: humanInboundIds.has(c.id),
       inboxFolder: c.inboxFolder,
+      audience: c.studentId ? "student" : "lead",
     });
     const previewMsg = pickPreviewMessage(c.messages);
     const last = c.messages[0];
@@ -399,6 +402,8 @@ export async function loadTelegramThread(
     id: row.id,
     title: conversationTitle(row),
     contactName,
+    leadId: row.studentId ? null : row.leadId,
+    studentId: row.studentId,
     automationPaused: !!row.automationPausedAt,
     replyDraft,
     hasPendingDelivery: row.messages.some(

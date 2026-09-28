@@ -15,17 +15,18 @@ import { StudentAvatar } from "@/components/student-avatar";
 import { MessageParagraphs } from "@/components/admin/message-paragraphs";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
 import {
-  folderMoveTarget,
+  DEFAULT_CONVERSATION_FOLDER,
   isBotCommandBody,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 import { cn, formatDate } from "@/lib/utils";
 import {
   pauseTelegramAutomationAction,
+  promoteLeadToStudentAction,
+  restoreTelegramInboxFolderAction,
   resumeTelegramAutomationAction,
   saveTelegramReplyDraftAction,
   sendTelegramInboxReplyAction,
-  setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
 } from "@/server/inbox-actions";
 import { useReportMobileChat } from "@/components/admin/mobile-chat-screen";
@@ -64,6 +65,8 @@ export type TelegramActiveThread = {
   id: string;
   title: string;
   contactName?: string;
+  leadId?: string | null;
+  studentId?: string | null;
   automationPaused: boolean;
   hasPendingDelivery: boolean;
   replyDraft?: string | null;
@@ -165,7 +168,7 @@ function SubmitButton() {
 
 function syncUrl(folder: ConversationFolder, conversationId: string | null) {
   const params = new URLSearchParams();
-  if (folder !== "chats") params.set("folder", folder);
+  if (folder !== DEFAULT_CONVERSATION_FOLDER) params.set("folder", folder);
   if (conversationId) params.set("conversationId", conversationId);
   const qs = params.toString();
   const href = qs
@@ -397,7 +400,7 @@ export function TelegramMessenger({
 
   function folderHref(next: ConversationFolder) {
     const params = new URLSearchParams();
-    if (next !== "chats") params.set("folder", next);
+    if (next !== DEFAULT_CONVERSATION_FOLDER) params.set("folder", next);
     return `/admin/messages/telegram${params.size ? `?${params.toString()}` : ""}`;
   }
 
@@ -425,16 +428,24 @@ export function TelegramMessenger({
     }
   }
 
-  async function moveFolder() {
+  async function restoreFromTrash() {
     if (!activeId || moving) return;
-    const target = folderMoveTarget(folder);
     setMoving(true);
     try {
-      await setTelegramInboxFolderAction(activeId, target.folder);
-      const params = new URLSearchParams();
-      if (target.folder !== "chats") params.set("folder", target.folder);
-      params.set("conversationId", activeId);
-      router.push(`/admin/messages/telegram?${params.toString()}`);
+      await restoreTelegramInboxFolderAction(activeId);
+      router.push(`/admin/messages/telegram?conversationId=${activeId}`);
+      router.refresh();
+    } finally {
+      setMoving(false);
+    }
+  }
+
+  async function promoteLead() {
+    if (!activeId || moving || !active?.leadId) return;
+    setMoving(true);
+    try {
+      await promoteLeadToStudentAction(activeId);
+      router.push(`/admin/messages/telegram?folder=chats&conversationId=${activeId}`);
       router.refresh();
     } finally {
       setMoving(false);
@@ -595,8 +606,8 @@ export function TelegramMessenger({
           <div className="flex gap-1 rounded-lg bg-muted/70 p-0.5">
             {(
               [
-                ["chats", "Чаты", chatsCount],
-                ["technical", "Технические", technicalCount],
+                ["technical", "Лиды", technicalCount],
+                ["chats", "Ученики", chatsCount],
                 ["trash", "Мусор", trashCount],
               ] as const
             ).map(([id, label, count]) => (
@@ -632,10 +643,10 @@ export function TelegramMessenger({
               {query.trim()
                 ? "Ничего не найдено"
                 : folder === "technical"
-                  ? "Нет технических диалогов"
+                  ? "Пока нет лидов"
                   : folder === "trash"
                     ? "Мусор пуст"
-                    : "Пока нет диалогов с клиентами"}
+                    : "Пока нет учеников"}
             </p>
           ) : (
             filtered.map((c) => {
@@ -760,25 +771,51 @@ export function TelegramMessenger({
                 </div>
                 <p className="text-[12px] text-muted-foreground">
                   Telegram
+                  {active.studentId ? " · ученик" : active.leadId ? " · лид" : ""}
                   {active.automationPaused ? " · автоответы на паузе" : ""}
-                  {folder === "technical"
-                    ? " · технический"
-                    : folder === "trash"
-                      ? " · мусор"
-                      : ""}
+                  {folder === "trash" ? " · мусор" : ""}
                   {threadLoading ? " · …" : ""}
                 </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                disabled={moving}
-                onClick={() => void moveFolder()}
-              >
-                {moving ? "…" : folderMoveTarget(folder).label}
-              </Button>
+              {active.studentId ? (
+                <Link
+                  href={`/admin/students/${active.studentId}`}
+                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px]"
+                >
+                  Профиль
+                </Link>
+              ) : active.leadId ? (
+                <>
+                  <Link
+                    href={`/admin/leads/${active.leadId}`}
+                    className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px]"
+                  >
+                    Профиль
+                  </Link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={moving}
+                    onClick={() => void promoteLead()}
+                  >
+                    {moving ? "…" : "Сделать учеником"}
+                  </Button>
+                </>
+              ) : null}
+              {folder === "trash" ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={moving}
+                  onClick={() => void restoreFromTrash()}
+                >
+                  {moving ? "…" : "В лиды"}
+                </Button>
+              ) : null}
             </header>
 
             <div

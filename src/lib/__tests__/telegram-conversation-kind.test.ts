@@ -149,46 +149,44 @@ describe("resolveConversationFolder", () => {
     ).toBe("trash");
   });
 
-  it("lets a saved folder override automatic placement", () => {
+  it("puts a person who wrote into leads until they are marked a student", () => {
+    const human = {
+      messages: [{ direction: "INBOUND", body: "привет" }],
+      contact: { title: "Michael Bilak", username: "bilakmichael" },
+      hasHumanInbound: true,
+    };
+    expect(resolveConversationFolder({ ...human, audience: "lead" })).toBe("technical");
+    expect(resolveConversationFolder(human)).toBe("technical");
+    expect(resolveConversationFolder({ ...human, audience: "student" })).toBe("chats");
+  });
+
+  it("keeps trash probes in trash even if a folder was saved", () => {
     expect(
       resolveConversationFolder({
         messages: [{ direction: "INBOUND", body: "привет" }],
-        contact: { title: "Michael Bilak", username: "bilakmichael" },
-        hasHumanInbound: true,
-        inboxFolder: "technical",
-      }),
-    ).toBe("technical");
-    expect(
-      resolveConversationFolder({
-        messages: [],
         contact: { title: "Diag", username: "diag_probe_user" },
+        hasHumanInbound: true,
         inboxFolder: "chats",
+        audience: "student",
       }),
-    ).toBe("chats");
+    ).toBe("trash");
   });
 });
 
 describe("folderMoveTarget", () => {
-  it("swaps chats and technical, and restores trash to chats", () => {
-    expect(folderMoveTarget("chats")).toEqual({
-      folder: "technical",
-      label: "Скрыть",
-    });
-    expect(folderMoveTarget("technical")).toEqual({
-      folder: "chats",
-      label: "Вернуть",
-    });
+  it("sends trash back to leads", () => {
     expect(folderMoveTarget("trash")).toEqual({
-      folder: "chats",
-      label: "В чаты",
+      folder: "technical",
+      label: "В лиды",
     });
   });
 });
 
 describe("parseConversationFolder", () => {
-  it("defaults to chats", () => {
-    expect(parseConversationFolder(undefined)).toBe("chats");
-    expect(parseConversationFolder("bogus")).toBe("chats");
+  it("defaults to leads", () => {
+    expect(parseConversationFolder(undefined)).toBe("technical");
+    expect(parseConversationFolder("bogus")).toBe("technical");
+    expect(parseConversationFolder("chats")).toBe("chats");
     expect(parseConversationFolder("technical")).toBe("technical");
     expect(parseConversationFolder("trash")).toBe("trash");
   });

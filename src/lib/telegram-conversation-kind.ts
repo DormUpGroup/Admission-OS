@@ -1,5 +1,10 @@
 export type ConversationFolder = "chats" | "technical" | "trash";
 
+/** `chats` is the students tab, `technical` is the leads tab. */
+export const DEFAULT_CONVERSATION_FOLDER: ConversationFolder = "technical";
+
+export type ConversationAudience = "lead" | "student";
+
 /** Telegram first_name / lead titles from integration fixtures. */
 export const FIXTURE_DISPLAY_NAMES = new Set([
   "test",
@@ -103,16 +108,19 @@ export function parseInboxFolderOverride(
   return null;
 }
 
-/** Where a thread belongs. A saved staff choice wins over automatic rules. */
+/**
+ * Leads and students come from the person, not from a hide button.
+ * Trash is only probes, fixtures, and threads that never had a human reply.
+ */
 export function resolveConversationFolder(input: {
   messages: Array<{ direction: string; body: string | null }>;
   contact?: { title?: string | null; username?: string | null };
   hasHumanInbound?: boolean;
   inboxFolder?: string | null;
+  audience?: ConversationAudience;
 }): ConversationFolder {
-  const override = parseInboxFolderOverride(input.inboxFolder);
-  if (override) return override;
   if (input.contact && isTrashContact(input.contact)) return "trash";
+  if (parseInboxFolderOverride(input.inboxFolder) === "trash") return "trash";
   if (
     isTechnicalConversation(input.messages, input.contact, {
       hasHumanInbound: input.hasHumanInbound,
@@ -120,26 +128,24 @@ export function resolveConversationFolder(input: {
   ) {
     return "trash";
   }
-  return "chats";
+  if (input.audience === "student") return "chats";
+  return "technical";
 }
 
-/** Chats and technical swap. Trash returns to the client inbox. */
+/** Trash returns to leads. Student status is not a folder move. */
 export function folderMoveTarget(folder: ConversationFolder): {
   folder: ConversationFolder;
   label: string;
 } {
-  if (folder === "chats") {
-    return { folder: "technical", label: "Скрыть" };
+  if (folder === "trash") {
+    return { folder: "technical", label: "В лиды" };
   }
-  if (folder === "technical") {
-    return { folder: "chats", label: "Вернуть" };
-  }
-  return { folder: "chats", label: "В чаты" };
+  return { folder: "technical", label: "В лиды" };
 }
 
 export function parseConversationFolder(
   value: string | undefined | null,
 ): ConversationFolder {
-  if (value === "technical" || value === "trash") return value;
-  return "chats";
+  if (value === "chats" || value === "technical" || value === "trash") return value;
+  return DEFAULT_CONVERSATION_FOLDER;
 }

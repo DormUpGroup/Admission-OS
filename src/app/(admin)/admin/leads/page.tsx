@@ -166,7 +166,11 @@ export default async function AdminLeadsPage({
           <DataTableBody>
             {rows.map((row) => (
               <DataTableRow key={row.id}>
-                <DataTableCell className="font-medium">{row.title}</DataTableCell>
+                <DataTableCell className="font-medium">
+                  <Link href={`/admin/leads/${row.id}`} className="hover:underline">
+                    {row.title}
+                  </Link>
+                </DataTableCell>
                 <DataTableCell>{row.channel}</DataTableCell>
                 <DataTableCell>{row.contact}</DataTableCell>
                 <DataTableCell>{row.curator}</DataTableCell>

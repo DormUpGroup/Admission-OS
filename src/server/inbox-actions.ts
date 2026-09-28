@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { StudyLevel, type StudyLevel as StudyLevelValue } from "@/lib/enums";
 import {
   parseInboxFolderOverride,
   type ConversationFolder,
@@ -162,4 +163,125 @@ export async function saveTelegramReplyDraftAction(
     where: { id: run.id },
     data: { outputJson: next as Prisma.InputJsonValue },
   });
+}
+
+/** Drop a trash override so the thread returns to leads or students. */
+export async function restoreTelegramInboxFolderAction(conversationId: string): Promise<void> {
+  await requireStaff();
+  const id = conversationId.trim();
+  if (!id) throw new Error("Диалог не найден");
+  await prisma.conversation.updateMany({
+    where: { id, channel: "TELEGRAM" },
+    data: { inboxFolder: null },
+  });
+}
+
+function factText(value: Prisma.JsonValue | null, key: string): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = (value as Record<string, unknown>)[key];
+  if (typeof raw !== "string") return null;
+  const text = raw.trim();
+  return text || null;
+}
+
+function studyLevelFromChat(value: string | null): StudyLevelValue {
+  const text = (value ?? "").toLowerCase();
+  if (text.includes("маг")) return StudyLevel.MASTER;
+  if (text.includes("бакал")) return StudyLevel.BACHELOR;
+  if (text.includes("phd") || text.includes("аспиран")) return StudyLevel.PHD;
+  if (text.includes("foundation") || text.includes("подготов")) return StudyLevel.FOUNDATION;
+  return StudyLevel.OTHER;
+}
+
+/**
+ * Curator or admin only (requireStaff). Turns the lead on this chat into a student
+ * and moves the thread into the students list.
+ */
+export async function promoteLeadToStudentAction(
+  conversationId: string,
+): Promise<{ studentId: string }> {
+  const session = await requireStaff();
+  const id = conversationId.trim();
+  if (!id) throw new Error("Диалог не найден");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id },
+    include: {
+      lead: {
+        include: {
+          channelIdentities: {
+            where: { channel: "TELEGRAM" },
+            select: { displayName: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+  if (!conversation || conversation.channel !== "TELEGRAM") {
+    throw new Error("Диалог не найден");
+  }
+  if (conversation.studentId) return { studentId: conversation.studentId };
+
+  const lead = conversation.lead;
+  if (!lead) throw new Error("У этого диалога нет лида");
+  if (lead.convertedStudentId) {
+    await prisma.conversation.updateMany({
+      where: { leadId: lead.id },
+      data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
+    });
+    return { studentId: lead.convertedStudentId };
+  }
+
+  const displayName = lead.channelIdentities[0]?.displayName?.trim() ?? "";
+  const nameParts = displayName.split(/\s+/).filter(Boolean);
+  const firstName = lead.firstName?.trim() || nameParts[0] || "Без имени";
+  const lastName =
+    lead.lastName?.trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "—");
+  const intake = factText(lead.qualificationJson, "desiredIntake") ?? "не указан";
+  const preferredEmail = lead.email?.trim().toLowerCase() || null;
+  const emailTaken = preferredEmail
+    ? await prisma.student.findUnique({ where: { email: preferredEmail }, select: { id: true } })
+    : null;
+  const email = preferredEmail && !emailTaken ? preferredEmail : `lead.${lead.id}@leads.immigrome.invalid`;
+
+  const student = await prisma.$transaction(async (tx) => {
+    const created = await tx.student.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone: lead.phone,
+        studyLevel: studyLevelFromChat(factText(lead.qualificationJson, "studyLevel")),
+        intake,
+        targetField: factText(lead.qualificationJson, "targetField"),
+        country: factText(lead.qualificationJson, "preferredCountry"),
+        preferredLanguage: lead.locale,
+        curatorId:
+          lead.assignedCuratorId ??
+          (session.user.role === "CURATOR" ? session.user.id : null),
+      },
+    });
+    await tx.lead.update({
+      where: { id: lead.id },
+      data: {
+        firstName: lead.firstName ?? firstName,
+        lastName: lead.lastName ?? (lastName === "—" ? null : lastName),
+        convertedStudentId: created.id,
+        convertedAt: new Date(),
+        status: "CONVERTED",
+      },
+    });
+    await tx.channelIdentity.updateMany({
+      where: { leadId: lead.id },
+      data: { studentId: created.id, leadId: null },
+    });
+    await tx.conversation.updateMany({
+      where: { leadId: lead.id },
+      data: { studentId: created.id, leadId: null, inboxFolder: null },
+    });
+    return created;
+  });
+
+  return { studentId: student.id };
 }
