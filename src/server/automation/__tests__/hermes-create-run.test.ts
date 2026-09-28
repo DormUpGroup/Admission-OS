@@ -80,6 +80,12 @@ function harness(options: {
       findUnique: async () => ({
         id: "conversation-1",
         hermesSessionId: sessionId,
+        lead: {
+          firstName: "Аня",
+          lastName: null,
+          locale: "ru",
+          qualificationJson: { studyLevel: "бакалавриат" },
+        },
       }),
       update: async ({ data }: { data: { hermesSessionId?: string } }) => {
         if (data.hermesSessionId) sessionId = data.hermesSessionId;
@@ -89,6 +95,11 @@ function harness(options: {
     conversationMessage: {
       findFirst: async () =>
         options.body === undefined ? { body: "Хочу поступить" } : { body: options.body },
+      findMany: async () => [
+        { direction: "INBOUND", body: options.body === undefined ? "Хочу поступить" : options.body },
+        { direction: "OUTBOUND", body: "Какой уровень вас интересует?" },
+        { direction: "INBOUND", body: "Бакалавриат" },
+      ],
     },
     agentCapabilityGrant: {
       findUnique: async ({ where }: { where: { agentRunId?: string; id?: string } }) =>
@@ -191,11 +202,21 @@ describe("hermes.create_run dispatch", () => {
         instructions: string;
       };
       expect(sent.input).toBe("Хочу поступить");
-      expect(sent.session_id).toBe("conversation-1");
+      expect(sent.session_id).toBe("run-1");
+      expect(sent.instructions).toContain("Хочу поступить");
+      expect(sent.instructions).toContain("Бакалавриат");
+      expect(sent.instructions).toContain("Какой уровень вас интересует?");
+      expect(sent.instructions).toContain("one next turn");
+      expect(sent.instructions).toContain("Name: Аня");
+      expect(sent.instructions).toContain("studyLevel: бакалавриат");
+      expect(sent.instructions).toContain("Missing: educationLevel, targetField, desiredIntake, preferredCountry, budget");
       expect(sent.instructions).toContain("get_conversation_context");
       expect(sent.instructions).toContain("get_contact_profile");
+      expect(sent.instructions).toContain("update_lead_qualification");
+      expect(sent.instructions).toContain("send_client_message");
+      expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("propose_reply");
-      expect(sent.instructions).not.toContain("send_client_message");
+      expect(sent.instructions).toContain("Do not stop after propose_reply");
       expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
       expect(sent.instructions).toContain("bullet list only when");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
@@ -214,6 +235,7 @@ describe("hermes.create_run dispatch", () => {
         conversationId: "conversation-1",
         inputJson: { messageId: "message-1" },
       },
+      hermesSessionId: "old-conversation-session",
       fetchImpl,
     });
 
@@ -228,7 +250,7 @@ describe("hermes.create_run dispatch", () => {
       { eventType: "hermes.poll_run", idempotencyKey: "hermes.poll_run:run-1" },
     ]);
     expect(box.grants[0]?.revokedAt).toBeNull();
-    expect(box.session()).toBe("conversation-1");
+    expect(box.session()).toBe("old-conversation-session");
   });
 
   it("does not call Hermes again once hermesRunId is stored", async () => {

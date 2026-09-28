@@ -199,23 +199,14 @@ export async function ingestTelegramUpdate(input: {
           clientRequestId: `telegram:help:${message.providerEventId}`,
         });
         outboundMessageIds.push(sent.message.id);
-      } else {
-        const inboundCount = await tx.conversationMessage.count({
-          where: {
-            conversationId: conversation.id,
-            direction: "INBOUND",
-          },
+      } else if (command === "start") {
+        const sent = await requestTelegramSend({
+          tx,
+          conversationId: conversation.id,
+          body: TELEGRAM_WELCOME_TEXT,
+          clientRequestId: `telegram:welcome:${conversation.id}`,
         });
-        const shouldWelcome = command === "start" || inboundCount === 1;
-        if (shouldWelcome) {
-          const sent = await requestTelegramSend({
-            tx,
-            conversationId: conversation.id,
-            body: TELEGRAM_WELCOME_TEXT,
-            clientRequestId: `telegram:welcome:${conversation.id}`,
-          });
-          outboundMessageIds.push(sent.message.id);
-        }
+        outboundMessageIds.push(sent.message.id);
       }
     }
 

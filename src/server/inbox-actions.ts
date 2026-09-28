@@ -81,3 +81,44 @@ export async function setTelegramInboxFolderAction(
     data: { inboxFolder: next },
   });
 }
+
+export async function pauseTelegramAutomationAction(conversationId: string): Promise<void> {
+  await requireStaff();
+  const id = conversationId.trim();
+  if (!id) throw new Error("Диалог не найден");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id },
+    select: { id: true, channel: true },
+  });
+  if (!conversation || conversation.channel !== "TELEGRAM") {
+    throw new Error("Диалог не найден");
+  }
+
+  await prisma.conversation.update({
+    where: { id: conversation.id },
+    data: {
+      automationPausedAt: new Date(),
+      automationPauseReason: "Куратор выключил бота",
+    },
+  });
+}
+
+export async function resumeTelegramAutomationAction(conversationId: string): Promise<void> {
+  await requireStaff();
+  const id = conversationId.trim();
+  if (!id) throw new Error("Диалог не найден");
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id },
+    select: { id: true, channel: true },
+  });
+  if (!conversation || conversation.channel !== "TELEGRAM") {
+    throw new Error("Диалог не найден");
+  }
+
+  await prisma.conversation.update({
+    where: { id: conversation.id },
+    data: { automationPausedAt: null, automationPauseReason: null },
+  });
+}

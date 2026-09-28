@@ -1,6 +1,12 @@
 import type { Prisma } from "@prisma/client";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
-import { ensureCapabilityGrant, hermesRunInstructions, revokeCapabilityGrant } from "./capability-grant";
+import {
+  ensureCapabilityGrant,
+  formatChatTranscript,
+  formatLeadCard,
+  hermesRunInstructions,
+  revokeCapabilityGrant,
+} from "./capability-grant";
 import {
   HermesRetryableError,
   postHermesCreateRun,
@@ -129,7 +135,17 @@ export async function dispatchHermesCreateRun(
   const messageId = typeof input?.messageId === "string" ? input.messageId : null;
   const conversation = await db.conversation.findUnique({
     where: { id: run.conversationId },
-    select: { id: true, hermesSessionId: true },
+    select: {
+      id: true,
+      lead: {
+        select: {
+          firstName: true,
+          lastName: true,
+          locale: true,
+          qualificationJson: true,
+        },
+      },
+    },
   });
   if (!conversation) {
     throw new HermesRetryableError(`Conversation ${run.conversationId} not found`);
@@ -146,19 +162,23 @@ export async function dispatchHermesCreateRun(
         select: { body: true },
       });
 
-  const sessionId = conversation.hermesSessionId?.trim() || conversation.id;
-  if (!conversation.hermesSessionId?.trim()) {
-    await db.conversation.update({
-      where: { id: conversation.id },
-      data: { hermesSessionId: sessionId },
-    });
-  }
-
   const text = message?.body?.trim() ?? "";
   if (!text) {
     await markFailed(db, run.id, "empty_text", "Inbound message body is empty", now);
     return { status: "failed", errorCode: "empty_text" };
   }
+
+  const recent = await db.conversationMessage.findMany({
+    where: { conversationId: conversation.id },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    select: { direction: true, body: true },
+  });
+  const transcript = formatChatTranscript([...recent].reverse());
+
+  // Fresh Hermes memory per message, so it does not copy its previous draft.
+  // The transcript above is the conversation it should continue.
+  const sessionId = run.id;
 
   const grant = await ensureCapabilityGrant(db, {
     agentRunId: run.id,
@@ -168,7 +188,12 @@ export async function dispatchHermesCreateRun(
   const body: HermesCreateRunBody = {
     input: text,
     session_id: sessionId,
-    instructions: hermesRunInstructions(grant.id),
+    instructions: hermesRunInstructions(
+      grant.id,
+      text,
+      transcript,
+      formatLeadCard(conversation.lead),
+    ),
   };
 
   const outcome = await postHermesCreateRun({
@@ -224,13 +249,6 @@ export async function dispatchHermesCreateRun(
   }
 
   await enqueueHermesPollRun(db, run.id);
-
-  if (outcome.sessionId && outcome.sessionId !== sessionId) {
-    await db.conversation.update({
-      where: { id: conversation.id },
-      data: { hermesSessionId: outcome.sessionId },
-    });
-  }
 
   return { status: "running", hermesRunId: outcome.runId };
 }

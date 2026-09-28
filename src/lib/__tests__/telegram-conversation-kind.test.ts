@@ -172,10 +172,16 @@ describe("folderMoveTarget", () => {
   it("swaps chats and technical, and restores trash to chats", () => {
     expect(folderMoveTarget("chats")).toEqual({
       folder: "technical",
-      label: "В технические",
+      label: "Скрыть",
     });
-    expect(folderMoveTarget("technical").folder).toBe("chats");
-    expect(folderMoveTarget("trash").folder).toBe("chats");
+    expect(folderMoveTarget("technical")).toEqual({
+      folder: "chats",
+      label: "Вернуть",
+    });
+    expect(folderMoveTarget("trash")).toEqual({
+      folder: "chats",
+      label: "В чаты",
+    });
   });
 });
 

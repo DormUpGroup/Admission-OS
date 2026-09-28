@@ -31,7 +31,14 @@ function grant(overrides: Partial<Grant> = {}): Grant {
 }
 
 function world(row: Grant | null, options?: { paused?: boolean }) {
-  const calls = { context: [] as string[], profile: [] as string[], messages: 0 };
+  const calls = {
+    context: [] as string[],
+    profile: [] as string[],
+    messages: 0,
+    sent: [] as string[],
+    patches: [] as unknown[],
+    reasons: [] as string[],
+  };
   let outputJson: unknown = { drafts: [{ body: "старый", createdAt: "2026-09-27T11:00:00.000Z" }] };
   const db = {
     agentCapabilityGrant: {
@@ -73,6 +80,38 @@ function world(row: Grant | null, options?: { paused?: boolean }) {
     saveDraft: async (input: { agentRunId: string; body: string }) => {
       await saveProposeReplyDraft(db as never, { ...input, now });
     },
+    sendClientMessage: async (input: { body: string }) => {
+      calls.sent.push(input.body);
+      if (/стоимост|срок/i.test(input.body)) {
+        return {
+          status: "APPROVAL_REQUIRED" as const,
+          approvalId: "approval-1",
+          payloadHash: "hash",
+          policy: { decision: "REQUIRE_APPROVAL" as const, reasons: ["intake_sensitive_claim"] },
+        };
+      }
+      return {
+        status: "ALLOWED" as const,
+        result: { messageId: "msg-1", duplicate: false },
+        policy: { decision: "ALLOW" as const, reasons: [] },
+      };
+    },
+    updateQualification: async (input: { patch: unknown }) => {
+      calls.patches.push(input.patch);
+      return {
+        status: "ALLOWED" as const,
+        result: { leadId: "lead-1" },
+        policy: { decision: "ALLOW" as const, reasons: [] },
+      };
+    },
+    escalate: async (input: { reason: string }) => {
+      calls.reasons.push(input.reason);
+      return {
+        status: "ALLOWED" as const,
+        result: { conversationId: "conversation-1", notifiedCurator: true },
+        policy: { decision: "ALLOW" as const, reasons: [] },
+      };
+    },
   };
   return { db, calls, executors, output: () => outputJson };
 }
@@ -99,14 +138,22 @@ async function post(
 }
 
 describe("MCP capability grant", () => {
-  it("lists only the v1 read and draft tools for the bootstrap key", async () => {
+  it("lists the dialogue tools for the bootstrap key", async () => {
     const box = world(grant());
     const listed = await post(box, { jsonrpc: "2.0", id: 1, method: "tools/list" });
-    const tools = (listed.body as { result: { tools: Array<{ name: string; inputSchema: { required: string[] } }> } })
-      .result.tools;
+    const tools = (listed.body as {
+      result: {
+        tools: Array<{ name: string; inputSchema: { required: string[]; properties: Record<string, unknown> } }>;
+      };
+    }).result.tools;
     expect(tools.map((tool) => tool.name)).toEqual([...MCP_V1_TOOLS]);
     expect(tools.every((tool) => tool.inputSchema.required.includes("grant_id"))).toBe(true);
-    expect(JSON.stringify(tools)).not.toContain("send_client_message");
+    const send = tools.find((tool) => tool.name === "send_client_message");
+    const escalate = tools.find((tool) => tool.name === "escalate_to_human");
+    const qualify = tools.find((tool) => tool.name === "update_lead_qualification");
+    expect(send?.inputSchema.required).toContain("body");
+    expect(escalate?.inputSchema.required).toContain("reason");
+    expect(qualify?.inputSchema.properties).toHaveProperty("studyLevel");
 
     const init = await post(box, {
       jsonrpc: "2.0",
@@ -238,5 +285,49 @@ describe("MCP capability grant", () => {
     expect(JSON.stringify(blocked.body)).toContain("policy_denied");
     expect(JSON.stringify(unsafe.output())).not.toContain("гарантируем");
     expect(unsafe.calls.messages).toBe(0);
+  });
+
+  it("sends a short reply, saves a stated fact, and escalates an unknown", async () => {
+    const box = world(grant());
+    const sent = await post(box, call("send_client_message", { grant_id: "grant-secret-value", body: "  Поняла, бакалавриат.  " }));
+    expect(JSON.stringify(sent.body)).toContain("sent");
+    expect(box.calls.sent).toEqual(["Поняла, бакалавриат."]);
+    expect(box.calls.messages).toBe(0);
+
+    const saved = await post(
+      box,
+      call("update_lead_qualification", {
+        grant_id: "grant-secret-value",
+        studyLevel: " бакалавриат ",
+        budget: "   ",
+      }),
+    );
+    expect(JSON.stringify(saved.body)).toContain("qualification_saved");
+    expect(box.calls.patches).toEqual([
+      {
+        firstName: undefined,
+        lastName: undefined,
+        locale: undefined,
+        qualification: { studyLevel: "бакалавриат" },
+      },
+    ]);
+
+    const held = await post(
+      box,
+      call("send_client_message", { grant_id: "grant-secret-value", body: "Стоимость уточню" }),
+    );
+    expect(JSON.stringify(held.body)).toContain("approval_required");
+    expect((held.body as { result: { isError: boolean } }).result.isError).toBe(false);
+
+    const escalated = await post(
+      box,
+      call("escalate_to_human", { grant_id: "grant-secret-value", reason: "  Спросили программу  " }),
+    );
+    expect(JSON.stringify(escalated.body)).toContain("escalated");
+    expect(box.calls.reasons).toEqual(["Спросили программу"]);
+
+    const empty = await post(box, call("update_lead_qualification", { grant_id: "grant-secret-value" }));
+    expect(JSON.stringify(empty.body)).toContain("nothing_to_save");
+    expect(box.calls.patches).toHaveLength(1);
   });
 });

@@ -2,11 +2,23 @@ import { createHash, randomBytes } from "crypto";
 import type { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 
-/** Tools Hermes may call in this PR. Not copied from the intake registry. */
+/** Tools Hermes may call on an intake run. */
 export const MCP_V1_TOOLS = [
   "get_conversation_context",
   "get_contact_profile",
+  "update_lead_qualification",
+  "send_client_message",
+  "escalate_to_human",
   "propose_reply",
+] as const;
+
+export const LEAD_FACT_FIELDS = [
+  "educationLevel",
+  "studyLevel",
+  "targetField",
+  "desiredIntake",
+  "preferredCountry",
+  "budget",
 ] as const;
 
 export type McpV1Tool = (typeof MCP_V1_TOOLS)[number];
@@ -26,19 +38,97 @@ export function capabilityGrantLogHash(grantId: string): string {
   return createHash("sha256").update(grantId).digest("hex").slice(0, 12);
 }
 
-export function hermesRunInstructions(grantId: string): string {
+export type ChatTurn = {
+  direction: string;
+  body: string | null;
+};
+
+const MAX_TURN_CHARS = 500;
+
+/** Oldest first. Sent messages only, so a previous unsent draft is not in the thread. */
+export function formatChatTranscript(turns: ChatTurn[]): string {
+  const lines: string[] = [];
+  for (const turn of turns) {
+    const body = turn.body?.trim();
+    if (!body) continue;
+    const who = turn.direction === "INBOUND" ? "Client" : "Us";
+    const clipped = body.length > MAX_TURN_CHARS ? `${body.slice(0, MAX_TURN_CHARS)}…` : body;
+    lines.push(`${who}: ${clipped}`);
+  }
+  return lines.length > 0 ? lines.join("\n") : "(no earlier messages)";
+}
+
+export type LeadCardSource = {
+  firstName?: string | null;
+  lastName?: string | null;
+  locale?: string | null;
+  qualificationJson?: unknown;
+} | null;
+
+function qualificationRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** Known facts and the gaps the bot may ask about, one at a time. */
+export function formatLeadCard(lead: LeadCardSource | undefined): string {
+  const name = [lead?.firstName, lead?.lastName].filter(Boolean).join(" ").trim() || "unknown";
+  const locale = lead?.locale?.trim() || "unknown";
+  const facts = qualificationRecord(lead?.qualificationJson);
+  const known: string[] = [];
+  const missing: string[] = [];
+  for (const field of LEAD_FACT_FIELDS) {
+    const value = facts[field];
+    const text =
+      typeof value === "string"
+        ? value.trim()
+        : typeof value === "number" && Number.isFinite(value)
+          ? String(value)
+          : "";
+    if (text) known.push(`${field}: ${text.slice(0, 120)}`);
+    else missing.push(field);
+  }
   return [
-    "You are the Immigrome intake assistant.",
+    `Name: ${name}`,
+    `Locale: ${locale}`,
+    `Known: ${known.length > 0 ? known.join("; ") : "none"}`,
+    `Missing: ${missing.length > 0 ? missing.join(", ") : "none"}`,
+  ].join("\n");
+}
+
+export function hermesRunInstructions(
+  grantId: string,
+  clientMessage: string,
+  transcript: string,
+  leadCard: string,
+): string {
+  return [
+    "You are the person chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
     "Call tools only through the admission_os MCP server.",
     `Pass grant_id exactly as ${grantId} on every tool call.`,
-    "Allowed tools: get_conversation_context, get_contact_profile, propose_reply.",
-    "Read the conversation and the contact, then call propose_reply with the draft text.",
-    "Do not send a message to the client. Do not use Telegram.",
-    "Write the draft in the client's language, usually Russian.",
+    "Allowed tools: get_conversation_context, get_contact_profile, update_lead_qualification, send_client_message, escalate_to_human, propose_reply.",
+    "Lead card:",
+    leadCard,
+    "Recent chat, oldest first. These messages were already sent:",
+    transcript,
+    "Read the whole chat and the lead card, then make one next turn.",
+    "Answer what the person just said and any unfinished thread: a question already asked, or a fact they already gave.",
+    "If the chat already started, do not greet again and do not restart the questionnaire from the beginning.",
+    "One turn only: a short human reply and at most one fitting question.",
+    "Collect missing facts over the course of the chat, never as a list of questions.",
+    "When the person states a fact from the card, save it with update_lead_qualification before you reply.",
+    "Answer a simple question about the process yourself.",
+    "For a specific programme, a price, a timeline, a decision, or anything that is not on the lead card, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
+    "Send that reply with send_client_message. Do not stop after propose_reply.",
+    "Do not put prices, tariffs, or timelines in the text you send.",
+    "Write in the client's language, usually Russian.",
     "Sound like a person in a Telegram chat: short, warm, plain words.",
     "Write in sentences. Use a bullet list only when the content is a list of requirements or a set of items that is clearer as a list.",
     "No corporate greeting, no \"уважаемый клиент\", no essay.",
     "Do not promise admission, a visa, or a payment.",
+    "Latest client message:",
+    clientMessage,
   ].join("\n");
 }
 

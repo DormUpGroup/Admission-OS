@@ -129,7 +129,10 @@ export function folderMoveTarget(folder: ConversationFolder): {
   label: string;
 } {
   if (folder === "chats") {
-    return { folder: "technical", label: "В технические" };
+    return { folder: "technical", label: "Скрыть" };
+  }
+  if (folder === "technical") {
+    return { folder: "chats", label: "Вернуть" };
   }
   return { folder: "chats", label: "В чаты" };
 }

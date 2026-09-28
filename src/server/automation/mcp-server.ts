@@ -1,9 +1,15 @@
-import { timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import type { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 import {
+  escalateAgentToHuman,
+  sendAgentClientMessage,
+  updateLeadQualificationFromAgent,
+} from "./actions";
+import {
   capabilityGrantLogHash,
   isMcpV1Tool,
+  LEAD_FACT_FIELDS,
   MCP_V1_TOOLS,
   type McpV1Tool,
 } from "./capability-grant";
@@ -23,10 +29,25 @@ const BOOTSTRAP_METHODS = new Set([
   "notifications/initialized",
 ]);
 
+type QualificationPatch = Parameters<typeof updateLeadQualificationFromAgent>[0]["patch"];
+
 export type McpToolExecutors = {
   getConversationContext: (conversationId: string) => Promise<unknown>;
   getContactProfile: (conversationId: string) => Promise<unknown>;
   saveDraft: (input: { agentRunId: string; body: string }) => Promise<void>;
+  sendClientMessage: (input: {
+    agentRunId: string;
+    conversationId: string;
+    body: string;
+  }) => ReturnType<typeof sendAgentClientMessage>;
+  updateQualification: (input: {
+    conversationId: string;
+    patch: QualificationPatch;
+  }) => ReturnType<typeof updateLeadQualificationFromAgent>;
+  escalate: (input: {
+    conversationId: string;
+    reason: string;
+  }) => ReturnType<typeof escalateAgentToHuman>;
 };
 
 export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
@@ -34,6 +55,15 @@ export function defaultMcpToolExecutors(db: DbClient): McpToolExecutors {
     getConversationContext: (conversationId) => getConversationContext(conversationId),
     getContactProfile: (conversationId) => getContactProfile(conversationId),
     saveDraft: (input) => saveProposeReplyDraft(db, input),
+    sendClientMessage: (input) =>
+      sendAgentClientMessage({
+        agentRunId: input.agentRunId,
+        conversationId: input.conversationId,
+        body: input.body,
+        clientRequestId: `agent-send:${input.agentRunId}:${createHash("sha256").update(input.body).digest("hex").slice(0, 16)}`,
+      }),
+    updateQualification: (input) => updateLeadQualificationFromAgent(input),
+    escalate: (input) => escalateAgentToHuman(input),
   };
 }
 
@@ -99,18 +129,33 @@ function toolSchema(name: McpV1Tool) {
     grant_id: { type: "string", description: "Capability grant id for this run." },
   };
   const required = ["grant_id"];
-  if (name === "propose_reply") {
+  let description = "Read recent messages and automation state for this conversation.";
+  if (name === "get_contact_profile") {
+    description = "Read the lead or student linked to this conversation.";
+  } else if (name === "propose_reply") {
+    description = "Store a draft reply for staff. Does not message the client.";
     properties.body = { type: "string", description: "Draft reply. This does not send it." };
     required.push("body");
+  } else if (name === "send_client_message") {
+    description = "Send one Telegram reply to the client.";
+    properties.body = { type: "string", description: "Message text to send." };
+    required.push("body");
+  } else if (name === "escalate_to_human") {
+    description = "Pause automation on this chat and notify the curator.";
+    properties.reason = { type: "string", description: "Why a curator must take over." };
+    required.push("reason");
+  } else if (name === "update_lead_qualification") {
+    description = "Save a fact the client just stated.";
+    properties.firstName = { type: "string" };
+    properties.lastName = { type: "string" };
+    properties.locale = { type: "string" };
+    for (const field of LEAD_FACT_FIELDS) {
+      properties[field] = { type: "string" };
+    }
   }
   return {
     name,
-    description:
-      name === "propose_reply"
-        ? "Store a draft reply for staff. Does not message the client."
-        : name === "get_contact_profile"
-          ? "Read the lead or student linked to this conversation."
-          : "Read recent messages and automation state for this conversation.",
+    description,
     inputSchema: {
       type: "object",
       properties,
@@ -118,6 +163,30 @@ function toolSchema(name: McpV1Tool) {
       additionalProperties: false,
     },
   };
+}
+
+function trimmed(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  return text ? text : undefined;
+}
+
+function qualificationPatch(args: Record<string, unknown>): QualificationPatch {
+  const qualification: Record<string, Prisma.JsonValue> = {};
+  for (const field of LEAD_FACT_FIELDS) {
+    const value = trimmed(args[field]);
+    if (value) qualification[field] = value;
+  }
+  return {
+    firstName: trimmed(args.firstName),
+    lastName: trimmed(args.lastName),
+    locale: trimmed(args.locale),
+    qualification: Object.keys(qualification).length > 0 ? qualification : undefined,
+  };
+}
+
+function patchIsEmpty(patch: QualificationPatch): boolean {
+  return !patch.firstName && !patch.lastName && !patch.locale && !patch.qualification;
 }
 
 function asAgentKey(value: string): AgentKey | null {
@@ -272,9 +341,17 @@ async function callTool(
     agentKey,
     toolName,
     conversationId: grant.conversationId,
-    body: toolName === "propose_reply" ? draftBody : undefined,
+    body:
+      toolName === "propose_reply" || toolName === "send_client_message" ? draftBody : undefined,
   });
-  if (policy.decision !== POLICY_DECISIONS.ALLOW) {
+  if (policy.decision === POLICY_DECISIONS.DENY) {
+    logLine("policy_denied");
+    return {
+      status: 200,
+      body: toolResult(id, `policy_denied:${policy.reasons.join(",")}`, true),
+    };
+  }
+  if (policy.decision !== POLICY_DECISIONS.ALLOW && toolName !== "send_client_message") {
     logLine("policy_denied");
     return {
       status: 200,
@@ -291,6 +368,80 @@ async function callTool(
     await executors.saveDraft({ agentRunId: grant.agentRunId, body });
     logLine("ok");
     return { status: 200, body: toolResult(id, "draft_stored", false) };
+  }
+
+  if (toolName === "send_client_message") {
+    const body = draftBody?.trim() ?? "";
+    if (!body) {
+      logLine("empty_message");
+      return { status: 200, body: toolResult(id, "empty_message", true) };
+    }
+    const sent = await executors.sendClientMessage({
+      agentRunId: grant.agentRunId,
+      conversationId: grant.conversationId,
+      body,
+    });
+    if (sent.status === "DENIED") {
+      logLine("policy_denied");
+      return {
+        status: 200,
+        body: toolResult(id, `policy_denied:${sent.policy.reasons.join(",")}`, true),
+      };
+    }
+    if (sent.status === "APPROVAL_REQUIRED") {
+      logLine("approval_required");
+      return {
+        status: 200,
+        body: toolResult(id, `approval_required:${sent.policy.reasons.join(",")}`, false),
+      };
+    }
+    logLine("ok");
+    return {
+      status: 200,
+      body: toolResult(id, sent.result.duplicate ? "already_sent" : "sent", false),
+    };
+  }
+
+  if (toolName === "update_lead_qualification") {
+    const patch = qualificationPatch(args);
+    if (patchIsEmpty(patch)) {
+      logLine("nothing_to_save");
+      return { status: 200, body: toolResult(id, "nothing_to_save", true) };
+    }
+    const saved = await executors.updateQualification({
+      conversationId: grant.conversationId,
+      patch,
+    });
+    if (saved.status !== "ALLOWED") {
+      logLine("policy_denied");
+      return {
+        status: 200,
+        body: toolResult(id, `policy_denied:${saved.policy.reasons.join(",")}`, true),
+      };
+    }
+    logLine("ok");
+    return { status: 200, body: toolResult(id, "qualification_saved", false) };
+  }
+
+  if (toolName === "escalate_to_human") {
+    const reason = trimmed(args.reason)?.slice(0, 500) ?? "";
+    if (!reason) {
+      logLine("empty_reason");
+      return { status: 200, body: toolResult(id, "empty_reason", true) };
+    }
+    const escalated = await executors.escalate({
+      conversationId: grant.conversationId,
+      reason,
+    });
+    if (escalated.status !== "ALLOWED") {
+      logLine("policy_denied");
+      return {
+        status: 200,
+        body: toolResult(id, `policy_denied:${escalated.policy.reasons.join(",")}`, true),
+      };
+    }
+    logLine("ok");
+    return { status: 200, body: toolResult(id, "escalated", false) };
   }
 
   const payload =

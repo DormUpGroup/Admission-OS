@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
+import { Bot } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StudentAvatar } from "@/components/student-avatar";
 import { MessageSenderAvatar } from "@/components/admin/message-sender-avatar";
@@ -19,6 +20,8 @@ import {
 } from "@/lib/telegram-conversation-kind";
 import { cn, formatDate } from "@/lib/utils";
 import {
+  pauseTelegramAutomationAction,
+  resumeTelegramAutomationAction,
   sendTelegramInboxReplyAction,
   setTelegramInboxFolderAction,
   type SendTelegramInboxReplyResult,
@@ -133,6 +136,7 @@ export function TelegramMessenger({
   const [threadLoading, setThreadLoading] = useState(false);
   const [openOnMobile, setOpenOnMobile] = useState(openedFromUrl);
   const [moving, setMoving] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
   const cacheRef = useRef<Map<string, TelegramActiveThread>>(new Map());
@@ -227,6 +231,25 @@ export function TelegramMessenger({
     const params = new URLSearchParams();
     if (next !== "chats") params.set("folder", next);
     return `/admin/messages/telegram${params.size ? `?${params.toString()}` : ""}`;
+  }
+
+  async function toggleAutomation() {
+    if (!activeId || resuming || !active) return;
+    const turnOn = active.automationPaused;
+    setResuming(true);
+    try {
+      if (turnOn) await resumeTelegramAutomationAction(activeId);
+      else await pauseTelegramAutomationAction(activeId);
+      setActive((prev) => {
+        if (!prev || prev.id !== activeId) return prev;
+        const next = { ...prev, automationPaused: !turnOn };
+        cacheRef.current.set(activeId, next);
+        return next;
+      });
+      router.refresh();
+    } finally {
+      setResuming(false);
+    }
   }
 
   async function moveFolder() {
@@ -490,9 +513,24 @@ export function TelegramMessenger({
               </button>
               <StudentAvatar name={active.title} size="md" />
               <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[15px] font-semibold leading-tight">
-                  {active.title}
-                </h2>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <h2 className="min-w-0 truncate text-[15px] font-semibold leading-tight">
+                    {active.title}
+                  </h2>
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white disabled:opacity-60",
+                      active.automationPaused ? "bg-neutral-300" : "bg-emerald-500",
+                    )}
+                    disabled={resuming}
+                    aria-label={active.automationPaused ? "Включить Бота" : "Выключить Бота"}
+                    title={active.automationPaused ? "Включить Бота" : "Бот включён"}
+                    onClick={() => void toggleAutomation()}
+                  >
+                    <Bot className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  </button>
+                </div>
                 <p className="text-[12px] text-muted-foreground">
                   Telegram
                   {active.automationPaused ? " · автоответы на паузе" : ""}
