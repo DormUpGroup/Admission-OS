@@ -9,6 +9,12 @@ import {
 
 export type { MessageUnreadCounts };
 
+const UNREAD_CACHE_MS = 15_000;
+const unreadCache = new Map<
+  string,
+  { at: number; value: MessageUnreadCounts }
+>();
+
 type MessageMeta = {
   note?: string;
   channel?: string;
@@ -119,7 +125,7 @@ async function countUnansweredSite(
   return unanswered;
 }
 
-export async function getMessageUnreadCounts(input: {
+async function loadMessageUnreadCounts(input: {
   userId: string;
   role: UserRole;
 }): Promise<MessageUnreadCounts> {
@@ -136,4 +142,17 @@ export async function getMessageUnreadCounts(input: {
     instagram,
     total: telegram + site + email + instagram,
   };
+}
+
+export async function getMessageUnreadCounts(input: {
+  userId: string;
+  role: UserRole;
+}): Promise<MessageUnreadCounts> {
+  const key = `${input.userId}:${input.role}`;
+  const hit = unreadCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < UNREAD_CACHE_MS) return hit.value;
+  const value = await loadMessageUnreadCounts(input);
+  unreadCache.set(key, { at: now, value });
+  return value;
 }

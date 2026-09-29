@@ -25,6 +25,9 @@ declare module "next-auth/jwt" {
   }
 }
 
+const USER_RESYNC_MS = 5 * 60 * 1000;
+const lastUserResyncAt = new Map<string, number>();
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -67,21 +70,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      // Re-sync after DB reseed / user recreation so stale JWT ids don't break ACL
-      if (token.email) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: String(token.email) },
-            select: { id: true, role: true, name: true, email: true },
-          });
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role as UserRole;
-            token.name = dbUser.name;
-            token.email = dbUser.email;
+      // Re-sync after DB reseed / user recreation so stale JWT ids don't break ACL.
+      // At most once per email per 5 minutes so navigation does not hit Postgres every time.
+      const email = token.email ? String(token.email) : "";
+      if (email) {
+        const now = Date.now();
+        const previous = lastUserResyncAt.get(email) ?? 0;
+        if (now - previous >= USER_RESYNC_MS) {
+          lastUserResyncAt.set(email, now);
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { email },
+              select: { id: true, role: true, name: true, email: true },
+            });
+            if (dbUser) {
+              token.id = dbUser.id;
+              token.role = dbUser.role as UserRole;
+              token.name = dbUser.name;
+              token.email = dbUser.email;
+            }
+          } catch (error) {
+            lastUserResyncAt.delete(email);
+            console.error("jwt user re-sync failed", error);
           }
-        } catch (error) {
-          console.error("jwt user re-sync failed", error);
         }
       }
 

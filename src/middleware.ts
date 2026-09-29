@@ -26,7 +26,8 @@ async function getSessionToken(req: NextRequest) {
   const token = await getToken({ req, secret, secureCookie });
   if (token) return token;
 
-  // HTTPS proxies and local HTTP use different cookie names; try the other.
+  // Only the other cookie family can still hold a session.
+  if (!(hasSecureCookie && hasPlainCookie)) return null;
   return getToken({ req, secret, secureCookie: !secureCookie });
 }
 

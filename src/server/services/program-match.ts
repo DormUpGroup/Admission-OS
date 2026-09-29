@@ -8,7 +8,7 @@ import {
   listPersistedMatches,
 } from "@/server/services/program-matching/program-matching";
 import { listStudentShortlist } from "@/server/services/program-matching/shortlist";
-import { getProgramDossier } from "@/server/services/program-matching/program-dossier";
+import { getProgramDossiers } from "@/server/services/program-matching/program-dossier";
 
 export type ProgramMatch = {
   programId: string;
@@ -99,12 +99,17 @@ export async function matchProgramsFromShortlist(
   });
   const applied = new Map(apps.map((a) => [a.programId, a.id]));
   const profile = await buildMatchingProfile(studentId);
+  const dossiers = await getProgramDossiers(
+    items.map((item) => item.programAcademicYearId),
+    { applicantCategory: profile?.applicantCategory },
+  );
+  const dossierByPay = new Map(
+    dossiers.map((dossier) => [dossier.programAcademicYearId, dossier]),
+  );
 
-  return Promise.all(items.map(async (item) => {
+  return items.map((item) => {
     const p = item.programAcademicYear.program;
-    const dossier = await getProgramDossier(item.programAcademicYearId, {
-      applicantCategory: profile?.applicantCategory,
-    });
+    const dossier = dossierByPay.get(item.programAcademicYearId);
     return {
       programId: p.id,
       programName: p.name,
@@ -129,7 +134,7 @@ export async function matchProgramsFromShortlist(
       quotaSeats: dossier?.quotaSeats ?? null,
       quotaScope: dossier?.quotaScope ?? null,
     };
-  }));
+  });
 }
 
 export async function getPersistedMatchCards(studentId: string) {

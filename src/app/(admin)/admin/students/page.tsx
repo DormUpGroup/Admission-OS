@@ -90,9 +90,8 @@ export default async function StudentsPage({
     prisma.student.findMany({
       where,
       include: {
-        curator: true,
-        applications: true,
-        documents: true,
+        curator: { select: { name: true } },
+        _count: { select: { applications: true, documents: true } },
       },
       orderBy: [{ riskLevel: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
     }),
@@ -109,6 +108,21 @@ export default async function StudentsPage({
       orderBy: { intake: "desc" },
     }),
   ]);
+
+  const approvedRows =
+    students.length === 0
+      ? []
+      : await prisma.document.groupBy({
+          by: ["studentId"],
+          where: {
+            studentId: { in: students.map((student) => student.id) },
+            status: "APPROVED",
+          },
+          _count: { _all: true },
+        });
+  const approvedByStudent = new Map(
+    approvedRows.map((row) => [row.studentId, row._count._all]),
+  );
 
   // SQLite has no reliable risk sort; sort in memory by RISK priority
   const riskRank: Record<string, number> = {
@@ -192,8 +206,7 @@ export default async function StudentsPage({
         <>
         <ul className="space-y-2 md:hidden">
           {students.map((s) => {
-            const approved = s.documents.filter((d) => d.status === "APPROVED")
-              .length;
+            const approved = approvedByStudent.get(s.id) ?? 0;
             const next = parseNextAction(s.nextActionJson);
             return (
               <li key={s.id}>
@@ -221,8 +234,8 @@ export default async function StudentsPage({
                     <PlatformPresenceBadge hasAccount={hasPlatformAccount(s.userId)} />
                     <StatusBadge status={s.journeyStage} />
                     <span className="text-[12px] text-muted-foreground">
-                      Набор {s.intake} · подачи {s.applications.length} ·
-                      документы {approved}/{s.documents.length}
+                      Набор {s.intake} · подачи {s._count.applications} ·
+                      документы {approved}/{s._count.documents}
                     </span>
                   </div>
                   <p className="mt-2 text-[13px] text-muted-foreground">
@@ -250,8 +263,7 @@ export default async function StudentsPage({
           </DataTableHeader>
           <DataTableBody>
             {students.map((s) => {
-              const approved = s.documents.filter((d) => d.status === "APPROVED")
-                .length;
+              const approved = approvedByStudent.get(s.id) ?? 0;
               const next = parseNextAction(s.nextActionJson);
               return (
                 <DataTableRow key={s.id}>
@@ -286,10 +298,10 @@ export default async function StudentsPage({
                     {s.curator?.name ?? "—"}
                   </DataTableCell>
                   <DataTableCell className="tabular-nums">
-                    {s.applications.length}
+                    {s._count.applications}
                   </DataTableCell>
                   <DataTableCell className="tabular-nums">
-                    {approved}/{s.documents.length}
+                    {approved}/{s._count.documents}
                   </DataTableCell>
                   <DataTableCell className="max-w-[200px] truncate text-muted-foreground">
                     {next?.title ?? "—"}

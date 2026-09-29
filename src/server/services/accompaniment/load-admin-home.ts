@@ -101,7 +101,7 @@ export async function loadAdminHome(input: {
   const canReject = canRejectAccompaniment(input.role);
   const canEditLimit = canChangeIntakeLimit(input.role);
 
-  const [cohorts, distinctIntakes, students, curators] = await Promise.all([
+  const [cohorts, distinctIntakes, students, curators, workQueue] = await Promise.all([
     prisma.intakeCohort.findMany({ orderBy: { intake: "desc" } }),
     prisma.student.findMany({
       where: { status: { not: "ARCHIVED" } },
@@ -131,6 +131,10 @@ export async function loadAdminHome(input: {
       where: { role: { in: ["ADMIN", "CURATOR"] } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
+    }),
+    loadWorkQueue({
+      userId: input.userId,
+      role: input.role,
     }),
   ]);
 
@@ -209,11 +213,6 @@ export async function loadAdminHome(input: {
         acceptBlockedReason: canAccept && !studentDecision.ok ? studentDecision.reason : null,
       };
     });
-
-  const workQueue = await loadWorkQueue({
-    userId: input.userId,
-    role: input.role,
-  });
 
   const studyLevels = [
     ...new Set(students.map((s) => s.studyLevel).filter(Boolean)),

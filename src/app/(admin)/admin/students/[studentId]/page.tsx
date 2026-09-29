@@ -42,7 +42,7 @@ import { curatorStageForStudent } from "@/server/services/work-queue/stage";
 import type { WorkQueueStudentInput } from "@/server/services/work-queue/types";
 import { applyCuratorMatchFilters } from "@/server/services/program-matching/curator-match-filters";
 import { buildCuratorMatchView } from "@/server/services/program-matching/curator-match-view";
-import { getProgramDossier } from "@/server/services/program-matching/program-dossier";
+import { getProgramDossiers } from "@/server/services/program-matching/program-dossier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,13 +146,20 @@ export default async function StudentProfilePage({
 
   if (!student) notFound();
 
+  const needsProgramCatalog = tab === "programs" || tab === "applications";
+  const needsTemplates = tab === "applications";
+
   const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications] =
     await Promise.all([
-      prisma.program.findMany({
-        include: { university: true },
-        orderBy: [{ university: { name: "asc" } }, { name: "asc" }],
-      }),
-      prisma.applicationTemplate.findMany({ orderBy: { name: "asc" } }),
+      needsProgramCatalog
+        ? prisma.program.findMany({
+            include: { university: true },
+            orderBy: [{ university: { name: "asc" } }, { name: "asc" }],
+          })
+        : Promise.resolve([]),
+      needsTemplates
+        ? prisma.applicationTemplate.findMany({ orderBy: { name: "asc" } })
+        : Promise.resolve([]),
       listPersistedMatches(studentId),
       listStudentShortlist(studentId),
       buildMatchingProfile(studentId),
@@ -171,17 +178,12 @@ export default async function StudentProfilePage({
   const personalAnswers = parsePersonalAnswers(student.questionnairePersonalJson);
   const programsAnswers = parseProgramsAnswers(student.questionnaireProgramsJson);
 
-  const dossiers = await Promise.all(
-    persistedMatches.map((m) =>
-      getProgramDossier(m.programAcademicYearId, {
-        applicantCategory: matchingProfile?.applicantCategory,
-      })
-    )
+  const dossiers = await getProgramDossiers(
+    persistedMatches.map((match) => match.programAcademicYearId),
+    { applicantCategory: matchingProfile?.applicantCategory },
   );
   const dossierByPay = new Map(
-    dossiers
-      .filter(Boolean)
-      .map((d) => [d!.programAcademicYearId, d!] as const)
+    dossiers.map((dossier) => [dossier.programAcademicYearId, dossier] as const)
   );
 
   const curatorViewsRaw = persistedMatches.map((m) =>

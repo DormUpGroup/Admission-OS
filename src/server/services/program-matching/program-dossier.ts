@@ -15,6 +15,7 @@ import {
   regionForCity,
 } from "@/lib/program-matching/taxonomy";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { inferPublicPrivateFromUniversityName } from "@/server/services/program-ingestion/infer-public-private";
 import { sanitizeTuitionPair } from "@/server/services/program-ingestion/call-text-parse";
 import type { SelectionRegime } from "@/server/services/program-ingestion/admission-regime";
@@ -325,24 +326,23 @@ function manualVerifiedFieldsFromFacts(
     });
 }
 
-export async function getProgramDossier(
-  programAcademicYearId: string,
-  options?: { applicantCategory?: ApplicantCategory }
-): Promise<ProgramDossier | null> {
-  const pay = await prisma.programAcademicYear.findUnique({
-    where: { id: programAcademicYearId },
-    include: {
-      program: { include: { university: true } },
-      facts: { where: { superseded: false } },
-      sourceDocuments: {
-        orderBy: { retrievedAt: "desc" },
-        take: 8,
-      },
-    },
-  });
-  if (!pay) return null;
+const programDossierInclude = {
+  program: { include: { university: true } },
+  facts: { where: { superseded: false } },
+  sourceDocuments: {
+    orderBy: { retrievedAt: "desc" as const },
+    take: 8,
+  },
+} satisfies Prisma.ProgramAcademicYearInclude;
 
-  const applicantCategory = options?.applicantCategory ?? "UNKNOWN";
+type DossierPay = Prisma.ProgramAcademicYearGetPayload<{
+  include: typeof programDossierInclude;
+}>;
+
+function buildProgramDossier(
+  pay: DossierPay,
+  applicantCategory: ApplicantCategory,
+): ProgramDossier {
   const factRows = pay.facts as Array<(typeof pay.facts)[number] & FactCandidate>;
   const resolveOne = (field: string) =>
     resolveProgramFact(
@@ -748,6 +748,32 @@ export async function getProgramDossier(
       origin: fact.origin,
     })),
   };
+}
+
+export async function getProgramDossiers(
+  programAcademicYearIds: string[],
+  options?: { applicantCategory?: ApplicantCategory },
+): Promise<ProgramDossier[]> {
+  const ids = [...new Set(programAcademicYearIds)];
+  if (ids.length === 0) return [];
+  const pays = await prisma.programAcademicYear.findMany({
+    where: { id: { in: ids } },
+    include: programDossierInclude,
+  });
+  const applicantCategory = options?.applicantCategory ?? "UNKNOWN";
+  return pays.map((pay) => buildProgramDossier(pay, applicantCategory));
+}
+
+export async function getProgramDossier(
+  programAcademicYearId: string,
+  options?: { applicantCategory?: ApplicantCategory },
+): Promise<ProgramDossier | null> {
+  const pay = await prisma.programAcademicYear.findUnique({
+    where: { id: programAcademicYearId },
+    include: programDossierInclude,
+  });
+  if (!pay) return null;
+  return buildProgramDossier(pay, options?.applicantCategory ?? "UNKNOWN");
 }
 
 export type EnsureDossierResult = {

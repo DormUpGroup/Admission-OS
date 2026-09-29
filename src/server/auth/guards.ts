@@ -1,13 +1,14 @@
+import { cache } from "react";
 import { auth } from "@/server/auth";
 import { prisma } from "@/lib/db";
 import type { UserRole } from "@/lib/enums";
 import { notFound, redirect } from "next/navigation";
 
-export async function requireSession() {
+export const requireSession = cache(async function requireSession() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   return session;
-}
+});
 
 export async function requireRole(roles: UserRole[]) {
   const session = await requireSession();
@@ -61,7 +62,7 @@ export async function assertStudentAccess(studentId: string) {
   if (!allowed) notFound();
 }
 
-export async function getCurrentStudent() {
+export const getCurrentStudent = cache(async function getCurrentStudent() {
   const session = await requireRole(["STUDENT"]);
   const student = await prisma.student.findFirst({
     where: {
@@ -70,7 +71,7 @@ export async function getCurrentStudent() {
   });
   if (!student) throw new Error("Профиль студента не привязан");
   return { session, student };
-}
+});
 
 export function studentScopeWhere(userId: string, role: UserRole) {
   if (role === "ADMIN") return {};
