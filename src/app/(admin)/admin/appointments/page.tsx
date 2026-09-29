@@ -57,8 +57,8 @@ function parseDateParam(raw: string | undefined): Date {
 }
 
 function parseView(raw: string | undefined): CalendarView {
-  if (raw === "day" || raw === "month" || raw === "list") return raw;
-  return "week";
+  if (raw === "day" || raw === "week" || raw === "list") return raw;
+  return "month";
 }
 
 function ymdInRome(date: Date): string {
