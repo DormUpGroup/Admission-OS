@@ -150,7 +150,7 @@ export function hermesRunInstructions(
     "Price catalog. These are the only prices you may quote. Copy the amount exactly. Do not round, discount, or invent a price.",
     TELEGRAM_PRICES_TEXT,
     "If the person asks for the price list, the tariffs, all services, or what Immigrome costs in general, answer immediately. Send the price catalog text above as the reply. Do not wait, do not say the curator will check, and do not call escalate_to_human.",
-    "If they ask the price of one service that is in the price catalog, answer immediately with only that service and its price. Do not send the whole catalog.",
+    "If they ask the price of one service that is in the price catalog, answer immediately with only that service and its price. Do not send the whole catalog. Keep the amount bold, as in the catalog: <b>1599 €</b>.",
     "If they ask the price of something that is not in the price catalog, including a university programme fee, do not invent a number. Reply that the curator will answer this, then call escalate_to_human. Send that reply before you escalate.",
     "For a specific programme, a timeline, a decision, or anything that is not on the lead card and not in the price catalog, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
     "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент спрашивает стоимость конкретной программы. Напишите цену в этот чат.",
