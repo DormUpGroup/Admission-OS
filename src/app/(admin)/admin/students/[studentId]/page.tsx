@@ -99,7 +99,7 @@ export default async function StudentProfilePage({
     deadlineBefore?: string;
   }>;
 }) {
-  await requireStaff();
+  const session = await requireStaff();
   const { studentId } = await params;
   const sp = await searchParams;
   const requestedTab =
@@ -149,7 +149,7 @@ export default async function StudentProfilePage({
   const needsProgramCatalog = tab === "programs" || tab === "applications";
   const needsTemplates = tab === "applications";
 
-  const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications] =
+  const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications, curators] =
     await Promise.all([
       needsProgramCatalog
         ? prisma.program.findMany({
@@ -168,6 +168,13 @@ export default async function StudentProfilePage({
             where: { userId: student.curatorId, studentId },
             orderBy: { createdAt: "desc" },
             take: 20,
+          })
+        : Promise.resolve([]),
+      session.user.role === "ADMIN"
+        ? prisma.user.findMany({
+            where: { role: { in: ["ADMIN", "CURATOR"] } },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true },
           })
         : Promise.resolve([]),
     ]);
@@ -413,6 +420,9 @@ export default async function StudentProfilePage({
         curatorName={student.curator?.name ?? null}
         curatorAssigned={Boolean(student.curatorId)}
         canAssignToMe={!student.curatorId}
+        canAssignCurator={session.user.role === "ADMIN"}
+        curators={curators}
+        currentCuratorId={student.curatorId}
         programsCount={shortlist.length}
         documentsApproved={docsApproved}
         documentsTotal={student.documents.length}

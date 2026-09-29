@@ -318,14 +318,51 @@ export async function updateStudentStatusAction(studentId: string, status: strin
 }
 
 export async function changeCuratorAction(formData: FormData) {
-  const session = await requireStaff();
-  if (session.user.role !== "ADMIN") throw new Error("Admin only");
-  const studentId = String(formData.get("studentId") || "");
-  const curatorId = String(formData.get("curatorId") || "");
-  await prisma.student.update({
-    where: { id: studentId },
-    data: { curatorId },
-  });
+  const session = await requireRole(["ADMIN"]);
+  const studentId = String(formData.get("studentId") || "").trim();
+  const curatorId = String(formData.get("curatorId") || "").trim();
+  if (!studentId || !curatorId) throw new Error("Выберите куратора");
+
+  const [student, curator] = await Promise.all([
+    prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, curatorId: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: curatorId },
+      select: { id: true, role: true, name: true },
+    }),
+  ]);
+  if (!student) throw new Error("Студент не найден");
+  if (!curator || (curator.role !== "ADMIN" && curator.role !== "CURATOR")) {
+    throw new Error("Куратор не найден");
+  }
+  if (student.curatorId !== curator.id) {
+    await prisma.$transaction([
+      prisma.student.update({
+        where: { id: student.id },
+        data: { curatorId: curator.id },
+      }),
+      prisma.conversation.updateMany({
+        where: { studentId: student.id },
+        data: { assignedCuratorId: curator.id },
+      }),
+      prisma.lead.updateMany({
+        where: { convertedStudentId: student.id },
+        data: { assignedCuratorId: curator.id },
+      }),
+    ]);
+    await logActivity({
+      type: "CURATOR_ASSIGNED",
+      studentId: student.id,
+      userId: session.user.id,
+      metadata: { name: curator.name, curatorId: curator.id },
+    });
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/students");
+  revalidatePath(`/admin/students/${student.id}`);
 }
 
 export async function portalUploadAction(formData: FormData) {

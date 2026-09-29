@@ -73,6 +73,8 @@ export function activityLabel(type: ActivityType, metadata?: string | null) {
       return "Подбор программ сброшен";
     case "INTAKE_LIMIT_CHANGED":
       return "Изменён лимит набора";
+    case "CURATOR_ASSIGNED":
+      return meta.name ? `Куратор: ${meta.name}` : "Назначен куратор";
     default:
       return type;
   }
