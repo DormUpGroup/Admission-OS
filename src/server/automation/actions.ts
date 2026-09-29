@@ -1,13 +1,21 @@
 import type { Prisma } from "@prisma/client";
 import { formatCuratorAutomationNotice } from "@/server/automation/curator-notice";
+import {
+  escalationIsCuratorHandoff,
+  explicitCuratorRequestCount,
+  shouldHandChatToCurator,
+  CURATOR_HANDOFF_REQUESTS,
+} from "@/server/automation/curator-handoff";
 import { createApprovalRequest } from "./approval";
 import { updateLeadQualification } from "./context";
 import {
   evaluateActionPolicyForConversation,
+  mentionsPrice,
   POLICY_DECISIONS,
   type PolicyEvaluation,
 } from "./policy";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
+import type { DbClient } from "@/server/commands/outbox";
 import { prisma } from "@/lib/db";
 
 type AgentActionResult<T> =
@@ -102,6 +110,29 @@ export async function escalateAgentToHuman(input: {
   });
   if (policy.decision === POLICY_DECISIONS.DENY) return { status: "DENIED", policy };
 
+  if (mentionsPrice(input.reason)) {
+    return {
+      status: "ALLOWED",
+      policy,
+      result: { conversationId: input.conversationId, notifiedCurator: false },
+    };
+  }
+
+  const inbound = await prisma.conversationMessage.findMany({
+    where: { conversationId: input.conversationId, direction: "INBOUND" },
+    select: { body: true },
+  });
+  if (
+    escalationIsCuratorHandoff(input.reason) &&
+    explicitCuratorRequestCount(inbound) < CURATOR_HANDOFF_REQUESTS
+  ) {
+    return {
+      status: "ALLOWED",
+      policy,
+      result: { conversationId: input.conversationId, notifiedCurator: false },
+    };
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     const conversation = await tx.conversation.findUnique({
       where: { id: input.conversationId },
@@ -143,6 +174,60 @@ export async function escalateAgentToHuman(input: {
     policy,
     result: { conversationId: input.conversationId, ...result },
   };
+}
+
+/** Pauses the chat after the client's third explicit request for a curator. */
+export async function handChatToCurator(
+  tx: DbClient,
+  conversationId: string,
+  now: Date,
+): Promise<boolean> {
+  const conversation = await tx.conversation.findUnique({
+    where: { id: conversationId },
+    include: {
+      lead: { select: { firstName: true, lastName: true, assignedCuratorId: true } },
+      student: { select: { curatorId: true, id: true } },
+      messages: {
+        where: { direction: "INBOUND" },
+        orderBy: { createdAt: "asc" },
+        select: { body: true },
+      },
+    },
+  });
+  if (!conversation || conversation.automationPausedAt) return false;
+  if (!shouldHandChatToCurator(conversation.messages)) return false;
+
+  const reason = "Клиент третий раз просит передать чат куратору.";
+  await tx.conversation.update({
+    where: { id: conversation.id },
+    data: { automationPausedAt: now, automationPauseReason: reason },
+  });
+  const curatorId =
+    conversation.assignedCuratorId ??
+    conversation.lead?.assignedCuratorId ??
+    conversation.student?.curatorId ??
+    null;
+  if (!curatorId) return true;
+  const name = [conversation.lead?.firstName, conversation.lead?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const notice = formatCuratorAutomationNotice({
+    clientName: name || null,
+    problem: reason,
+    action: "откройте переписку и ответьте клиенту сами. Бот в этом чате остановлен.",
+  });
+  await tx.inAppNotification.create({
+    data: {
+      userId: curatorId,
+      studentId: conversation.student?.id ?? null,
+      type: "automation.escalated",
+      title: notice.title,
+      body: notice.body,
+      metadataJson: JSON.stringify({ conversationId: conversation.id, source: "curator_handoff" }),
+    },
+  });
+  return true;
 }
 
 /**

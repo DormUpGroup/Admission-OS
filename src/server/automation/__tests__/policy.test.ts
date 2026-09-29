@@ -4,7 +4,7 @@ import {
   approvalPayloadHash,
   canonicalApprovalPayload,
 } from "../approval";
-import { evaluateActionPolicy, POLICY_DECISIONS } from "../policy";
+import { evaluateActionPolicy, mentionsPrice, POLICY_DECISIONS } from "../policy";
 
 const safeConversation = {
   channel: "TELEGRAM",
@@ -99,6 +99,15 @@ describe("agent policy gate", () => {
     });
     expect(result.decision).toBe(POLICY_DECISIONS.REQUIRE_APPROVAL);
     expect(result.reasons).toContain("intake_message_too_long");
+  });
+
+  it("treats a quoted amount and a price question as a price mention", () => {
+    expect(mentionsPrice("Магистратура — <b>1599 €</b>.")).toBe(true);
+    expect(mentionsPrice("Клиент спрашивает стоимость программы.")).toBe(true);
+    expect(mentionsPrice("Сколько стоит консультация?")).toBe(true);
+    expect(mentionsPrice("Пришлите тарифы")).toBe(true);
+    expect(mentionsPrice("Спросили программу")).toBe(false);
+    expect(mentionsPrice("Оценка программ")).toBe(false);
   });
 
   it("sends a reply that only mentions price without quoting one", () => {

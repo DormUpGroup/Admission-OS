@@ -29,6 +29,14 @@ export type EvaluateActionPolicyInput = {
   conversation: PolicyConversationContext;
 };
 
+const PRICE_MENTION_PATTERN =
+  /€|\beuro\b|сколько\s+стоит|(?:^|[^\p{L}])(?:евро|цен(?:а|ы|у|е|ой|ами|ах)?|стоимост\p{L}*|тариф\p{L}*|прайс\p{L}*)(?![\p{L}])/iu;
+
+/** A quoted amount or a question about cost. This must not pause the chat. */
+export function mentionsPrice(text: string): boolean {
+  return PRICE_MENTION_PATTERN.test(text);
+}
+
 const GUARANTEE_OR_PAYMENT_PATTERN =
   /(?:guarantee(?:d)?|guaranteed admission|guaranteed visa|visa approved|admission assured|confirm(?:ed)? payment|payment received|гарантир(?:уем|овано|ую)|гарантия|гарантированн\S* поступлен|гарантированн\S* виз|виза одобрен|поступление гарант|подтвержда(?:ем|ю) оплат|оплата подтвержден)/iu;
 

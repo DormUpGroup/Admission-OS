@@ -16,6 +16,7 @@ import {
   type HermesCreateRunBody,
 } from "./hermes-client";
 import { enqueueHermesPollRun } from "./hermes-poll-run";
+import { explicitCuratorRequestCount } from "./curator-handoff";
 
 export const HERMES_CREATE_RUN_EVENT = "hermes.create_run";
 
@@ -218,6 +219,9 @@ export async function dispatchHermesCreateRun(
       formatLeadCard(
         conversation.lead ? { ...conversation.lead, qualificationJson } : conversation.lead,
         chronological,
+      ),
+      explicitCuratorRequestCount(
+        chronological.filter((message) => message.direction === "INBOUND"),
       ),
     ),
   };

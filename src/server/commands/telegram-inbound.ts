@@ -14,6 +14,8 @@ import {
 } from "@/server/channels/telegram-copy";
 import { enqueueOutbox, resolveAutomationEnabled } from "@/server/commands/outbox";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
+import { handChatToCurator } from "@/server/automation/actions";
+import { CURATOR_HANDOFF_ACK } from "@/server/automation/curator-handoff";
 
 const CHANNEL = "TELEGRAM";
 
@@ -216,6 +218,14 @@ export async function ingestTelegramUpdate(input: {
           conversationId: conversation.id,
           body: TELEGRAM_PRICES_TEXT,
           clientRequestId: `telegram:prices:${message.providerEventId}`,
+        });
+        outboundMessageIds.push(sent.message.id);
+      } else if (!command && (await handChatToCurator(tx, conversation.id, now))) {
+        const sent = await requestTelegramSend({
+          tx,
+          conversationId: conversation.id,
+          body: CURATOR_HANDOFF_ACK,
+          clientRequestId: `telegram:curator:${message.providerEventId}`,
         });
         outboundMessageIds.push(sent.message.id);
       }

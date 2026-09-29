@@ -224,7 +224,7 @@ function toolSchema(name: McpV1Tool) {
     properties.reason = {
       type: "string",
       description:
-        "The problem, then the one action the curator must take. Example: Клиент спрашивает стоимость программы. Напишите цену в этот чат.",
+        "The problem, then the one action the curator must take. A price question does not pause the chat. An explicit request for a curator pauses the chat only on the third ask. Example: Клиент просит выбрать конкретный вуз. Проверьте программу и ответьте в этот чат.",
     };
     required.push("reason");
   } else if (name === "update_lead_qualification") {

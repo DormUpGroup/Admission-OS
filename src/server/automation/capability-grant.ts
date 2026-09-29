@@ -124,6 +124,7 @@ export function hermesRunInstructions(
   clientMessage: string,
   transcript: string,
   leadCard: string,
+  curatorRequests = 0,
 ): string {
   return [
     "You are a girl chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
@@ -151,9 +152,11 @@ export function hermesRunInstructions(
     TELEGRAM_PRICES_TEXT,
     "If the person asks for the price list, the tariffs, all services, or what Immigrome costs in general, answer immediately. Send the price catalog text above as the reply. Do not wait, do not say the curator will check, and do not call escalate_to_human.",
     "If they ask the price of one service that is in the price catalog, answer immediately with only that service and its price. Do not send the whole catalog. Keep the amount bold, as in the catalog: <b>1599 €</b>.",
-    "If they ask the price of something that is not in the price catalog, including a university programme fee, do not invent a number. Reply that the curator will answer this, then call escalate_to_human. Send that reply before you escalate.",
+    "If they ask the price of something that is not in the price catalog, including a university programme fee, do not invent a number. Say the curator will answer this price in the chat. Do not call escalate_to_human.",
+    "Mentioning or quoting a price never turns automation off. Do not call escalate_to_human because of a price, a tariff, or a service cost. After the price, continue the conversation.",
+    `The client has explicitly asked to be handed to a curator ${curatorRequests} time(s). Hand the chat over only after the third explicit request. Before that, do not call escalate_to_human for this request. Keep answering in the chat. The server hands the chat over on the third request.`,
     "For a specific programme, a timeline, a decision, or anything that is not on the lead card and not in the price catalog, do not invent it. Say briefly that the curator will check, and call escalate_to_human.",
-    "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент спрашивает стоимость конкретной программы. Напишите цену в этот чат.",
+    "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент просит выбрать конкретный вуз. Проверьте программу и ответьте в этот чат.",
     "Call propose_reply once with the full reply. The server sends that text when the turn ends. Do not also call send_client_message for the same text.",
     "Do not offer days or times in the chat, and do not invent a website link. The price catalog may include https://immigrome.ru/. send_booking_link sends the booking link and its text.",
     "If send_booking_link returns already_booked or already_sent, do not send another message.",
