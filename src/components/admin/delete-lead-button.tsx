@@ -3,28 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { deleteLeadAction } from "@/server/lead-actions";
-
-const CONFIRM_WORD = "УДАЛИТЬ";
 
 export function DeleteLeadButton({ leadId, name }: { leadId: string; name: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [phrase, setPhrase] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const confirmed = phrase.trim().toUpperCase() === CONFIRM_WORD;
 
   function close() {
     if (pending) return;
     setOpen(false);
-    setPhrase("");
     setError("");
   }
 
   function remove() {
-    if (!confirmed || pending) return;
+    if (pending) return;
     setPending(true);
     setError("");
     void deleteLeadAction(leadId)
@@ -55,6 +49,9 @@ export function DeleteLeadButton({ leadId, name }: { leadId: string; name: strin
             aria-labelledby="delete-lead-title"
             className="surface-card w-full max-w-md rounded-[28px] p-6"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") close();
+            }}
           >
             <h2 id="delete-lead-title" className="text-[20px] font-semibold tracking-tight">
               Удалить {name}?
@@ -63,23 +60,6 @@ export function DeleteLeadButton({ leadId, name }: { leadId: string; name: strin
               Пропадёт карточка, переписка в Telegram и записи на консультации. Восстановить это
               нельзя.
             </p>
-            <label className="mt-4 block text-[13px] text-muted-foreground" htmlFor="delete-lead-phrase">
-              Чтобы подтвердить, введите {CONFIRM_WORD}
-            </label>
-            <Input
-              id="delete-lead-phrase"
-              className="mt-2"
-              value={phrase}
-              autoComplete="off"
-              onChange={(event) => setPhrase(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  remove();
-                }
-                if (event.key === "Escape") close();
-              }}
-            />
             {error ? (
               <p className="mt-3 text-[13px] text-[var(--danger-fg)]" role="alert">
                 {error}
@@ -89,12 +69,7 @@ export function DeleteLeadButton({ leadId, name }: { leadId: string; name: strin
               <Button type="button" variant="outline" onClick={close} disabled={pending}>
                 Отмена
               </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={!confirmed || pending}
-                onClick={remove}
-              >
+              <Button type="button" variant="destructive" disabled={pending} onClick={remove}>
                 {pending ? "Удаляем…" : "Удалить навсегда"}
               </Button>
             </div>
