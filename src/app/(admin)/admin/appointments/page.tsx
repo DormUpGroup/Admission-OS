@@ -162,12 +162,8 @@ export default async function AdminAppointmentsPage({
       prisma.appointment.findMany({
         where:
           view === "list"
-            ? {
-                assignedCuratorId: curatorId,
-                status: { not: "CANCELLED" },
-              }
+            ? { status: { not: "CANCELLED" } }
             : {
-                assignedCuratorId: curatorId,
                 status: { not: "CANCELLED" },
                 OR: [
                   { startsAt: { gte: from, lt: to } },
