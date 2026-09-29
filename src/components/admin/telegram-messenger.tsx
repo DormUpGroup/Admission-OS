@@ -807,7 +807,24 @@ export function TelegramMessenger({
               <StudentAvatar name={active.title} size="md" />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <h2 className="min-w-0 truncate text-[15px] font-semibold leading-tight">
+                  {active.studentId || active.leadId ? (
+                    <Link
+                      href={
+                        active.studentId
+                          ? `/admin/students/${active.studentId}`
+                          : `/admin/leads/${active.leadId}`
+                      }
+                      className="min-w-0 truncate py-1 text-[15px] font-semibold leading-tight md:hidden"
+                    >
+                      {active.title}
+                    </Link>
+                  ) : null}
+                  <h2
+                    className={cn(
+                      "min-w-0 truncate text-[15px] font-semibold leading-tight",
+                      (active.studentId || active.leadId) && "hidden md:block",
+                    )}
+                  >
                     {active.title}
                   </h2>
                   <button
@@ -837,7 +854,7 @@ export function TelegramMessenger({
               {active.studentId ? (
                 <Link
                   href={`/admin/students/${active.studentId}`}
-                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px]"
+                  className="hidden shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px] md:inline-flex"
                 >
                   Профиль
                 </Link>
@@ -845,7 +862,7 @@ export function TelegramMessenger({
                 <>
                   <Link
                     href={`/admin/leads/${active.leadId}`}
-                    className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px]"
+                    className="hidden shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px] md:inline-flex"
                   >
                     Профиль
                   </Link>
@@ -853,7 +870,7 @@ export function TelegramMessenger({
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="shrink-0"
+                    className="hidden shrink-0 md:inline-flex"
                     disabled={moving}
                     onClick={() => void promoteLead()}
                   >
