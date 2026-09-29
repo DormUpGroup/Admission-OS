@@ -21,7 +21,8 @@ export async function GET(
     return NextResponse.json({ error: "missing_id" }, { status: 400 });
   }
 
-  const thread = await loadTelegramThread(conversationId.trim());
+  const markRead = new URL(_req.url).searchParams.get("markRead") !== "0";
+  const thread = await loadTelegramThread(conversationId.trim(), { markRead });
   if (!thread) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }

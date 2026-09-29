@@ -333,6 +333,7 @@ export function folderList(
 
 export async function loadTelegramThread(
   conversationId: string,
+  options?: { markRead?: boolean },
 ): Promise<TelegramThreadDto | null> {
   const row = await prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -368,25 +369,6 @@ export async function loadTelegramThread(
   });
   if (!row || row.channel !== "TELEGRAM") return null;
 
-  const runs = await prisma.agentRun.findMany({
-    where: { conversationId: row.id },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    select: { outputJson: true },
-  });
-  const replyDraft = latestUnsentReplyDraft(runs, row.messages);
-
-  const now = new Date();
-  const needsReadMark =
-    row.lastInboundAt != null &&
-    (row.staffLastReadAt == null || row.lastInboundAt > row.staffLastReadAt);
-  if (needsReadMark) {
-    await prisma.conversation.update({
-      where: { id: row.id },
-      data: { staffLastReadAt: now },
-    });
-  }
-
   const contactName = conversationBaseName(row);
   const staffIds = [
     ...new Set(
@@ -395,13 +377,32 @@ export async function loadTelegramThread(
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  const staffUsers =
+  const needsReadMark =
+    options?.markRead !== false &&
+    row.lastInboundAt != null &&
+    (row.staffLastReadAt == null || row.lastInboundAt > row.staffLastReadAt);
+
+  const [runs, staffUsers] = await Promise.all([
+    prisma.agentRun.findMany({
+      where: { conversationId: row.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: { outputJson: true },
+    }),
     staffIds.length > 0
-      ? await prisma.user.findMany({
+      ? prisma.user.findMany({
           where: { id: { in: staffIds } },
           select: { id: true, name: true },
         })
-      : [];
+      : Promise.resolve([]),
+    needsReadMark
+      ? prisma.conversation.update({
+          where: { id: row.id },
+          data: { staffLastReadAt: new Date() },
+        })
+      : Promise.resolve(null),
+  ]);
+  const replyDraft = latestUnsentReplyDraft(runs, row.messages);
   const staffNameById = new Map(staffUsers.map((u) => [u.id, u.name]));
 
   return {

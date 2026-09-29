@@ -213,7 +213,9 @@ export function TelegramMessenger({
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
   const [composer, setComposer] = useState(initialActive?.replyDraft ?? "");
-  const cacheRef = useRef<Map<string, TelegramActiveThread>>(new Map());
+  const cacheRef = useRef<Map<string, TelegramActiveThread>>(
+    initialActive ? new Map([[initialActive.id, initialActive]]) : new Map(),
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const inflightRef = useRef<{ id: string; ac: AbortController } | null>(null);
   const draftLock = useRef<"idle" | "editing" | "saving">("idle");
@@ -321,7 +323,7 @@ export function TelegramMessenger({
   }, []);
 
   const loadThread = useCallback(
-    async (id: string, opts?: { silent?: boolean }) => {
+    async (id: string, opts?: { silent?: boolean; markRead?: boolean }) => {
       const cached = cacheRef.current.get(id);
       if (cached && !opts?.silent) {
         setActive(cached);
@@ -334,8 +336,9 @@ export function TelegramMessenger({
       inflightRef.current = { id, ac };
       if (!opts?.silent && !cached) setThreadLoading(true);
       try {
+        const markRead = opts?.markRead === false ? "0" : "1";
         const res = await fetch(
-          `/api/admin/telegram/conversations/${encodeURIComponent(id)}?t=${Date.now()}`,
+          `/api/admin/telegram/conversations/${encodeURIComponent(id)}?markRead=${markRead}`,
           { signal: ac.signal, cache: "no-store" },
         );
         if (!res.ok) throw new Error(`thread ${res.status}`);
@@ -361,14 +364,60 @@ export function TelegramMessenger({
       );
       syncUrl(folder, id);
       const cached = cacheRef.current.get(id);
-      if (cached) setActive(cached);
-      else setActive(null);
-      void loadThread(id).then(() => {
-        router.refresh();
-      });
+      if (cached) {
+        setActive(cached);
+        setThreadLoading(false);
+      } else {
+        const item = list.find((c) => c.id === id);
+        setThreadLoading(true);
+        setActive({
+          id,
+          title: item?.title ?? "",
+          contactName: item?.title ?? "",
+          automationPaused: item?.automationPaused ?? false,
+          hasPendingDelivery: false,
+          onPlatform: item?.onPlatform ?? false,
+          messages: [],
+          replyDraft: null,
+        });
+      }
+      void loadThread(id);
     },
-    [folder, loadThread, router],
+    [folder, list, loadThread],
   );
+
+  useEffect(() => {
+    const ids = list
+      .map((item) => item.id)
+      .filter((id) => !cacheRef.current.has(id))
+      .slice(0, 8);
+    if (ids.length === 0) return;
+    const ac = new AbortController();
+    let cursor = 0;
+
+    async function pull() {
+      while (cursor < ids.length) {
+        const id = ids[cursor];
+        cursor += 1;
+        if (!id || ac.signal.aborted || cacheRef.current.has(id)) continue;
+        try {
+          const res = await fetch(
+            `/api/admin/telegram/conversations/${encodeURIComponent(id)}?markRead=0`,
+            { signal: ac.signal, cache: "no-store" },
+          );
+          if (!res.ok || ac.signal.aborted || cacheRef.current.has(id)) continue;
+          const data = (await res.json()) as TelegramActiveThread;
+          if (ac.signal.aborted || cacheRef.current.has(id)) continue;
+          cacheRef.current.set(id, data);
+        } catch (error) {
+          if ((error as Error).name === "AbortError") return;
+        }
+      }
+    }
+
+    void Promise.all(Array.from({ length: Math.min(3, ids.length) }, () => pull()));
+    return () => ac.abort();
+  }, [list]);
 
   // Wait for the thread request to finish, then read again. Aborting it every
   // second dropped the response whenever the database was slower than the timer.
@@ -830,6 +879,11 @@ export function TelegramMessenger({
               ref={scrollRef}
               className="flex-1 space-y-0.5 overflow-y-auto px-4 py-3"
             >
+              {threadLoading && active.messages.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Загрузка…
+                </p>
+              ) : null}
               {active.messages.map((m, i) => {
                 const outbound = m.direction === "OUTBOUND";
                 const command = isBotCommandBody(m.body);
