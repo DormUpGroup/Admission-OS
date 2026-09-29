@@ -13,8 +13,9 @@ describe("telegram greeting name", () => {
     expect(explicitTelegramFirstName("Мария Иванова")).toBe("Мария");
     const welcome = telegramWelcomeText("Мария Иванова");
     expect(welcome.startsWith("Здравствуйте, Мария.")).toBe(true);
-    expect(welcome).toContain("Я бот Immigrome");
-    expect(welcome).toContain("/prices");
+    expect(welcome).toContain("Я помощник кураторов Immigrome");
+    expect(welcome).toContain("Готовы начать?");
+    expect(welcome).not.toContain("/prices");
     expect(welcome).not.toContain("визу");
     expect(welcome).not.toContain("несколько вопросов");
     expect(explicitTelegramLeadName("Анна-Мария Rossi")).toEqual({

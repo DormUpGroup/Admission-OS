@@ -51,9 +51,9 @@ export function explicitTelegramLeadName(displayName: string | null | undefined)
 }
 
 const WELCOME_BODY = [
-  "Я бот Immigrome. Мы сопровождаем поступление в вузы Италии.",
+  "Я помощник кураторов Immigrome.",
   "",
-  "В этом чате можно спросить про поступление, документы и цены — /prices. Ответ придёт сюда.",
+  "Готовы начать?",
 ].join("\n");
 
 export function telegramWelcomeText(displayName: string | null | undefined): string {

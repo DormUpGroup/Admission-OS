@@ -507,6 +507,17 @@ describe("formatLeadCard", () => {
     expect(card).not.toContain("Ask only");
   });
 
+  it("treats yes to the start greeting as agreement to begin", () => {
+    const card = formatLeadCard(null, [
+      {
+        direction: "OUTBOUND",
+        body: "Здравствуйте.\n\nЯ помощник кураторов Immigrome.\n\nГотовы начать?",
+      },
+      { direction: "INBOUND", body: "Да" },
+    ]);
+    expect(card).toContain("магистратура, foundation, or мастер");
+  });
+
   it("asks магистратура, foundation, or мастер after they agree", () => {
     const card = formatLeadCard(null, [
       {

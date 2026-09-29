@@ -132,7 +132,7 @@ export function questionnaireOfferMessage(): string {
 }
 
 function mentionsQuestionnaire(text: string | null | undefined): boolean {
-  return /начн[её]м\?/iu.test(text ?? "");
+  return /начн[её]м\?|готовы начать\?/iu.test(text ?? "");
 }
 
 export function agreedToQuestionnaire(turn: BookingConsentTurn): boolean {
