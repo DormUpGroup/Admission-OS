@@ -449,21 +449,34 @@ export async function prepareCalendarDelete(
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
   });
+  const payloadEventId =
+    typeof (payload as { googleEventId?: unknown }).googleEventId === "string"
+      ? String((payload as { googleEventId?: unknown }).googleEventId)
+      : null;
   if (!appointment) {
+    if (!payloadEventId) {
+      return {
+        action: "skip",
+        appointmentId,
+        googleEventId: null,
+        calendarId: null,
+        credentials: null,
+      };
+    }
+    const calendarId = env.GOOGLE_CALENDAR_ID?.trim().replace(/\r/g, "") ?? null;
+    if (!calendarId) {
+      throw new Error("GOOGLE_CALENDAR_ID is not configured");
+    }
     return {
-      action: "skip",
+      action: "delete",
       appointmentId,
-      googleEventId: null,
-      calendarId: null,
-      credentials: null,
+      googleEventId: payloadEventId,
+      calendarId,
+      credentials: calendarCredentials(env),
     };
   }
 
-  const googleEventId =
-    appointment.googleEventId ??
-    (typeof (payload as { googleEventId?: unknown }).googleEventId === "string"
-      ? String((payload as { googleEventId?: unknown }).googleEventId)
-      : null);
+  const googleEventId = appointment.googleEventId ?? payloadEventId;
 
   if (!googleEventId) {
     return {

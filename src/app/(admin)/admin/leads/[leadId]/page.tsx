@@ -7,6 +7,7 @@ import { buildLeadCard } from "@/lib/lead-profile";
 import { PageHeader } from "@/components/page-header";
 import { StudentAvatar } from "@/components/student-avatar";
 import { PromoteLeadButton } from "@/components/admin/promote-lead-button";
+import { DeleteLeadButton } from "@/components/admin/delete-lead-button";
 import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,7 @@ export default async function LeadProfilePage({
               </Link>
             ) : null}
             {primaryChat ? <PromoteLeadButton conversationId={primaryChat.id} /> : null}
+            <DeleteLeadButton leadId={lead.id} name={name} />
           </>
         }
       >
