@@ -53,6 +53,60 @@ function newConfirmationToken() {
   return randomBytes(8).toString("hex");
 }
 
+const APPOINTMENT_YES = new Set([
+  "да",
+  "даа",
+  "давай",
+  "давайте",
+  "ок",
+  "окей",
+  "хорошо",
+  "согласен",
+  "согласна",
+  "согласны",
+  "yes",
+  "ok",
+  "yeah",
+  "угу",
+  "ага",
+  "подтверждаю",
+  "подтвердить",
+]);
+
+function normalizeAppointmentReply(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/[«»"'“”.,!?…:;()[\]\-—–]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** A chat reply that accepts a consultation time already proposed in this chat. */
+export function isAppointmentConfirmation(
+  text: string,
+  previousOutbound: string | null | undefined,
+): boolean {
+  const raw = text.trim();
+  if (!raw || raw.length > 80) return false;
+  const normalized = normalizeAppointmentReply(raw);
+  if (!normalized) return false;
+  if (
+    /^(нет|не надо|не хочу|не подходит|не удобно|другое время|другой день)/.test(normalized) ||
+    /друг(ое|ой) время|перенес|не подход|не удобн/.test(normalized)
+  ) {
+    return false;
+  }
+
+  const asked = /подтвердите/iu.test(previousOutbound ?? "");
+  const explicit =
+    /подтвержда/.test(normalized) ||
+    /(время|мне) (подходит|удобно)/.test(normalized) ||
+    (asked && /^(подходит|удобно)$/.test(normalized));
+  if (explicit) return true;
+  return asked && APPOINTMENT_YES.has(normalized);
+}
+
 async function assertNoCuratorConflict(
   db: DbClient,
   input: {
@@ -438,62 +492,146 @@ export async function appointmentReschedule(
   return appointmentProposeReschedule(input);
 }
 
+async function confirmAppointmentWithToken(
+  tx: DbClient,
+  appointmentId: string,
+  token: string,
+  options?: { source?: "client" | "staff" },
+): Promise<{ ok: true; appointment: Appointment } | { ok: false; reason: string }> {
+  const current = await tx.appointment.findUnique({
+    where: { id: appointmentId },
+  });
+  if (!current) return { ok: false as const, reason: "not_found" };
+  if (current.confirmationToken !== token) {
+    return { ok: false as const, reason: "bad_token" };
+  }
+  if (current.status === APPOINTMENT_STATUS.CANCELLED) {
+    return { ok: false as const, reason: "cancelled" };
+  }
+
+  const startsAt = current.pendingStartsAt ?? current.startsAt;
+  const endsAt = current.pendingEndsAt ?? current.endsAt;
+
+  if (current.assignedCuratorId) {
+    await assertNoCuratorConflict(tx, {
+      curatorId: current.assignedCuratorId,
+      startsAt,
+      endsAt,
+      excludeId: current.id,
+    });
+  }
+
+  const appointment = await tx.appointment.update({
+    where: { id: current.id },
+    data: {
+      startsAt,
+      endsAt,
+      pendingStartsAt: null,
+      pendingEndsAt: null,
+      confirmationToken: null,
+      confirmationRequestedAt: null,
+      lastClientNudgeAt: null,
+      curatorNudgeSentAt: null,
+      clientChangeUnseen: options?.source !== "staff",
+      status: APPOINTMENT_STATUS.PENDING,
+      version: { increment: 1 },
+    },
+  });
+
+  await enqueueOutbox(tx, {
+    aggregateType: "Appointment",
+    aggregateId: appointment.id,
+    eventType: "calendar.upsert",
+    payload: { appointmentId: appointment.id },
+    idempotencyKey: `calendar.upsert:${appointment.id}:v${appointment.version}`,
+  });
+
+  return { ok: true as const, appointment };
+}
+
 export async function appointmentConfirmByClient(
   appointmentId: string,
   token: string,
   options?: { source?: "client" | "staff" },
 ): Promise<{ ok: true; appointment: Appointment } | { ok: false; reason: string }> {
-  return prisma.$transaction(async (tx) => {
-    const current = await tx.appointment.findUnique({
-      where: { id: appointmentId },
-    });
-    if (!current) return { ok: false as const, reason: "not_found" };
-    if (current.confirmationToken !== token) {
-      return { ok: false as const, reason: "bad_token" };
+  try {
+    return await prisma.$transaction((tx) =>
+      confirmAppointmentWithToken(tx, appointmentId, token, options),
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message === "The selected slot is no longer available") {
+      return { ok: false, reason: "conflict" };
     }
-    if (current.status === APPOINTMENT_STATUS.CANCELLED) {
-      return { ok: false as const, reason: "cancelled" };
-    }
+    throw error;
+  }
+}
 
-    const startsAt = current.pendingStartsAt ?? current.startsAt;
-    const endsAt = current.pendingEndsAt ?? current.endsAt;
-
-    if (current.assignedCuratorId) {
-      await assertNoCuratorConflict(tx, {
-        curatorId: current.assignedCuratorId,
-        startsAt,
-        endsAt,
-        excludeId: current.id,
-      });
-    }
-
-    const appointment = await tx.appointment.update({
-      where: { id: current.id },
-      data: {
-        startsAt,
-        endsAt,
-        pendingStartsAt: null,
-        pendingEndsAt: null,
-        confirmationToken: null,
-        confirmationRequestedAt: null,
-        lastClientNudgeAt: null,
-        curatorNudgeSentAt: null,
-        clientChangeUnseen: options?.source !== "staff",
-        status: APPOINTMENT_STATUS.PENDING,
-        version: { increment: 1 },
-      },
-    });
-
-    await enqueueOutbox(tx, {
-      aggregateType: "Appointment",
-      aggregateId: appointment.id,
-      eventType: "calendar.upsert",
-      payload: { appointmentId: appointment.id },
-      idempotencyKey: `calendar.upsert:${appointment.id}:v${appointment.version}`,
-    });
-
-    return { ok: true as const, appointment };
+/**
+ * Confirm a proposed consultation when the person accepts it in the chat.
+ * Returns confirmed when this message was the confirmation, so intake does not
+ * treat it as a problem for the curator.
+ */
+export async function confirmAppointmentFromChat(
+  tx: DbClient,
+  input: {
+    conversationId: string;
+    leadId: string | null;
+    studentId: string | null;
+    text: string;
+    clientRequestId: string;
+  },
+): Promise<{ confirmed: boolean; messageId: string | null }> {
+  const previous = await tx.conversationMessage.findFirst({
+    where: { conversationId: input.conversationId, direction: "OUTBOUND" },
+    orderBy: { createdAt: "desc" },
+    select: { body: true },
   });
+  if (!isAppointmentConfirmation(input.text, previous?.body)) {
+    return { confirmed: false, messageId: null };
+  }
+
+  const or: Prisma.AppointmentWhereInput[] = [{ conversationId: input.conversationId }];
+  if (input.leadId) or.push({ leadId: input.leadId });
+  if (input.studentId) or.push({ studentId: input.studentId });
+
+  const current = await tx.appointment.findFirst({
+    where: {
+      confirmationToken: { not: null },
+      status: { not: APPOINTMENT_STATUS.CANCELLED },
+      OR: or,
+    },
+    orderBy: { confirmationRequestedAt: "desc" },
+  });
+  if (!current?.confirmationToken) return { confirmed: false, messageId: null };
+
+  let result: { ok: true; appointment: Appointment } | { ok: false; reason: string };
+  try {
+    result = await confirmAppointmentWithToken(tx, current.id, current.confirmationToken, {
+      source: "client",
+    });
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "The selected slot is no longer available") {
+      throw error;
+    }
+    const sent = await requestTelegramSend({
+      tx,
+      conversationId: input.conversationId,
+      body: "Это время уже занято. Напишите, и куратор предложит другое.",
+      clientRequestId: input.clientRequestId,
+    });
+    return { confirmed: true, messageId: sent.message.id };
+  }
+
+  if (!result.ok) return { confirmed: false, messageId: null };
+
+  const when = formatSlotLabel(result.appointment.startsAt, result.appointment.timezone);
+  const sent = await requestTelegramSend({
+    tx,
+    conversationId: input.conversationId,
+    body: `Спасибо! Время подтверждено.\n${when} (${result.appointment.timezone})`,
+    clientRequestId: input.clientRequestId,
+  });
+  return { confirmed: true, messageId: sent.message.id };
 }
 
 /** Admin override when there is no Telegram conversation. */

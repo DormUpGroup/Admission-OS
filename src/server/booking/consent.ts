@@ -127,6 +127,58 @@ export function latestConsentTurn(messages: ConsentMessage[]): BookingConsentTur
   return { previousBody, clientBody: messages[clientIndex]?.body ?? null };
 }
 
+export function questionnaireOfferMessage(): string {
+  return "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?";
+}
+
+function mentionsQuestionnaire(text: string | null | undefined): boolean {
+  return /начн[её]м\?/iu.test(text ?? "");
+}
+
+export function agreedToQuestionnaire(turn: BookingConsentTurn): boolean {
+  const client = turn.clientBody?.trim() ?? "";
+  if (!client || isRefusal(client) || !mentionsQuestionnaire(turn.previousBody)) return false;
+  return isShortAgreement(client);
+}
+
+export function declinedQuestionnaire(turn: BookingConsentTurn): boolean {
+  const client = turn.clientBody?.trim() ?? "";
+  if (!client || !mentionsQuestionnaire(turn.previousBody)) return false;
+  return isRefusal(client);
+}
+
+export function questionnaireDeclineCount(messages: ConsentMessage[]): number {
+  let count = 0;
+  let previous = "";
+  for (const message of messages) {
+    const body = message.body?.trim() ?? "";
+    if (!body) continue;
+    if (
+      message.direction === "INBOUND" &&
+      declinedQuestionnaire({ previousBody: previous || null, clientBody: body })
+    ) {
+      count += 1;
+    }
+    previous = body;
+  }
+  return count;
+}
+
+export function clientAlreadyAgreedToQuestionnaire(messages: ConsentMessage[]): boolean {
+  let agreed = false;
+  let previous = "";
+  for (const message of messages) {
+    const body = message.body?.trim() ?? "";
+    if (!body) continue;
+    if (message.direction === "INBOUND" && mentionsQuestionnaire(previous)) {
+      if (isRefusal(body)) agreed = false;
+      else if (isShortAgreement(body)) agreed = true;
+    }
+    previous = body;
+  }
+  return agreed;
+}
+
 /** The client said no to a consultation question. */
 export function declinedConsultation(turn: BookingConsentTurn): boolean {
   const client = turn.clientBody?.trim() ?? "";

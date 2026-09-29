@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import {
   hashJson,
+  jsonHasBlockedMedia,
+  messageHasBlockedMedia,
   normalizeTelegramUpdate,
   type NormalizedTelegramMessage,
 } from "@/server/channels/telegram";
@@ -89,6 +91,51 @@ describe("telegram normalize (unit)", () => {
 
     const server = Object.assign(new Error("boom"), { status: 502 });
     expect(isAmbiguousTelegramError(server)).toBe(true);
+  });
+
+  it("marks photos, video, circles, and voice as blocked media", () => {
+    const photo = normalizeTelegramUpdate({
+      update_id: 43,
+      message: {
+        message_id: 8,
+        photo: [{ file_id: "small" }, { file_id: "large" }],
+        from: { id: 100, first_name: "Ada" },
+        chat: { id: 100, type: "private" },
+      },
+    });
+    const circle = normalizeTelegramUpdate({
+      update_id: 44,
+      message: {
+        message_id: 9,
+        video_note: { file_id: "circle" },
+        from: { id: 100, first_name: "Ada" },
+        chat: { id: 100, type: "private" },
+      },
+    });
+    const voice = normalizeTelegramUpdate({
+      update_id: 45,
+      message: {
+        message_id: 10,
+        voice: { file_id: "voice" },
+        from: { id: 100, first_name: "Ada" },
+        chat: { id: 100, type: "private" },
+      },
+    });
+    const file = normalizeTelegramUpdate({
+      update_id: 46,
+      message: {
+        message_id: 11,
+        document: { file_id: "pdf", file_name: "diploma.pdf" },
+        from: { id: 100, first_name: "Ada" },
+        chat: { id: 100, type: "private" },
+      },
+    });
+    expect(photo?.kind === "message" && messageHasBlockedMedia(photo.attachments)).toBe(true);
+    expect(circle?.kind === "message" && circle.attachments[0]?.kind).toBe("video_note");
+    expect(voice?.kind === "message" && messageHasBlockedMedia(voice.attachments)).toBe(true);
+    expect(file?.kind === "message" && messageHasBlockedMedia(file.attachments)).toBe(false);
+    expect(jsonHasBlockedMedia([{ kind: "audio" }])).toBe(true);
+    expect(jsonHasBlockedMedia([{ kind: "document" }])).toBe(false);
   });
 
   it("parseTelegramBotCommand strips @bot suffix", () => {

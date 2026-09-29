@@ -28,6 +28,7 @@ describe("intake typing", () => {
       isLeadConversation: true,
     };
     expect(shouldShowIntakeTyping({ ...base, text: "/start" })).toBe(false);
+    expect(shouldShowIntakeTyping({ ...base, blockedMedia: true })).toBe(false);
     expect(shouldShowIntakeTyping({ ...base, automationPaused: true })).toBe(false);
     expect(shouldShowIntakeTyping({ ...base, isLeadConversation: false })).toBe(false);
     expect(shouldShowIntakeTyping({ ...base, automationEnabled: false })).toBe(false);

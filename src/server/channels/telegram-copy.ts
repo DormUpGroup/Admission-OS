@@ -1,5 +1,7 @@
 /** Immigrome Telegram bot copy (RU). No emoji spam, no "AI assistant". */
 
+import { parseTelegramBotCommand } from "@/lib/telegram-conversation-kind";
+
 const GENERIC_DISPLAY_NAMES = new Set([
   "user",
   "username",
@@ -49,11 +51,9 @@ export function explicitTelegramLeadName(displayName: string | null | undefined)
 }
 
 const WELCOME_BODY = [
-  "Вы на связи с Immigrome — мы сопровождаем поступление в вузы Италии.",
+  "Я бот Immigrome. Мы сопровождаем поступление в вузы Италии.",
   "",
-  "Напишите куратору ваш вопрос: программа, документы или следующий шаг. Ответ придёт в этот чат.",
-  "",
-  "Мы не оформляем визу и не гарантируем зачисление.",
+  "В этом чате можно спросить про поступление, документы и цены — /prices. Ответ придёт сюда.",
 ].join("\n");
 
 export function telegramWelcomeText(displayName: string | null | undefined): string {
@@ -64,6 +64,26 @@ export function telegramWelcomeText(displayName: string | null | undefined): str
 
 export const TELEGRAM_HELP_TEXT =
   "Сейчас бот принимает сообщения и передаёт их куратору Immigrome. Напишите вопрос — ответ придёт сюда. /start — краткое приветствие. /prices — услуги и цены.";
+
+export const TELEGRAM_MEDIA_REFUSAL_TEXT =
+  "Фото, видео, кружки и голосовые лучше не присылать. Напишите, пожалуйста, текстом.";
+
+/** Same command sent again, with no other client message between them. */
+export function isSameConsecutiveCommand(
+  command: string | null,
+  previousBody: string | null | undefined,
+): boolean {
+  const current = telegramCommandFamily(command);
+  if (!current) return false;
+  const previous = telegramCommandFamily(parseTelegramBotCommand(previousBody ?? ""));
+  return previous === current;
+}
+
+function telegramCommandFamily(command: string | null): string | null {
+  if (!command) return null;
+  if (isTelegramPriceCommand(command)) return "prices";
+  return command;
+}
 
 /**
  * Public prices from https://immigrome.ru/ (tariff and service cards).
@@ -100,4 +120,4 @@ export function isTelegramPriceCommand(command: string | null): boolean {
   return command === "prices" || command === "price" || command === "pricelist";
 }
 
-export { parseTelegramBotCommand } from "@/lib/telegram-conversation-kind";
+export { parseTelegramBotCommand };

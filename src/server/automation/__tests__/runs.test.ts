@@ -156,5 +156,38 @@ describe("Intake run queue", () => {
         payloadJson: { conversationId: "conversation-cmd", messageId: "message-3" },
       }),
     ).toEqual({ queued: false, reason: "bot_command" });
+
+    const mediaDb = {
+      conversation: {
+        findUnique: async () => ({
+          id: "conversation-media",
+          leadId: "lead-1",
+          studentId: null,
+          automationPausedAt: null,
+          messages: [{ body: null, attachmentsJson: [{ kind: "video_note" }] }],
+        }),
+      },
+    };
+    expect(
+      await queueIntakeRunForMessageReceived(mediaDb as never, {
+        aggregateId: "message-4",
+        eventType: "message.received",
+        idempotencyKey: "event-4",
+        payloadJson: { conversationId: "conversation-media", messageId: "message-4" },
+      }),
+    ).toEqual({ queued: false, reason: "blocked_media" });
+
+    expect(
+      await queueIntakeRunForMessageReceived({} as never, {
+        aggregateId: "message-5",
+        eventType: "message.received",
+        idempotencyKey: "event-5",
+        payloadJson: {
+          conversationId: "conversation-1",
+          messageId: "message-5",
+          appointmentConfirmed: true,
+        },
+      }),
+    ).toEqual({ queued: false, reason: "appointment_confirmed" });
   });
 });

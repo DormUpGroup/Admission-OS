@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   explicitTelegramFirstName,
   explicitTelegramLeadName,
+  isSameConsecutiveCommand,
   isTelegramPriceCommand,
   TELEGRAM_PRICES_TEXT,
   telegramWelcomeText,
@@ -10,9 +11,12 @@ import {
 describe("telegram greeting name", () => {
   it("greets by the Telegram first name", () => {
     expect(explicitTelegramFirstName("Мария Иванова")).toBe("Мария");
-    expect(telegramWelcomeText("Мария Иванова").startsWith("Здравствуйте, Мария.")).toBe(
-      true,
-    );
+    const welcome = telegramWelcomeText("Мария Иванова");
+    expect(welcome.startsWith("Здравствуйте, Мария.")).toBe(true);
+    expect(welcome).toContain("Я бот Immigrome");
+    expect(welcome).toContain("/prices");
+    expect(welcome).not.toContain("визу");
+    expect(welcome).not.toContain("несколько вопросов");
     expect(explicitTelegramLeadName("Анна-Мария Rossi")).toEqual({
       firstName: "Анна-Мария",
       lastName: "Rossi",
@@ -32,6 +36,17 @@ describe("telegram greeting name", () => {
       firstName: null,
       lastName: null,
     });
+  });
+});
+
+describe("consecutive commands", () => {
+  it("treats a repeated price command as the same request", () => {
+    expect(isSameConsecutiveCommand("prices", "/prices")).toBe(true);
+    expect(isSameConsecutiveCommand("pricelist", "/price")).toBe(true);
+    expect(isSameConsecutiveCommand("help", "/help")).toBe(true);
+    expect(isSameConsecutiveCommand("prices", "/help")).toBe(false);
+    expect(isSameConsecutiveCommand("prices", "Сколько стоит магистратура?")).toBe(false);
+    expect(isSameConsecutiveCommand(null, "/prices")).toBe(false);
   });
 });
 

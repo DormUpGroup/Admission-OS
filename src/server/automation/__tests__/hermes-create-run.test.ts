@@ -221,7 +221,7 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("send_client_message");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
-      expect(sent.instructions).toContain("Next: Ask only this one missing fact: citizenship");
+      expect(sent.instructions).toContain("Next: Ask only this one missing fact: educationLevel");
       expect(sent.instructions).toContain("Never ask a Known fact again");
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("the one action the curator should take");
@@ -232,6 +232,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("You are a girl chatting with this new lead");
       expect(sent.instructions).toContain("поняла, передала, уточнила, написала");
       expect(sent.instructions).toContain("If Name is unknown, do not address the client by name");
+      expect(sent.instructions).toContain("do not greet again");
+      expect(sent.instructions).toContain("repeats the previous client message");
       expect(sent.instructions).toContain("answer immediately");
       expect(sent.instructions).toContain("1599 €");
       expect(sent.instructions).toContain("third explicit request");
@@ -496,5 +498,59 @@ describe("formatLeadCard", () => {
     expect(card).toContain("Хотите консультацию?");
     expect(card).toContain("Do not send the booking link until they say yes");
     expect(card).toContain("Missing:");
+  });
+
+  it("offers to start questions before asking a fact", () => {
+    const card = formatLeadCard(null, [{ direction: "INBOUND", body: "Привет" }]);
+    expect(card).toContain("Начнём?");
+    expect(card).toContain("Do not ask a fact");
+    expect(card).not.toContain("Ask only");
+  });
+
+  it("asks магистратура, foundation, or мастер after they agree", () => {
+    const card = formatLeadCard(null, [
+      {
+        direction: "OUTBOUND",
+        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+      },
+      { direction: "INBOUND", body: "Да" },
+    ]);
+    expect(card).toContain("магистратура, foundation, or мастер");
+    expect(card).not.toContain("Do not ask a fact");
+  });
+
+  it("explains the questions after one refusal and stops after the second", () => {
+    const once = formatLeadCard(null, [
+      {
+        direction: "OUTBOUND",
+        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+      },
+      { direction: "INBOUND", body: "Нет" },
+    ]);
+    expect(once).toContain("declined the questions");
+    expect(once).toContain("не предлагать лишние шаги");
+    expect(once).not.toContain("Ask only");
+
+    const twice = formatLeadCard(null, [
+      {
+        direction: "OUTBOUND",
+        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+      },
+      { direction: "INBOUND", body: "Нет" },
+      {
+        direction: "OUTBOUND",
+        body: "Вопросы нужны, чтобы понять ваш случай и не предлагать лишние шаги.\n\nНачнём?",
+      },
+      { direction: "INBOUND", body: "Нет" },
+    ]);
+    expect(twice).toContain("declined the questions again");
+    expect(twice).toContain("do not offer the questionnaire again");
+  });
+
+  it("skips the offer when the level was already named", () => {
+    const card = formatLeadCard(null, [{ direction: "INBOUND", body: "Хочу на мастер" }]);
+    expect(card).toContain("studyLevel: Магистратура");
+    expect(card).toContain("Ask only this one missing fact: educationLevel");
+    expect(card).not.toContain("Начнём?");
   });
 });

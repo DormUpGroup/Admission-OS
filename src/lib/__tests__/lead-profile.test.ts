@@ -95,6 +95,18 @@ describe("buildLeadCard", () => {
     });
   });
 
+  it("reads мастер as магистратура and foundation as preparatory", () => {
+    expect(
+      buildLeadCard({ messages: [inbound("Хочу на мастер")] }).find((row) => row.key === "studyLevel"),
+    ).toEqual({ key: "studyLevel", label: "Уровень", value: "Магистратура" });
+    expect(
+      buildLeadCard({ messages: [inbound("Хочу в магистратуру")] }).find((row) => row.key === "studyLevel"),
+    ).toEqual({ key: "studyLevel", label: "Уровень", value: "Магистратура" });
+    expect(
+      buildLeadCard({ messages: [inbound("Foundation")] }).find((row) => row.key === "studyLevel"),
+    ).toEqual({ key: "studyLevel", label: "Уровень", value: "Подготовительный" });
+  });
+
   it("keeps a saved fact when the chat says something else", () => {
     const card = buildLeadCard({
       qualificationJson: { studyLevel: "магистратура" },

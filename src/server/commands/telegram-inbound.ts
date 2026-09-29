@@ -2,16 +2,21 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   hashJson,
+  jsonHasBlockedMedia,
+  messageHasBlockedMedia,
   type NormalizedTelegramMessage,
 } from "@/server/channels/telegram";
 import {
   explicitTelegramLeadName,
+  isSameConsecutiveCommand,
   isTelegramPriceCommand,
   parseTelegramBotCommand,
   TELEGRAM_HELP_TEXT,
+  TELEGRAM_MEDIA_REFUSAL_TEXT,
   TELEGRAM_PRICES_TEXT,
   telegramWelcomeText,
 } from "@/server/channels/telegram-copy";
+import { confirmAppointmentFromChat } from "@/server/commands/appointments";
 import { enqueueOutbox, resolveAutomationEnabled } from "@/server/commands/outbox";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { handChatToCurator } from "@/server/automation/actions";
@@ -180,6 +185,19 @@ export async function ingestTelegramUpdate(input: {
     }
 
     const outboundMessageIds: string[] = [];
+    let appointmentConfirmed = false;
+    if (createdInbound && message.text?.trim()) {
+      const confirmed = await confirmAppointmentFromChat(tx, {
+        conversationId: conversation.id,
+        leadId,
+        studentId,
+        text: message.text,
+        clientRequestId: `telegram:appt-confirm:${message.providerEventId}`,
+      });
+      appointmentConfirmed = confirmed.confirmed;
+      if (confirmed.messageId) outboundMessageIds.push(confirmed.messageId);
+    }
+
     const outbox = await enqueueOutbox(tx, {
       aggregateType: "ConversationMessage",
       aggregateId: messageId,
@@ -189,45 +207,73 @@ export async function ingestTelegramUpdate(input: {
         conversationId: conversation.id,
         channel: CHANNEL,
         providerEventId: message.providerEventId,
+        appointmentConfirmed,
       },
       idempotencyKey: `telegram:update:${message.providerEventId}`,
     });
 
     if (createdInbound && (await resolveAutomationEnabled(tx))) {
       const command = parseTelegramBotCommand(message.text);
+      const blockedMedia = messageHasBlockedMedia(message.attachments);
+      const earlierInbound = await tx.conversationMessage.findMany({
+        where: {
+          conversationId: conversation.id,
+          direction: "INBOUND",
+          id: { not: messageId },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { body: true, attachmentsJson: true },
+        take: 20,
+      });
+      const previousInbound = earlierInbound[0];
+      const repeatedCommand = isSameConsecutiveCommand(command, previousInbound?.body);
+      const repeatedMedia = blockedMedia && jsonHasBlockedMedia(previousInbound?.attachmentsJson);
+      const openingText = earlierInbound.every(
+        (row) =>
+          parseTelegramBotCommand(row.body ?? "") !== null ||
+          jsonHasBlockedMedia(row.attachmentsJson),
+      );
 
-      if (command === "help") {
+      const sendOnce = async (body: string, clientRequestId: string) => {
         const sent = await requestTelegramSend({
           tx,
           conversationId: conversation.id,
-          body: TELEGRAM_HELP_TEXT,
-          clientRequestId: `telegram:help:${message.providerEventId}`,
+          body,
+          clientRequestId,
         });
-        outboundMessageIds.push(sent.message.id);
+        if (!sent.duplicate) outboundMessageIds.push(sent.message.id);
+      };
+
+      if (blockedMedia) {
+        if (!repeatedMedia) {
+          await sendOnce(
+            TELEGRAM_MEDIA_REFUSAL_TEXT,
+            `telegram:media:${message.providerEventId}`,
+          );
+        }
+      } else if (command === "help") {
+        if (!repeatedCommand) {
+          await sendOnce(TELEGRAM_HELP_TEXT, `telegram:help:${message.providerEventId}`);
+        }
       } else if (command === "start") {
-        const sent = await requestTelegramSend({
-          tx,
-          conversationId: conversation.id,
-          body: telegramWelcomeText(message.displayName),
-          clientRequestId: `telegram:welcome:${conversation.id}`,
-        });
-        outboundMessageIds.push(sent.message.id);
+        await sendOnce(
+          telegramWelcomeText(message.displayName),
+          `telegram:welcome:${conversation.id}`,
+        );
       } else if (isTelegramPriceCommand(command)) {
-        const sent = await requestTelegramSend({
-          tx,
-          conversationId: conversation.id,
-          body: TELEGRAM_PRICES_TEXT,
-          clientRequestId: `telegram:prices:${message.providerEventId}`,
-        });
-        outboundMessageIds.push(sent.message.id);
-      } else if (!command && (await handChatToCurator(tx, conversation.id, now))) {
-        const sent = await requestTelegramSend({
-          tx,
-          conversationId: conversation.id,
-          body: CURATOR_HANDOFF_ACK,
-          clientRequestId: `telegram:curator:${message.providerEventId}`,
-        });
-        outboundMessageIds.push(sent.message.id);
+        if (!repeatedCommand) {
+          await sendOnce(TELEGRAM_PRICES_TEXT, `telegram:prices:${message.providerEventId}`);
+        }
+      } else if (!appointmentConfirmed) {
+        if (openingText) {
+          await sendOnce(
+            telegramWelcomeText(message.displayName),
+            `telegram:welcome:${conversation.id}`,
+          );
+        }
+        if (await handChatToCurator(tx, conversation.id, now)) {
+          await sendOnce(CURATOR_HANDOFF_ACK, `telegram:curator:${message.providerEventId}`);
+        }
       }
     }
 

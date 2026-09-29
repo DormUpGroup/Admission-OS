@@ -50,7 +50,9 @@ export async function handleAppointmentCallback(input: {
     );
     const message = result.ok
       ? "Спасибо! Время подтверждено."
-      : "Не удалось подтвердить. Напишите куратору.";
+      : result.reason === "conflict"
+        ? "Это время уже занято. Напишите в чат, подберём другое."
+        : "Не удалось подтвердить. Напишите в чат.";
     await answerTelegramCallbackQuery(input.callbackQueryId, message);
     return { handled: true, message };
   }

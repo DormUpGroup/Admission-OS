@@ -16,10 +16,12 @@ export function shouldShowIntakeTyping(input: {
   automationEnabled: boolean;
   automationPaused: boolean;
   isLeadConversation: boolean;
+  blockedMedia?: boolean;
 }): boolean {
   if (!input.automationEnabled) return false;
   if (input.automationPaused) return false;
   if (!input.isLeadConversation) return false;
+  if (input.blockedMedia) return false;
   if (isTelegramBotCommand(input.text)) return false;
   return true;
 }
@@ -87,6 +89,7 @@ export async function maybeSendIntakeTyping(input: {
   conversationId: string;
   chatId: string;
   text: string;
+  blockedMedia?: boolean;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
 }): Promise<void> {
   const [automation, conversation] = await Promise.all([
@@ -100,6 +103,7 @@ export async function maybeSendIntakeTyping(input: {
   if (
     !shouldShowIntakeTyping({
       text: input.text,
+      blockedMedia: input.blockedMedia,
       automationEnabled: automation.enabled,
       automationPaused: Boolean(conversation.automationPausedAt),
       isLeadConversation: Boolean(conversation.leadId) && !conversation.studentId,

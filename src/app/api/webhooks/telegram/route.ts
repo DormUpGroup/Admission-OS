@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { normalizeTelegramUpdate } from "@/server/channels/telegram";
+import { messageHasBlockedMedia, normalizeTelegramUpdate } from "@/server/channels/telegram";
 import { handleAppointmentCallback } from "@/server/commands/appointment-callbacks";
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         conversationId: result.conversationId,
         chatId: update.externalChatId,
         text: update.text,
+        blockedMedia: messageHasBlockedMedia(update.attachments),
       }).catch((error) => {
         console.warn(
           JSON.stringify({

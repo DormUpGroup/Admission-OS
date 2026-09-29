@@ -1,11 +1,35 @@
 import { createHash } from "crypto";
 
 export type TelegramAttachment = {
-  kind: "document" | "photo";
+  kind: "document" | "photo" | "video" | "video_note" | "voice" | "audio";
   providerFileId?: string;
   filename?: string;
   mimeType?: string;
 };
+
+const BLOCKED_MEDIA_KINDS = new Set<TelegramAttachment["kind"]>([
+  "photo",
+  "video",
+  "video_note",
+  "voice",
+  "audio",
+]);
+
+/** Photos, video, video notes, voice, and audio. Documents stay allowed. */
+export function messageHasBlockedMedia(
+  attachments: Array<Pick<TelegramAttachment, "kind">>,
+): boolean {
+  return attachments.some((item) => BLOCKED_MEDIA_KINDS.has(item.kind));
+}
+
+export function jsonHasBlockedMedia(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.some((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const kind = (item as { kind?: unknown }).kind;
+    return typeof kind === "string" && BLOCKED_MEDIA_KINDS.has(kind as TelegramAttachment["kind"]);
+  });
+}
 
 export type NormalizedTelegramMessage = {
   kind: "message";
@@ -95,6 +119,10 @@ export function normalizeTelegramUpdate(
       providerFileId: last.file_id != null ? String(last.file_id) : undefined,
     });
   }
+  pushTelegramMedia(attachments, message.video, "video");
+  pushTelegramMedia(attachments, message.video_note, "video_note");
+  pushTelegramMedia(attachments, message.voice, "voice");
+  pushTelegramMedia(attachments, message.audio, "audio");
 
   return {
     kind: "message",
@@ -107,6 +135,19 @@ export function normalizeTelegramUpdate(
     text: String(message.text ?? message.caption ?? "").trim(),
     attachments,
   };
+}
+
+function pushTelegramMedia(
+  attachments: TelegramAttachment[],
+  raw: unknown,
+  kind: TelegramAttachment["kind"],
+) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+  const fileId = (raw as Record<string, unknown>).file_id;
+  attachments.push({
+    kind,
+    providerFileId: fileId != null ? String(fileId) : undefined,
+  });
 }
 
 function normalizeCallback(

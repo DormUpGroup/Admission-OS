@@ -1,4 +1,5 @@
 import type { OutboxEvent } from "@prisma/client";
+import { jsonHasBlockedMedia } from "@/server/channels/telegram";
 import type { DbClient } from "@/server/commands/outbox";
 import { enqueueHermesCreateRun } from "./hermes-create-run";
 import { AGENT_DEFINITIONS_BY_KEY, syncAgentDefinitions } from "./registry";
@@ -36,6 +37,9 @@ export async function queueIntakeRunForMessageReceived(
   if (!conversationId || !messageId) {
     return { queued: false, reason: "invalid_payload" };
   }
+  if (payload?.appointmentConfirmed === true) {
+    return { queued: false, reason: "appointment_confirmed" };
+  }
 
   const conversation = await db.conversation.findUnique({
     where: { id: conversationId },
@@ -44,7 +48,11 @@ export async function queueIntakeRunForMessageReceived(
       leadId: true,
       studentId: true,
       automationPausedAt: true,
-      messages: { where: { id: messageId }, select: { body: true }, take: 1 },
+      messages: {
+        where: { id: messageId },
+        select: { body: true, attachmentsJson: true },
+        take: 1,
+      },
     },
   });
   if (!conversation) return { queued: false, reason: "conversation_not_found" };
@@ -54,6 +62,9 @@ export async function queueIntakeRunForMessageReceived(
   }
   if (isTelegramBotCommand(conversation.messages[0]?.body ?? null)) {
     return { queued: false, reason: "bot_command" };
+  }
+  if (jsonHasBlockedMedia(conversation.messages[0]?.attachmentsJson)) {
+    return { queued: false, reason: "blocked_media" };
   }
 
   await syncAgentDefinitions(db);

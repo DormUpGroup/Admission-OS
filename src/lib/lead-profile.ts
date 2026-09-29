@@ -135,7 +135,7 @@ function intakeFrom(text: string): string | null {
 }
 
 function studyLevelFrom(text: string): string | null {
-  if (/магистратур|магистр/iu.test(text)) return "Магистратура";
+  if (/магистратур|магистр|мастер/iu.test(text)) return "Магистратура";
   if (/бакалавр/iu.test(text)) return "Бакалавриат";
   if (/аспирант|\bphd\b/iu.test(text)) return "Аспирантура";
   if (/foundation|подготовительн/iu.test(text)) return "Подготовительный";

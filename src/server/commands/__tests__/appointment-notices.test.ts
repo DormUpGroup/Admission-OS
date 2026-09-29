@@ -3,6 +3,7 @@ import {
   formatAppointmentBookedNotice,
   formatAppointmentCancelNotice,
   formatMeetingLinkNotice,
+  isAppointmentConfirmation,
 } from "@/server/commands/appointments";
 
 describe("appointment client notices", () => {
@@ -37,6 +38,16 @@ describe("appointment client notices", () => {
         email: "anya@example.com",
       }),
     ).toContain("Ссылку на звонок пришлём в этот чат и на почту anya@example.com.");
+  });
+
+  it("accepts a chat confirmation of a proposed time", () => {
+    const asked = "Подтвердите или выберите другое время.";
+    expect(isAppointmentConfirmation("Подтверждаю", asked)).toBe(true);
+    expect(isAppointmentConfirmation("Да", asked)).toBe(true);
+    expect(isAppointmentConfirmation("Время подходит", "Предложено новое время")).toBe(true);
+    expect(isAppointmentConfirmation("Да", "Хотите консультацию?")).toBe(false);
+    expect(isAppointmentConfirmation("Нет", asked)).toBe(false);
+    expect(isAppointmentConfirmation("Другое время", asked)).toBe(false);
   });
 
   it("sends the Meet link once Calendar has created it", () => {
