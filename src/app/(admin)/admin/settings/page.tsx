@@ -58,6 +58,7 @@ export default async function AdminSettingsPage({
         </p>
       ) : null}
 
+      {canEditLimit ? (
       <Card>
         <CardHeader>
           <CardTitle>Набор на сопровождение</CardTitle>
@@ -145,6 +146,7 @@ export default async function AdminSettingsPage({
           ) : null}
         </CardContent>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

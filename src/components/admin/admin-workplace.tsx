@@ -27,7 +27,7 @@ export function AdminWorkplaceScreen({
         description="Кого принять на сопровождение и кому помочь сегодня"
       />
 
-      <CohortBlock view={view} />
+      {view.canEditLimit ? <CohortBlock view={view} /> : null}
       <NewAnketasBlock view={view} query={query} />
       <TodayActionsBlock queue={view.workQueue} count={view.todayActionCount} />
     </div>
