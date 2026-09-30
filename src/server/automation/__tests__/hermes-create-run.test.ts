@@ -10,7 +10,7 @@ import {
 
 const env = {
   HERMES_API_URL: "http://hermes.railway.internal:8642",
-  HERMES_API_KEY: "api-secret",
+  HERMES_API_KEY_INTAKE: "intake-secret",
 };
 
 const now = new Date("2026-09-27T08:00:00.000Z");
@@ -22,8 +22,22 @@ type RunRow = {
   hermesRunId: string | null;
   idempotencyKey: string;
   conversationId: string | null;
-  inputJson: { messageId?: string };
+  inputJson: { messageId?: string; appointmentId?: string };
+  outputJson?: unknown;
   queuedAt?: Date;
+};
+
+const bookedAppointment = {
+  id: "appt-1",
+  status: "PENDING",
+  version: 3,
+  title: "Консультация",
+  startsAt: new Date("2026-10-01T10:00:00.000Z"),
+  endsAt: new Date("2026-10-01T10:30:00.000Z"),
+  timezone: "Europe/Rome",
+  guestName: "Аня",
+  guestEmail: "anya@example.com",
+  assignedCuratorId: null as string | null,
 };
 
 type GrantRow = {
@@ -41,12 +55,15 @@ function harness(options: {
   body?: string | null;
   hermesSessionId?: string | null;
   fetchImpl?: typeof fetch;
+  appointment?: typeof bookedAppointment | null;
+  uniqueConflict?: boolean;
 }) {
   const outboxCreates: Array<{ eventType: string; idempotencyKey: string }> = [];
   const runUpdates: Array<Record<string, unknown>> = [];
   const grants: GrantRow[] = [];
   let sessionId = options.hermesSessionId ?? null;
-  const state = { ...options.run };
+  const state: RunRow = { ...options.run };
+  let uniqueConflictThrown = false;
 
   const db = {
     outboxEvent: {
@@ -70,12 +87,28 @@ function harness(options: {
     agentRun: {
       findUnique: async () => ({ ...state }),
       findMany: async () => (state.status === "QUEUED" && !state.hermesRunId ? [state] : []),
+      update: async ({ data }: { data: { outputJson?: unknown } }) => {
+        if (data.outputJson !== undefined) state.outputJson = data.outputJson;
+        return { ...state };
+      },
       updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+        if (options.uniqueConflict && !uniqueConflictThrown) {
+          uniqueConflictThrown = true;
+          const error = new Error("unique") as Error & { code?: string };
+          error.code = "P2002";
+          throw error;
+        }
         if (state.status !== "QUEUED" || state.hermesRunId) return { count: 0 };
         Object.assign(state, data);
         runUpdates.push(data);
         return { count: 1 };
       },
+    },
+    appointment: {
+      findUnique: async () => options.appointment ?? null,
+    },
+    user: {
+      findUnique: async () => null,
     },
     conversation: {
       findUnique: async () => ({
@@ -195,8 +228,9 @@ describe("hermes.create_run dispatch", () => {
 
   it("marks RUNNING with hermesRunId and does not send to the client", async () => {
     let fetchCalls = 0;
-    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
       fetchCalls += 1;
+      expect(String(url)).toBe("http://hermes.railway.internal:8642/p/intake/v1/runs");
       const sent = JSON.parse(String(init?.body)) as {
         input: string;
         session_id: string;
@@ -227,11 +261,8 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("the one action the curator should take");
       expect(sent.instructions).toContain("propose_reply");
       expect(sent.instructions).toContain("The server sends that text when the turn ends");
-      expect(sent.instructions).toContain("blank line between thoughts");
-      expect(sent.instructions).toContain("at most one in a message");
-      expect(sent.instructions).toContain("You are a girl chatting with this new lead");
-      expect(sent.instructions).toContain("поняла, передала, уточнила, написала");
-      expect(sent.instructions).toContain("If Name is unknown, do not address the client by name");
+      expect(sent.instructions).not.toContain("You are a girl");
+      expect(sent.instructions).not.toContain("поняла, передала");
       expect(sent.instructions).toContain("do not greet again");
       expect(sent.instructions).toContain("repeats the previous client message");
       expect(sent.instructions).toContain("answer immediately");
@@ -239,9 +270,9 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("third explicit request");
       expect(sent.instructions).toContain("the curator will answer this");
       expect(sent.instructions).not.toContain("Do not put prices");
-      expect(sent.instructions).toContain("Sound like a person in a Telegram chat");
-      expect(sent.instructions).toContain("One list per message");
-      expect(sent.instructions).toContain("<b>word</b>");
+      expect(sent.instructions).not.toContain("Sound like a person");
+      expect(sent.instructions).toContain("send_booking_link");
+      expect(sent.instructions).toContain("Do not offer days or times");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
       return new Response(JSON.stringify({ run_id: "hermes-9", status: "started" }), {
         status: 202,
@@ -345,6 +376,133 @@ describe("hermes.create_run dispatch", () => {
     expect(box.state.hermesRunId).toBeNull();
     expect(box.outboxCreates).toEqual([]);
     expect(box.grants[0]?.revokedAt).toEqual(now);
+  });
+
+  it("queues the calendar when scheduling create gets a terminal HTTP error", async () => {
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "scheduling",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:scheduling:appt-1",
+        conversationId: "conversation-1",
+        inputJson: { appointmentId: "appt-1" },
+      },
+      appointment: bookedAppointment,
+    });
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 })) as typeof fetch;
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "http_401" });
+    expect(box.state.status).toBe("FAILED");
+    expect(box.outboxCreates).toEqual([
+      { eventType: "calendar.upsert", idempotencyKey: "calendar.upsert:appt-1:v3" },
+    ]);
+    expect(box.state.outputJson).toMatchObject({
+      consultationCommitted: true,
+      appointmentId: "appt-1",
+    });
+  });
+
+  it("does not queue the calendar when scheduling create is retryable", async () => {
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "scheduling",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:scheduling:appt-1",
+        conversationId: "conversation-1",
+        inputJson: { appointmentId: "appt-1" },
+      },
+      appointment: bookedAppointment,
+    });
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ message: "unavailable" }), { status: 503 })) as typeof fetch;
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+      }),
+    ).rejects.toBeInstanceOf(HermesRetryableError);
+    expect(box.state.status).toBe("QUEUED");
+    expect(box.outboxCreates).toEqual([]);
+  });
+
+  it("does not queue the calendar when the booked appointment is already cancelled", async () => {
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "scheduling",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:scheduling:appt-1",
+        conversationId: "conversation-1",
+        inputJson: { appointmentId: "appt-1" },
+      },
+      appointment: { ...bookedAppointment, status: "CANCELLED" },
+    });
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl: (async () => {
+          throw new Error("Hermes should not be called");
+        }) as typeof fetch,
+        now,
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "missing_appointment" });
+    expect(box.outboxCreates).toEqual([]);
+  });
+
+  it("queues the calendar when storing the Hermes run id conflicts", async () => {
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "scheduling",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:scheduling:appt-1",
+        conversationId: "conversation-1",
+        inputJson: { appointmentId: "appt-1" },
+      },
+      appointment: bookedAppointment,
+      uniqueConflict: true,
+    });
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ run_id: "hermes-1", session_id: "sess-1" }), {
+        status: 200,
+      })) as typeof fetch;
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "duplicate_hermes_run" });
+    expect(box.outboxCreates).toEqual([
+      { eventType: "calendar.upsert", idempotencyKey: "calendar.upsert:appt-1:v3" },
+    ]);
+    expect(box.state.status).toBe("FAILED");
+    expect(box.state.outputJson).toMatchObject({ consultationCommitted: true });
   });
 
   it("does not mark FAILED when Hermes is not configured", async () => {
@@ -507,7 +665,7 @@ describe("formatLeadCard", () => {
     expect(card).not.toContain("Ask only");
   });
 
-  it("treats yes to the start greeting as agreement to begin", () => {
+  it("asks permission to ask questions after they say they are ready", () => {
     const card = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
@@ -515,7 +673,9 @@ describe("formatLeadCard", () => {
       },
       { direction: "INBOUND", body: "Да" },
     ]);
-    expect(card).toContain("магистратура, foundation, or мастер");
+    expect(card).toContain("Начнём?");
+    expect(card).toContain("Do not ask a fact");
+    expect(card).not.toContain("магистратура, foundation, or мастер");
   });
 
   it("asks магистратура, foundation, or мастер after they agree", () => {

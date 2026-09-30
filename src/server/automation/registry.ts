@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 
-export type AgentKey = "intake" | "scheduling" | "qa_safety";
+export type AgentKey = "intake" | "scheduling" | "onboarding" | "qa_safety";
 
 export type AgentDefinitionSpec = {
   key: AgentKey;
@@ -46,20 +46,30 @@ export const AGENT_DEFINITION_SPECS: readonly AgentDefinitionSpec[] = [
     key: "scheduling",
     enabledByDefault: false,
     autonomyLevel: "APPROVAL_FOR_EXTERNAL_WRITE",
-    allowedTools: [
-      "get_conversation_context",
-      "list_available_slots",
-      "create_appointment_draft",
-      "create_approval_request",
-    ],
+    allowedTools: ["commit_booked_consultation"],
     eventTypes: ["scheduling.requested"],
     policy: {
-      approvalRequired: [
-        "create_appointment_draft",
-        "confirm_appointment",
-        "reschedule_appointment",
-        "cancel_appointment",
-      ],
+      effect: "calendar_meet_email",
+      timeSource: "appointment_row",
+    },
+    promptVersion: "v1",
+    policyVersion: "v1",
+    maxIterations: 6,
+    timeoutSeconds: 90,
+    maxCostUsd: new Prisma.Decimal("0.20"),
+  },
+  {
+    key: "onboarding",
+    enabledByDefault: false,
+    autonomyLevel: "DRAFT_ONLY",
+    allowedTools: [
+      "get_onboarding_context",
+      "submit_onboarding_result",
+      "create_curator_task",
+    ],
+    eventTypes: ["client.activated"],
+    policy: {
+      forbidden: ["client_status_change", "telegram_send", "legal_sufficiency"],
     },
     promptVersion: "v1",
     policyVersion: "v1",

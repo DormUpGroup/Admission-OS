@@ -1,5 +1,23 @@
-export const HERMES_CREATE_RUN_PATH = "/v1/runs";
 export const HERMES_HTTP_TIMEOUT_MS = 20_000;
+
+/** Profiles the worker may call. default is the gateway host and is not one of them. */
+export const HERMES_PROFILE_KEYS = ["intake", "scheduling", "onboarding"] as const;
+export type HermesProfileKey = (typeof HERMES_PROFILE_KEYS)[number];
+
+const HERMES_PROFILE_KEY_ENV: Record<HermesProfileKey, string> = {
+  intake: "HERMES_API_KEY_INTAKE",
+  scheduling: "HERMES_API_KEY_SCHEDULING",
+  onboarding: "HERMES_API_KEY_ONBOARDING",
+};
+
+export function isHermesProfileKey(value: string): value is HermesProfileKey {
+  return (HERMES_PROFILE_KEYS as readonly string[]).includes(value);
+}
+
+/** Named profile route. A default key on this path returns 401. */
+export function hermesProfileRunPath(agentKey: string): string {
+  return `/p/${encodeURIComponent(agentKey)}/v1/runs`;
+}
 
 /** Missing Hermes env. Worker defers the outbox row without burning attempts. */
 export class HermesNotConfiguredError extends Error {
@@ -39,15 +57,21 @@ export type HermesHttpOutcome =
   | { kind: "ok"; runId: string; sessionId: string | null }
   | { kind: "terminal"; status: number; message: string };
 
-export function readHermesConfig(
+export function readHermesProfileConfig(
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
-): { apiUrl: string; apiKey: string } {
-  const apiUrl = env.HERMES_API_URL?.trim() ?? "";
-  const apiKey = env.HERMES_API_KEY?.trim() ?? "";
-  if (!apiUrl || !apiKey) {
-    throw new HermesNotConfiguredError("HERMES_API_URL and HERMES_API_KEY are required");
+  agentKey: string,
+): { apiUrl: string; apiKey: string; agentKey: HermesProfileKey } {
+  if (!isHermesProfileKey(agentKey)) {
+    throw new HermesNotConfiguredError(`Hermes profile ${agentKey || "missing"} is not a worker profile`);
   }
-  return { apiUrl: apiUrl.replace(/\/$/, ""), apiKey };
+  const apiUrl = env.HERMES_API_URL?.trim() ?? "";
+  const apiKey = env[HERMES_PROFILE_KEY_ENV[agentKey]]?.trim() ?? "";
+  if (!apiUrl || !apiKey) {
+    throw new HermesNotConfiguredError(
+      `HERMES_API_URL and ${HERMES_PROFILE_KEY_ENV[agentKey]} are required`,
+    );
+  }
+  return { apiUrl: apiUrl.replace(/\/$/, ""), apiKey, agentKey };
 }
 
 type HermesResponseBody = {
@@ -65,18 +89,19 @@ function responseMessage(data: HermesResponseBody | null, status: number): strin
 
 export async function postHermesCreateRun(options: {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  agentKey: string;
   body: HermesCreateRunBody;
   idempotencyKey: string;
   fetchImpl?: typeof fetch;
 }): Promise<HermesHttpOutcome> {
-  const { apiUrl, apiKey } = readHermesConfig(options.env);
+  const { apiUrl, apiKey, agentKey } = readHermesProfileConfig(options.env, options.agentKey);
   const fetchImpl = options.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HERMES_HTTP_TIMEOUT_MS);
   try {
     let response: Response;
     try {
-      response = await fetchImpl(`${apiUrl}${HERMES_CREATE_RUN_PATH}`, {
+      response = await fetchImpl(`${apiUrl}${hermesProfileRunPath(agentKey)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -150,10 +175,11 @@ function usageCount(usage: unknown, key: "input_tokens" | "output_tokens"): numb
 
 export async function getHermesRun(options: {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  agentKey: string;
   runId: string;
   fetchImpl?: typeof fetch;
 }): Promise<HermesRunPoll> {
-  const { apiUrl, apiKey } = readHermesConfig(options.env);
+  const { apiUrl, apiKey, agentKey } = readHermesProfileConfig(options.env, options.agentKey);
   const fetchImpl = options.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HERMES_HTTP_TIMEOUT_MS);
@@ -161,7 +187,7 @@ export async function getHermesRun(options: {
     let response: Response;
     try {
       response = await fetchImpl(
-        `${apiUrl}${HERMES_CREATE_RUN_PATH}/${encodeURIComponent(options.runId)}`,
+        `${apiUrl}${hermesProfileRunPath(agentKey)}/${encodeURIComponent(options.runId)}`,
         {
           method: "GET",
           headers: { Authorization: `Bearer ${apiKey}` },

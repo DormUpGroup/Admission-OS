@@ -5,13 +5,14 @@ import { dispatchHermesPollRun } from "../hermes-poll-run";
 
 const env = {
   HERMES_API_URL: "http://hermes.railway.internal:8642",
-  HERMES_API_KEY: "api-secret",
+  HERMES_API_KEY_INTAKE: "intake-secret",
 };
 const now = new Date("2026-09-27T12:00:00.000Z");
 
 function harness(status = "RUNNING") {
   const state: {
     id: string;
+    agentKey: string;
     status: string;
     hermesRunId: string | null;
     conversationId: string | null;
@@ -21,6 +22,7 @@ function harness(status = "RUNNING") {
     completedAt?: Date;
   } = {
     id: "run-1",
+    agentKey: "intake",
     status,
     hermesRunId: "hermes-9",
     conversationId: "conv-1",
@@ -124,6 +126,170 @@ describe("hermes.poll_run", () => {
     ).rejects.toThrow("telegram down");
     expect(box.state.status).toBe("RUNNING");
     expect(box.grant.revokedAt).toBeNull();
+  });
+
+  it("writes the calendar when a scheduling run ends without the tool", async () => {
+    const outbox: string[] = [];
+    const state = {
+      id: "run-1",
+      agentKey: "scheduling",
+      status: "RUNNING",
+      hermesRunId: "hermes-9",
+      conversationId: "conv-1",
+      startedAt: new Date("2026-09-27T11:00:00.000Z"),
+      outputJson: {} as Record<string, unknown>,
+      inputJson: { appointmentId: "appt-1" },
+      errorCode: null as string | null,
+    };
+    const db = {
+      agentRun: {
+        findUnique: async () => state,
+        update: async ({ data }: { data: { outputJson: Record<string, unknown> } }) => {
+          state.outputJson = data.outputJson;
+          return state;
+        },
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          Object.assign(state, data);
+          return { count: 1 };
+        },
+      },
+      agentCapabilityGrant: {
+        updateMany: async () => ({ count: 1 }),
+      },
+      appointment: {
+        findUnique: async () => ({ id: "appt-1", status: "PENDING", version: 1 }),
+      },
+      outboxEvent: {
+        findUnique: async () => null,
+        create: async ({ data }: { data: { eventType: string } }) => {
+          outbox.push(data.eventType);
+          return { id: "out-1" };
+        },
+      },
+    };
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ status: "completed", output: "done" }), {
+        status: 200,
+      })) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+        deliverDraft: async () => {
+          throw new Error("scheduling must not send Telegram");
+        },
+      }),
+    ).resolves.toEqual({ status: "completed" });
+    expect(outbox).toEqual(["calendar.upsert"]);
+    expect(state.status).toBe("COMPLETED");
+    expect(state.outputJson).toMatchObject({ consultationCommitted: true, appointmentId: "appt-1" });
+  });
+
+  function schedulingFailureBox(appointmentStatus = "PENDING") {
+    const outbox: string[] = [];
+    const state = {
+      id: "run-1",
+      agentKey: "scheduling",
+      status: "RUNNING",
+      hermesRunId: "hermes-9",
+      conversationId: "conv-1",
+      startedAt: new Date("2026-09-27T11:00:00.000Z"),
+      outputJson: {} as Record<string, unknown>,
+      inputJson: { appointmentId: "appt-1" },
+      errorCode: null as string | null,
+    };
+    const db = {
+      agentRun: {
+        findUnique: async () => state,
+        update: async ({ data }: { data: { outputJson: Record<string, unknown> } }) => {
+          state.outputJson = data.outputJson;
+          return state;
+        },
+        updateMany: async ({ data }: { data: Record<string, unknown> }) => {
+          Object.assign(state, data);
+          return { count: 1 };
+        },
+      },
+      agentCapabilityGrant: {
+        updateMany: async () => ({ count: 1 }),
+      },
+      appointment: {
+        findUnique: async () => ({ id: "appt-1", status: appointmentStatus, version: 1 }),
+      },
+      outboxEvent: {
+        findUnique: async () => null,
+        create: async ({ data }: { data: { eventType: string } }) => {
+          outbox.push(data.eventType);
+          return { id: "out-1" };
+        },
+      },
+    };
+    return { db, state, outbox };
+  }
+
+  it("writes the calendar when a scheduling run fails in Hermes", async () => {
+    const box = schedulingFailureBox();
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ status: "failed", message: "boom" }), { status: 200 })) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+        deliverDraft: async () => {
+          throw new Error("scheduling must not send Telegram");
+        },
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "hermes_failed" });
+    expect(box.outbox).toEqual(["calendar.upsert"]);
+    expect(box.state.status).toBe("FAILED");
+    expect(box.state.outputJson).toMatchObject({ consultationCommitted: true, appointmentId: "appt-1" });
+  });
+
+  it("writes the calendar when the scheduling poll gets a terminal HTTP error", async () => {
+    const box = schedulingFailureBox();
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ message: "unauthorized" }), { status: 401 })) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+        deliverDraft: async () => {
+          throw new Error("scheduling must not send Telegram");
+        },
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "http_401" });
+    expect(box.outbox).toEqual(["calendar.upsert"]);
+    expect(box.state.outputJson).toMatchObject({ consultationCommitted: true });
+  });
+
+  it("does not write the calendar when the booked appointment is cancelled", async () => {
+    const box = schedulingFailureBox("CANCELLED");
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ status: "failed", message: "boom" }), { status: 200 })) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(box.db as never, "run-1", {
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642",
+          HERMES_API_KEY_SCHEDULING: "scheduling-secret",
+        },
+        fetchImpl,
+        now,
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "hermes_failed" });
+    expect(box.outbox).toEqual([]);
+    expect(box.state.outputJson).not.toMatchObject({ consultationCommitted: true });
   });
 
   it("fails the local run when Hermes reports failed or cancelled", async () => {

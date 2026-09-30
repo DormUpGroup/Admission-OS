@@ -15,6 +15,7 @@ import {
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { resolveConsultationEmail } from "@/server/registration/contact";
+import { enqueueOutbox } from "@/server/commands/outbox";
 import { sendRegistrationInviteOnce } from "@/server/registration/invite";
 
 export type SendTelegramInboxReplyResult = {
@@ -291,6 +292,13 @@ export async function promoteLeadToStudentAction(
     return created;
   });
 
+  await enqueueOutbox(prisma, {
+    aggregateType: "Student",
+    aggregateId: student.id,
+    eventType: "client.activated",
+    payload: { studentId: student.id, conversationId: id, reason: "curator_promoted" },
+    idempotencyKey: `client.activated:${student.id}`,
+  });
   await sendRegistrationInviteOnce(student.id);
   return { studentId: student.id };
 }

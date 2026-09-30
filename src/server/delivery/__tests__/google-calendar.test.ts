@@ -240,6 +240,42 @@ describe("google calendar helpers (unit)", () => {
       "event-id",
     );
     expect(body.attendees).toEqual([{ email: "anya@example.com" }]);
+    const invited = buildCalendarEventBody(
+      {
+        id: "appt1",
+        clientRequestId: "c1",
+        leadId: null,
+        studentId: null,
+        conversationId: null,
+        assignedCuratorId: "curator-1",
+        title: "Консультация",
+        startsAt: new Date("2026-10-01T10:00:00.000Z"),
+        endsAt: new Date("2026-10-01T11:00:00.000Z"),
+        timezone: "Europe/Rome",
+        status: "PENDING",
+        googleEventId: null,
+        participantsJson: null,
+        version: 1,
+        pendingStartsAt: null,
+        pendingEndsAt: null,
+        confirmationToken: null,
+        confirmationRequestedAt: null,
+        lastClientNudgeAt: null,
+        curatorNudgeSentAt: null,
+        clientChangeUnseen: false,
+        guestName: "Аня",
+        guestEmail: "anya@example.com",
+        meetingUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      "event-id",
+      "curator@example.com",
+    );
+    expect(invited.attendees).toEqual([
+      { email: "anya@example.com" },
+      { email: "curator@example.com" },
+    ]);
     expect(body.conferenceData).toEqual({
       createRequest: {
         requestId: "appt1",

@@ -1065,9 +1065,9 @@ export async function appointmentBookByGuest(input: {
     await enqueueOutbox(tx, {
       aggregateType: "Appointment",
       aggregateId: created.id,
-      eventType: "calendar.upsert",
-      payload: { appointmentId: created.id },
-      idempotencyKey: `calendar.upsert:${created.id}:v${created.version}`,
+      eventType: "scheduling.requested",
+      payload: { appointmentId: created.id, conversationId: invite.conversationId },
+      idempotencyKey: `scheduling.requested:${created.id}`,
     });
 
     const whenLabel = formatSlotLabel(created.startsAt, created.timezone);

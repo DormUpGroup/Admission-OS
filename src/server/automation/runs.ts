@@ -119,3 +119,106 @@ export async function queueIntakeRunForMessageReceived(
     throw error;
   }
 }
+
+async function queueProfileRun(
+  db: DbClient,
+  input: {
+    agentKey: "scheduling" | "onboarding";
+    conversationId: string;
+    subjectType: string;
+    subjectId: string;
+    idempotencyKey: string;
+    correlationId: string;
+    inputJson: Record<string, string>;
+  },
+): Promise<QueueIntakeRunResult> {
+  await syncAgentDefinitions(db);
+  const definition = AGENT_DEFINITIONS_BY_KEY.get(input.agentKey);
+  if (!definition) throw new Error(`${input.agentKey} agent definition is missing`);
+
+  const existing = await db.agentRun.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+  if (existing) {
+    await enqueueHermesCreateRun(db, existing.id);
+    return { queued: true, agentRunId: existing.id, duplicate: true };
+  }
+
+  try {
+    const run = await db.agentRun.create({
+      data: {
+        agentKey: input.agentKey,
+        conversationId: input.conversationId,
+        subjectType: input.subjectType,
+        subjectId: input.subjectId,
+        status: "QUEUED",
+        inputJson: input.inputJson,
+        idempotencyKey: input.idempotencyKey,
+        correlationId: input.correlationId,
+        queuedAt: new Date(),
+        promptVersion: definition.promptVersion,
+        policyVersion: definition.policyVersion,
+      },
+    });
+    await enqueueHermesCreateRun(db, run.id);
+    return { queued: true, agentRunId: run.id, duplicate: false };
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      const winner = await db.agentRun.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (winner) {
+        await enqueueHermesCreateRun(db, winner.id);
+        return { queued: true, agentRunId: winner.id, duplicate: true };
+      }
+    }
+    throw error;
+  }
+}
+
+export async function queueSchedulingRunForBooking(
+  db: DbClient,
+  event: Pick<OutboxEvent, "eventType" | "idempotencyKey" | "payloadJson">,
+): Promise<QueueIntakeRunResult> {
+  if (event.eventType !== "scheduling.requested") {
+    return { queued: false, reason: "unsupported_event" };
+  }
+  const payload = asRecord(event.payloadJson);
+  const appointmentId = typeof payload?.appointmentId === "string" ? payload.appointmentId : null;
+  const conversationId = typeof payload?.conversationId === "string" ? payload.conversationId : null;
+  if (!appointmentId || !conversationId) return { queued: false, reason: "invalid_payload" };
+
+  return queueProfileRun(db, {
+    agentKey: "scheduling",
+    conversationId,
+    subjectType: "Appointment",
+    subjectId: appointmentId,
+    idempotencyKey: `agent:scheduling:${appointmentId}`,
+    correlationId: event.idempotencyKey,
+    inputJson: { appointmentId, conversationId, eventType: event.eventType },
+  });
+}
+
+export async function queueOnboardingRunForClientActivated(
+  db: DbClient,
+  event: Pick<OutboxEvent, "eventType" | "idempotencyKey" | "payloadJson">,
+): Promise<QueueIntakeRunResult> {
+  if (event.eventType !== "client.activated") {
+    return { queued: false, reason: "unsupported_event" };
+  }
+  const payload = asRecord(event.payloadJson);
+  const studentId = typeof payload?.studentId === "string" ? payload.studentId : null;
+  const conversationId = typeof payload?.conversationId === "string" ? payload.conversationId : null;
+  if (!studentId || !conversationId) return { queued: false, reason: "invalid_payload" };
+
+  return queueProfileRun(db, {
+    agentKey: "onboarding",
+    conversationId,
+    subjectType: "Student",
+    subjectId: studentId,
+    idempotencyKey: `agent:onboarding:${studentId}`,
+    correlationId: event.idempotencyKey,
+    inputJson: { studentId, conversationId, eventType: event.eventType },
+  });
+}

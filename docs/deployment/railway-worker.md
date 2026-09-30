@@ -15,7 +15,7 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
    - `DATABASE_URL` (same as web)
    - `AUTOMATION_ENABLED=true` to process `message.received`, bot welcome/help, and nudges (noop / `worker.log` / curator `telegram.send` always run)
    - Phase 1+: `TELEGRAM_BOT_TOKEN` (outbound send)
-   - Hermes (worker only): `HERMES_API_URL`, `HERMES_API_KEY` (the Hermes service `API_SERVER_KEY`). See below.
+   - Hermes (worker only): `HERMES_API_URL` and one key per profile (`HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING`). See below.
 4. Web env (Phase 1): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`
    - Admin inbox replies deliver **inline** from the web process when
      `TELEGRAM_BOT_TOKEN` is set. They are not blocked by the automation
@@ -43,9 +43,7 @@ Worker env:
 
 Share the target calendar with the service account email (`client_email`) as editor.
 
-Outbox `calendar.upsert` runs only after the client confirms (Telegram) or admin
-manual confirm. Staff Telegram replies can complete without the worker; calendar
-sync **requires the worker service** to be running.
+A guest booking enqueues `scheduling.requested`. `calendar.upsert` follows from the scheduling tool, or from the worker if that Hermes run ends without the tool, including a terminal HTTP or model failure. The AgentRun stays FAILED in that case. A missing profile key defers the run and does not write the calendar yet. Staff create and confirm still enqueue `calendar.upsert` directly. Calendar sync **requires the worker service** to be running.
 
 ```bash
 npx prisma migrate deploy
@@ -60,13 +58,13 @@ calls it over Railway private networking.
 Worker env (the web service does not call Hermes):
 
 - `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8642`
-- `HERMES_API_KEY` — same value as `API_SERVER_KEY` on the Hermes service. Sent as `Authorization: Bearer` on `POST /v1/runs`.
+- `HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING` — each profile's `API_SERVER_KEY`. Sent as `Authorization: Bearer` on `POST /p/<profile>/v1/runs` and the matching GET. The default gateway key is not used for these calls.
 
 The body is `{ "input", "session_id", "instructions" }`. `instructions` carries the
-capability `grant_id` and the three tool names. Hermes answers `202` with `run_id`.
-The worker then polls `GET /v1/runs/{id}` (`hermes.poll_run`) until the run is
+capability `grant_id` and that profile's tools. Hermes answers `202` with `run_id`.
+The worker then polls `GET /p/<profile>/v1/runs/{id}` (`hermes.poll_run`) until the run is
 `completed` or `failed`. A still-running poll is deferred without burning attempts.
-That does not send Telegram.
+Intake still sends the Telegram reply. Scheduling and onboarding do not.
 
 `HERMES_MCP_KEY`, `HERMES_MCP_URL`, and `HERMES_MCP_SCOPES` are deprecated and are
 not read.
@@ -80,10 +78,13 @@ Hermes service config (not an Admission OS env var):
 ```yaml
 mcp_servers:
   admission_os:
-    url: http://<web>.railway.internal:<port>/api/mcp
+    url: http://<web>.railway.internal:<port>/api/mcp?profile=intake
     headers:
       Authorization: "Bearer ${MCP_BOOTSTRAP_KEY}"
+      x-admission-profile: intake
 ```
+
+Use `profile=scheduling` or `profile=onboarding` on that profile's MCP entry. Each profile has its own `API_SERVER_KEY`.
 
 Use the web private address, not a public domain. Do not put `TELEGRAM_BOT_TOKEN`
 or `DATABASE_URL` on Hermes. Disable Hermes toolsets that can send Telegram or
@@ -92,9 +93,9 @@ arbitrary HTTP (`terminal`, messaging); otherwise the agent can leave this MCP r
 `message.received` enqueues `hermes.create_run`. The worker also sweeps `QUEUED`
 intake runs that have no `hermesRunId`. A successful call sets
 `AgentRun.status = RUNNING` and `hermesRunId`, and enqueues `hermes.poll_run`.
-Poll sets `COMPLETED` or `FAILED` and revokes the grant. It does not send Telegram.
+Poll sets `COMPLETED` or `FAILED` and revokes the grant. Intake sends its Telegram reply from the run. Scheduling and onboarding do not.
 
-If `HERMES_API_URL` or `HERMES_API_KEY` is empty, the worker defers
+If `HERMES_API_URL` or the profile key for that run is empty, the worker defers
 `hermes.create_run` without burning attempts and without marking the run
 `FAILED`.
 

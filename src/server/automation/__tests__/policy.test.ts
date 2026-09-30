@@ -50,6 +50,15 @@ describe("agent policy gate", () => {
     });
   });
 
+  it("lets scheduling commit a page booking without another approval", () => {
+    const result = evaluateActionPolicy({
+      agentKey: "scheduling",
+      toolName: "commit_booked_consultation",
+      conversation: safeConversation,
+    });
+    expect(result).toEqual({ decision: POLICY_DECISIONS.ALLOW, reasons: [] });
+  });
+
   it("allows the intake bot to send a booking link", () => {
     const result = evaluateActionPolicy({
       agentKey: "intake",

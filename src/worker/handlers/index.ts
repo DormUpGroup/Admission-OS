@@ -2,6 +2,7 @@ import { registerOutboxHandler } from "../dispatch";
 import { handleAppointmentClientNudge } from "./appointment-nudge";
 import { handleCalendarDelete, handleCalendarUpsert } from "./calendar";
 import { handleHermesCreateRun, handleHermesPollRun } from "./hermes";
+import { handleClientActivated, handleSchedulingRequested } from "./profiles";
 import { handleNoop, handleWorkerLog } from "./noop";
 import { handleMessageReceived, handleTelegramSend } from "./telegram";
 
@@ -15,4 +16,6 @@ export function registerBuiltinHandlers(): void {
   registerOutboxHandler("appointment.client_nudge", handleAppointmentClientNudge);
   registerOutboxHandler("hermes.create_run", handleHermesCreateRun);
   registerOutboxHandler("hermes.poll_run", handleHermesPollRun);
+  registerOutboxHandler("scheduling.requested", handleSchedulingRequested);
+  registerOutboxHandler("client.activated", handleClientActivated);
 }

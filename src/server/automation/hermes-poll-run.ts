@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
 import { revokeCapabilityGrant } from "./capability-grant";
+import { commitBookedConsultation, commitSchedulingRunCalendar } from "./commit-consultation";
 import { sendUnsentRunDraft } from "./deliver-draft";
 import {
   getHermesRun,
@@ -52,11 +53,13 @@ export async function dispatchHermesPollRun(
     where: { id: agentRunId },
     select: {
       id: true,
+      agentKey: true,
       status: true,
       hermesRunId: true,
       conversationId: true,
       startedAt: true,
       outputJson: true,
+      inputJson: true,
     },
   });
   if (!run) throw new HermesRetryableError(`AgentRun ${agentRunId} not found`);
@@ -70,6 +73,7 @@ export async function dispatchHermesPollRun(
 
   const snapshot = await getHermesRun({
     env,
+    agentKey: run.agentKey,
     runId: run.hermesRunId,
     fetchImpl: options?.fetchImpl,
   });
@@ -78,19 +82,11 @@ export async function dispatchHermesPollRun(
     throw new HermesRunPendingError();
   }
 
-  if (snapshot.kind === "terminal_http") {
-    await finishRun(db, run.id, run.outputJson, {
-      status: "FAILED",
-      errorCode: `http_${snapshot.status}`,
-      errorMessage: snapshot.message,
-      now,
-    });
-    return { status: "failed", errorCode: `http_${snapshot.status}` };
-  }
-
-  if (snapshot.kind === "failed") {
-    const errorCode = `hermes_${snapshot.status}`;
-    await finishRun(db, run.id, run.outputJson, {
+  if (snapshot.kind === "terminal_http" || snapshot.kind === "failed") {
+    const outputJson = await commitSchedulingRunCalendar(db, run);
+    const errorCode =
+      snapshot.kind === "terminal_http" ? `http_${snapshot.status}` : `hermes_${snapshot.status}`;
+    await finishRun(db, run.id, outputJson, {
       status: "FAILED",
       errorCode,
       errorMessage: snapshot.message,
@@ -99,16 +95,54 @@ export async function dispatchHermesPollRun(
     return { status: "failed", errorCode };
   }
 
-  if (run.conversationId) {
+  let outputJson = run.outputJson;
+  if (run.agentKey === "scheduling" && asRecord(outputJson)?.consultationCommitted !== true) {
+    const appointmentId = asRecord(run.inputJson)?.appointmentId;
+    if (typeof appointmentId !== "string" || !appointmentId.trim()) {
+      await finishRun(db, run.id, outputJson, {
+        status: "FAILED",
+        errorCode: "missing_appointment",
+        errorMessage: "Scheduling run finished without an appointment",
+        hermesOutput: snapshot.output,
+        inputTokens: snapshot.inputTokens,
+        outputTokens: snapshot.outputTokens,
+        now,
+      });
+      return { status: "failed", errorCode: "missing_appointment" };
+    }
+    const committed = await commitBookedConsultation(db, {
+      appointmentId,
+      agentRunId: run.id,
+    });
+    if (committed.status !== "committed") {
+      await finishRun(db, run.id, outputJson, {
+        status: "FAILED",
+        errorCode: committed.status,
+        errorMessage: "Booked consultation could not be written to the calendar",
+        hermesOutput: snapshot.output,
+        inputTokens: snapshot.inputTokens,
+        outputTokens: snapshot.outputTokens,
+        now,
+      });
+      return { status: "failed", errorCode: committed.status };
+    }
+    outputJson = {
+      ...(asRecord(outputJson) ?? {}),
+      consultationCommitted: true,
+      appointmentId,
+    };
+  }
+
+  if (run.agentKey === "intake" && run.conversationId) {
     await deliverDraft(db, {
       agentRunId: run.id,
       conversationId: run.conversationId,
-      outputJson: run.outputJson,
+      outputJson,
       startedAt: run.startedAt,
     });
   }
 
-  await finishRun(db, run.id, run.outputJson, {
+  await finishRun(db, run.id, outputJson, {
     status: "COMPLETED",
     errorCode: null,
     errorMessage: null,

@@ -20,11 +20,16 @@ import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { agentSendClientRequestId } from "./deliver-draft";
 import {
   capabilityGrantLogHash,
-  isMcpV1Tool,
+  isKnownMcpTool,
   LEAD_FACT_FIELDS,
-  MCP_V1_TOOLS,
-  type McpV1Tool,
+  toolsForProfile,
 } from "./capability-grant";
+import { commitBookedConsultation } from "./commit-consultation";
+import {
+  createCuratorTask,
+  loadOnboardingContext,
+  submitOnboardingResult,
+} from "./onboarding";
 import { getContactProfile, getConversationContext } from "./context";
 import {
   evaluateActionPolicyForConversation,
@@ -195,7 +200,7 @@ function toolResult(id: unknown, text: string, isError: boolean) {
   });
 }
 
-function toolSchema(name: McpV1Tool) {
+function toolSchema(name: string) {
   const properties: Record<string, unknown> = {
     grant_id: { type: "string", description: "Capability grant id for this run." },
   };
@@ -235,6 +240,23 @@ function toolSchema(name: McpV1Tool) {
     for (const field of LEAD_FACT_FIELDS) {
       properties[field] = { type: "string" };
     }
+  } else if (name === "commit_booked_consultation") {
+    description =
+      "Write the already booked consultation to the curator calendar, create Google Meet, and email the client and the curator. Do not change the time.";
+    properties.appointment_id = { type: "string" };
+    required.push("appointment_id");
+  } else if (name === "get_onboarding_context") {
+    description = "Read the activated client's service, country, programme, deadlines, and curator.";
+  } else if (name === "submit_onboarding_result") {
+    description = "Store the route, checklist, and risks on this run. Does not change the client status or send a message.";
+    properties.route = { type: "string" };
+    properties.checklist = { type: "array", items: { type: "string" } };
+    properties.risks = { type: "array", items: { type: "string" } };
+    required.push("route");
+  } else if (name === "create_curator_task") {
+    description = "Create one curator task for a gap or a deadline risk. Does not message the client.";
+    properties.title = { type: "string" };
+    required.push("title");
   }
   return {
     name,
@@ -246,6 +268,14 @@ function toolSchema(name: McpV1Tool) {
       additionalProperties: false,
     },
   };
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim())
+    .slice(0, 20);
 }
 
 function trimmed(value: unknown): string | undefined {
@@ -273,7 +303,9 @@ function patchIsEmpty(patch: QualificationPatch): boolean {
 }
 
 function asAgentKey(value: string): AgentKey | null {
-  if (value === "intake" || value === "scheduling" || value === "qa_safety") return value;
+  if (value === "intake" || value === "scheduling" || value === "onboarding" || value === "qa_safety") {
+    return value;
+  }
   return null;
 }
 
@@ -291,6 +323,7 @@ export async function handleMcpPost(options: {
   db: DbClient;
   authorizationHeader: string | null;
   body: unknown;
+  profile?: string | null;
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   now?: Date;
   executors?: McpToolExecutors;
@@ -341,7 +374,7 @@ export async function handleMcpPost(options: {
   if (method === "tools/list") {
     return {
       status: 200,
-      body: rpcResult(id, { tools: MCP_V1_TOOLS.map((name) => toolSchema(name)) }),
+      body: rpcResult(id, { tools: toolsForProfile(options.profile).map((name) => toolSchema(name)) }),
     };
   }
 
@@ -378,7 +411,7 @@ async function callTool(
     );
   };
 
-  if (!grantId || !isMcpV1Tool(toolName)) {
+  if (!grantId || !isKnownMcpTool(toolName)) {
     logLine(grantId && toolName ? "tool_not_allowed" : "grant_rejected");
     return {
       status: 200,
@@ -388,7 +421,9 @@ async function callTool(
 
   const grant = await options.db.agentCapabilityGrant.findUnique({
     where: { id: grantId },
-    include: { agentRun: { select: { id: true, agentKey: true, conversationId: true } } },
+    include: {
+      agentRun: { select: { id: true, agentKey: true, conversationId: true, inputJson: true } },
+    },
   });
   const run = grant?.agentRun;
   const grantOk =
@@ -573,6 +608,73 @@ async function callTool(
     }
     logLine("ok");
     return { status: 200, body: toolResult(id, "escalated", false) };
+  }
+
+  if (toolName === "commit_booked_consultation") {
+    const requested = trimmed(args.appointment_id) ?? "";
+    const expected = asRecord(run.inputJson)?.appointmentId;
+    const appointmentId = typeof expected === "string" && expected.trim() ? expected : requested;
+    if (!appointmentId || (requested && requested !== appointmentId)) {
+      logLine("appointment_mismatch");
+      return { status: 200, body: toolResult(id, "appointment_mismatch", true) };
+    }
+    const committed = await commitBookedConsultation(options.db, {
+      appointmentId,
+      agentRunId: run.id,
+    });
+    logLine(committed.status);
+    return {
+      status: 200,
+      body: toolResult(id, committed.status, committed.status !== "committed"),
+    };
+  }
+
+  if (toolName === "get_onboarding_context") {
+    const studentId = asRecord(run.inputJson)?.studentId;
+    if (typeof studentId !== "string" || !studentId.trim()) {
+      logLine("missing_student");
+      return { status: 200, body: toolResult(id, "missing_student", true) };
+    }
+    const context = await loadOnboardingContext(options.db, studentId, now);
+    if (!context) {
+      logLine("missing_student");
+      return { status: 200, body: toolResult(id, "missing_student", true) };
+    }
+    logLine("ok");
+    return { status: 200, body: toolResult(id, JSON.stringify(context), false) };
+  }
+
+  if (toolName === "submit_onboarding_result") {
+    const route = trimmed(args.route) ?? "";
+    if (!route) {
+      logLine("empty_route");
+      return { status: 200, body: toolResult(id, "empty_route", true) };
+    }
+    const checklist = stringList(args.checklist);
+    const risks = stringList(args.risks);
+    await submitOnboardingResult(options.db, {
+      agentRunId: run.id,
+      route,
+      checklist,
+      risks,
+    });
+    logLine("ok");
+    return { status: 200, body: toolResult(id, "onboarding_saved", false) };
+  }
+
+  if (toolName === "create_curator_task") {
+    const studentId = asRecord(run.inputJson)?.studentId;
+    const title = trimmed(args.title) ?? "";
+    if (typeof studentId !== "string" || !studentId.trim() || !title) {
+      logLine("missing_task");
+      return { status: 200, body: toolResult(id, "missing_task", true) };
+    }
+    const created = await createCuratorTask(options.db, { studentId, title });
+    logLine(created);
+    return {
+      status: 200,
+      body: toolResult(id, created, created === "no_student" || created === "empty_title"),
+    };
   }
 
   const payload =

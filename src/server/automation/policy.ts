@@ -68,6 +68,19 @@ export function evaluateActionPolicy(
     return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
   }
 
+  if (input.agentKey === "scheduling" && input.toolName === "commit_booked_consultation") {
+    return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
+  }
+
+  if (
+    input.agentKey === "onboarding" &&
+    (input.toolName === "get_onboarding_context" ||
+      input.toolName === "submit_onboarding_result" ||
+      input.toolName === "create_curator_task")
+  ) {
+    return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
+  }
+
   if (input.conversation.automationPausedAt) {
     reasons.push("automation_paused");
   }

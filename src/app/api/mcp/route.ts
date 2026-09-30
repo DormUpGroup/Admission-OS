@@ -12,9 +12,11 @@ export async function POST(request: Request) {
     body = null;
   }
 
+  const url = new URL(request.url);
   const result = await handleMcpPost({
     db: prisma,
     authorizationHeader: request.headers.get("authorization"),
+    profile: request.headers.get("x-admission-profile") ?? url.searchParams.get("profile"),
     body,
   });
 

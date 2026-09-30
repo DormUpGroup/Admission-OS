@@ -14,6 +14,7 @@ import {
   shouldSendBookingLink,
 } from "@/server/booking/consent";
 import type { DbClient } from "@/server/commands/outbox";
+import { AGENT_DEFINITIONS_BY_KEY, type AgentKey } from "./registry";
 
 /** Tools Hermes may call on an intake run. */
 export const MCP_V1_TOOLS = [
@@ -44,7 +45,28 @@ const QUESTION_ORDER = [
   ...LEAD_FACT_FIELDS.filter((field) => field !== "studyLevel"),
 ] as const;
 
+export const SCHEDULING_MCP_TOOLS = ["commit_booked_consultation"] as const;
+export const ONBOARDING_MCP_TOOLS = [
+  "get_onboarding_context",
+  "submit_onboarding_result",
+  "create_curator_task",
+] as const;
+
 export type McpV1Tool = (typeof MCP_V1_TOOLS)[number];
+
+export function toolsForProfile(profile: string | null | undefined): readonly string[] {
+  if (profile === "scheduling") return SCHEDULING_MCP_TOOLS;
+  if (profile === "onboarding") return ONBOARDING_MCP_TOOLS;
+  return MCP_V1_TOOLS;
+}
+
+export function isKnownMcpTool(name: string): boolean {
+  return (
+    (MCP_V1_TOOLS as readonly string[]).includes(name) ||
+    (SCHEDULING_MCP_TOOLS as readonly string[]).includes(name) ||
+    (ONBOARDING_MCP_TOOLS as readonly string[]).includes(name)
+  );
+}
 
 export const CAPABILITY_GRANT_TTL_MS = 15 * 60 * 1000;
 
@@ -161,8 +183,6 @@ export function hermesRunInstructions(
   curatorRequests = 0,
 ): string {
   return [
-    "You are a girl chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
-    "Refer to yourself in the feminine: поняла, передала, уточнила, написала. Never понял, передал, уточнил, написал. The Name on the lead card is the client, not you. If Name is unknown, do not address the client by name and do not invent one. If Name is a personal name, you may use that first name.",
     "Call tools only through the admission_os MCP server.",
     `Pass grant_id exactly as ${grantId} on every tool call.`,
     "Allowed tools: get_conversation_context, get_contact_profile, update_lead_qualification, send_client_message, send_booking_link, escalate_to_human, propose_reply.",
@@ -201,13 +221,6 @@ export function hermesRunInstructions(
     "If send_booking_link returns no_curator or booking_unavailable, call escalate_to_human and do not invent a link.",
     "Do not put timelines in the text you send. A price is allowed only when it is copied from the price catalog.",
     "Write in the client's language, usually Russian.",
-    "Sound like a person in a Telegram chat: short, warm, plain words.",
-    "Put a blank line between thoughts. One short paragraph for the answer, then a blank line, then the question if you ask one. Do not send one dense block.",
-    "An emoji is optional and rare: at most one in a message, and not in every message. Skip it when the topic is a problem, a refusal, or anything serious.",
-    "When you list items, use a list. Steps in order are lines starting with 1. 2. 3. Equal items, such as documents or options, are lines starting with •. One list per message, at most five items. A blank line before the list and a blank line after it. The question stays after the list, as a plain sentence. The five-item limit does not apply to the price catalog: send the whole catalog when they ask for the price list.",
-    "Bold only the word that matters, as Telegram HTML <b>word</b>: a document name, a date, a time, or a status. Two to four bold words in a message is enough. Do not bold a whole sentence, and do not bold the question. Dates look like <b>15 марта 2026</b>. Times look like <b>14:30</b>. Repeat a date or time the client already said. Do not invent dates or times.",
-    "If you include a link, put the plain URL on its own line. No headings, no tables, no italics, no asterisks. The only markup is <b> and </b>.",
-    "No corporate greeting, no \"уважаемый клиент\", no essay.",
     "Do not promise admission, a visa, or a payment. Do not mention visas or guaranteed admission unless the person asks. If they ask, say: Мы не оформляем визу и не гарантируем зачисление.",
     "Latest client message:",
     clientMessage,
@@ -254,13 +267,20 @@ export async function ensureCapabilityGrant(
     });
   }
 
+  const run = await db.agentRun.findUnique({
+    where: { id: input.agentRunId },
+    select: { agentKey: true },
+  });
+  const spec = run ? AGENT_DEFINITIONS_BY_KEY.get(run.agentKey as AgentKey) : undefined;
+  const allowedTools = spec ? [...spec.allowedTools] : [...MCP_V1_TOOLS];
+
   try {
     return await db.agentCapabilityGrant.create({
       data: {
         id: newCapabilityGrantId(),
         agentRunId: input.agentRunId,
         conversationId: input.conversationId,
-        allowedToolsJson: [...MCP_V1_TOOLS],
+        allowedToolsJson: allowedTools,
         expiresAt,
       },
     });

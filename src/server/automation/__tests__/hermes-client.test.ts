@@ -8,7 +8,7 @@ import {
 
 const env = {
   HERMES_API_URL: "http://hermes.railway.internal:8642",
-  HERMES_API_KEY: "api-secret",
+  HERMES_API_KEY_INTAKE: "intake-secret",
 };
 
 const body = {
@@ -29,15 +29,16 @@ describe("Hermes create_run client", () => {
 
     const outcome = await postHermesCreateRun({
       env,
+      agentKey: "intake",
       body,
       idempotencyKey: "agent:intake:event-1",
       fetchImpl,
     });
 
     expect(outcome).toEqual({ kind: "ok", runId: "run_abc123", sessionId: null });
-    expect(captured.url).toBe("http://hermes.railway.internal:8642/v1/runs");
+    expect(captured.url).toBe("http://hermes.railway.internal:8642/p/intake/v1/runs");
     const headers = captured.init?.headers as Record<string, string>;
-    expect(headers.Authorization).toBe("Bearer api-secret");
+    expect(headers.Authorization).toBe("Bearer intake-secret");
     expect(headers["Idempotency-Key"]).toBe("agent:intake:event-1");
     expect(JSON.parse(String(captured.init?.body))).toEqual(body);
   });
@@ -48,7 +49,7 @@ describe("Hermes create_run client", () => {
         status: 409,
       })) as typeof fetch;
     await expect(
-      postHermesCreateRun({ env, body, idempotencyKey: "k", fetchImpl }),
+      postHermesCreateRun({ env, agentKey: "intake", body, idempotencyKey: "k", fetchImpl }),
     ).resolves.toEqual({
       kind: "terminal",
       status: 409,
@@ -60,13 +61,13 @@ describe("Hermes create_run client", () => {
     const unavailable = (async () =>
       new Response(JSON.stringify({ message: "down" }), { status: 503 })) as typeof fetch;
     await expect(
-      postHermesCreateRun({ env, body, idempotencyKey: "k", fetchImpl: unavailable }),
+      postHermesCreateRun({ env, agentKey: "intake", body, idempotencyKey: "k", fetchImpl: unavailable }),
     ).rejects.toBeInstanceOf(HermesRetryableError);
 
     const rejected = (async () =>
       new Response(JSON.stringify({ message: "bad request" }), { status: 400 })) as typeof fetch;
     await expect(
-      postHermesCreateRun({ env, body, idempotencyKey: "k", fetchImpl: rejected }),
+      postHermesCreateRun({ env, agentKey: "intake", body, idempotencyKey: "k", fetchImpl: rejected }),
     ).resolves.toEqual({ kind: "terminal", status: 400, message: "bad request" });
   });
 
@@ -74,6 +75,7 @@ describe("Hermes create_run client", () => {
     await expect(
       postHermesCreateRun({
         env: { HERMES_API_URL: "http://hermes.railway.internal:8642" },
+        agentKey: "intake",
         body,
         idempotencyKey: "k",
         fetchImpl: (async () => {
@@ -88,7 +90,11 @@ describe("Hermes create_run client", () => {
       })) as typeof fetch;
     await expect(
       postHermesCreateRun({
-        env: { HERMES_API_URL: "http://hermes.railway.internal:8642/", HERMES_API_KEY: "api-secret" },
+        env: {
+          HERMES_API_URL: "http://hermes.railway.internal:8642/",
+          HERMES_API_KEY_INTAKE: "intake-secret",
+        },
+        agentKey: "intake",
         body,
         idempotencyKey: "k",
         fetchImpl,
@@ -96,9 +102,9 @@ describe("Hermes create_run client", () => {
     ).resolves.toEqual({ kind: "ok", runId: "run_ok", sessionId: null });
   });
 
-  it("polls GET /v1/runs/{id} and classifies terminal and pending statuses", async () => {
+  it("polls GET /p/intake/v1/runs/{id} and classifies terminal and pending statuses", async () => {
     const completed = (async (url: string | URL | Request) => {
-      expect(String(url)).toBe("http://hermes.railway.internal:8642/v1/runs/run_abc");
+      expect(String(url)).toBe("http://hermes.railway.internal:8642/p/intake/v1/runs/run_abc");
       return new Response(
         JSON.stringify({
           status: "completed",
@@ -108,7 +114,9 @@ describe("Hermes create_run client", () => {
         { status: 200 },
       );
     }) as typeof fetch;
-    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: completed })).resolves.toEqual({
+    await expect(
+      getHermesRun({ env, agentKey: "intake", runId: "run_abc", fetchImpl: completed }),
+    ).resolves.toEqual({
       kind: "completed",
       output: "Черновик готов",
       inputTokens: 3,
@@ -117,7 +125,9 @@ describe("Hermes create_run client", () => {
 
     const pending = (async () =>
       new Response(JSON.stringify({ status: "running" }), { status: 200 })) as typeof fetch;
-    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: pending })).resolves.toEqual({
+    await expect(
+      getHermesRun({ env, agentKey: "intake", runId: "run_abc", fetchImpl: pending }),
+    ).resolves.toEqual({
       kind: "pending",
       status: "running",
     });
@@ -126,7 +136,9 @@ describe("Hermes create_run client", () => {
       new Response(JSON.stringify({ status: "failed", message: "boom" }), {
         status: 200,
       })) as typeof fetch;
-    await expect(getHermesRun({ env, runId: "run_abc", fetchImpl: failed })).resolves.toEqual({
+    await expect(
+      getHermesRun({ env, agentKey: "intake", runId: "run_abc", fetchImpl: failed }),
+    ).resolves.toEqual({
       kind: "failed",
       status: "failed",
       message: "boom",

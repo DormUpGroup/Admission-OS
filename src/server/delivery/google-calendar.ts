@@ -19,6 +19,7 @@ export type PreparedCalendarUpsert = {
   providerEventId: string;
   calendarId: string;
   credentials: ServiceAccountCredentials;
+  curatorEmail?: string | null;
 };
 
 export type PreparedCalendarDelete = {
@@ -180,7 +181,11 @@ export function meetingUrlFromCalendarEvent(
   return video?.uri?.trim() || null;
 }
 
-export function buildCalendarEventBody(appointment: Appointment, providerEventId: string) {
+export function buildCalendarEventBody(
+  appointment: Appointment,
+  providerEventId: string,
+  curatorEmail?: string | null,
+) {
   const summary = appointment.guestName?.trim()
     ? `${appointment.title}: ${appointment.guestName.trim()}`
     : appointment.title;
@@ -201,9 +206,13 @@ export function buildCalendarEventBody(appointment: Appointment, providerEventId
       },
     },
   };
-  if (appointment.guestEmail?.trim()) {
-    body.attendees = [{ email: appointment.guestEmail.trim() }];
-    const who = [appointment.guestName?.trim(), appointment.guestEmail.trim()]
+  const attendees = [appointment.guestEmail?.trim(), curatorEmail?.trim()]
+    .filter((email): email is string => Boolean(email))
+    .filter((email, index, all) => all.indexOf(email) === index)
+    .map((email) => ({ email }));
+  if (attendees.length > 0) {
+    body.attendees = attendees;
+    const who = [appointment.guestName?.trim(), appointment.guestEmail?.trim(), curatorEmail?.trim()]
       .filter(Boolean)
       .join("\n");
     body.description = who;
@@ -290,12 +299,22 @@ export async function prepareCalendarUpsert(
     ? "patch"
     : "create";
 
+  let curatorEmail: string | null = null;
+  if (appointment.assignedCuratorId) {
+    const curator = await prisma.user.findUnique({
+      where: { id: appointment.assignedCuratorId },
+      select: { email: true },
+    });
+    curatorEmail = curator?.email?.trim() || null;
+  }
+
   return {
     action,
     appointment,
     providerEventId,
     calendarId,
     credentials,
+    curatorEmail,
   };
 }
 
@@ -307,8 +326,14 @@ export async function callCalendarUpsert(
     throw new Error("callCalendarUpsert requires an appointment");
   }
   const token = await getGoogleAccessToken(prepared.credentials, fetchImpl);
-  const body = buildCalendarEventBody(prepared.appointment, prepared.providerEventId);
-  const sendUpdates = Boolean(prepared.appointment.guestEmail?.trim());
+  const body = buildCalendarEventBody(
+    prepared.appointment,
+    prepared.providerEventId,
+    prepared.curatorEmail,
+  );
+  const sendUpdates = Boolean(
+    prepared.appointment.guestEmail?.trim() || prepared.curatorEmail?.trim(),
+  );
   const writeUrl = (eventId?: string) =>
     calendarEventsUrl(prepared.calendarId, eventId, {
       conference: true,

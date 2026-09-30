@@ -157,10 +157,14 @@ describeDb("client books a consultation from the site", () => {
     expect(lead?.email).toBe(email);
     expect(await resolveConsultationEmail(leadId)).toBe(email);
 
+    const scheduling = await prisma.outboxEvent.findFirst({
+      where: { aggregateId: appointment.id, eventType: "scheduling.requested" },
+    });
+    expect(scheduling).toBeTruthy();
     const calendar = await prisma.outboxEvent.findFirst({
       where: { aggregateId: appointment.id, eventType: "calendar.upsert" },
     });
-    expect(calendar).toBeTruthy();
+    expect(calendar).toBeNull();
 
     const notice = await prisma.conversationMessage.findFirst({
       where: { conversationId, body: { contains: "Консультация назначена" } },
