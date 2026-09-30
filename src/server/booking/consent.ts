@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { buildLeadCard, consultationGate } from "@/lib/lead-profile";
+import { ADMISSION_CONSULTATION_PRICE } from "@/server/channels/telegram-copy";
 
 export type BookingConsentTurn = {
   /** The message just before the client's latest one. Any sender. */
@@ -57,7 +58,13 @@ export function mentionsConsultation(text: string | null | undefined): boolean {
 
 /** The one question that must be answered before the booking link goes out. */
 export function consultationOfferMessage(): string {
-  return "Хотите консультацию?";
+  return [
+    "Общая картина ясна.",
+    "",
+    `Есть возможность провести консультацию с куратором: познакомиться и закрыть последние вопросы. Консультация по поступлению — ${ADMISSION_CONSULTATION_PRICE}.`,
+    "",
+    "Хотите консультацию?",
+  ].join("\n");
 }
 
 /** After a no: why it helps, then the same question once more. */

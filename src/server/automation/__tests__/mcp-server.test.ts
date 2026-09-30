@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { describe, expect, it } from "vitest";
+import { consultationOfferMessage } from "@/server/booking/consent";
 import { MCP_V1_TOOLS } from "../capability-grant";
 import { handleMcpPost, saveProposeReplyDraft } from "../mcp-server";
 
@@ -419,7 +420,7 @@ describe("MCP capability grant", () => {
     );
     expect(JSON.stringify(draft.body)).toContain("offer_sent");
     expect(box.calls.bookings).toBe(0);
-    expect(box.calls.sent).toEqual(["Хотите консультацию?"]);
+    expect(box.calls.sent).toEqual([consultationOfferMessage()]);
   });
 
   it("explains and asks again when the client declines", async () => {

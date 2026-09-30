@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { clientAlreadyAgreedToConsultation, shouldSendBookingLink } from "../consent";
+import {
+  clientAlreadyAgreedToConsultation,
+  consultationOfferMessage,
+  shouldSendBookingLink,
+} from "../consent";
 
 describe("booking consent", () => {
   it("sends the link when a person asked and the client agreed", () => {
@@ -45,6 +49,17 @@ describe("booking consent", () => {
         clientBody: "Давайте",
       }),
     ).toBe(false);
+  });
+
+  it("sends the link when the client agrees to the full consultation offer", () => {
+    expect(
+      shouldSendBookingLink({
+        previousBody: consultationOfferMessage(),
+        clientBody: "Да",
+      }),
+    ).toBe(true);
+    expect(consultationOfferMessage()).toContain("Общая картина ясна.");
+    expect(consultationOfferMessage()).toContain("<b>130 €</b> / 1 час");
   });
 
   it("sends the link only after a yes to the consultation question", () => {

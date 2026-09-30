@@ -89,6 +89,9 @@ function telegramCommandFamily(command: string | null): string | null {
  * Public prices from https://immigrome.ru/ (tariff and service cards).
  * The link sits on the tariffs block, which is the site's «Тарифы» section.
  */
+/** «Консультация по поступлению» from the public tariff list. */
+export const ADMISSION_CONSULTATION_PRICE = "<b>130 €</b> / 1 час";
+
 export const TELEGRAM_PRICES_TEXT = [
   "<b>Тарифы</b>",
   "Комплексное сопровождение поступления.",
@@ -103,7 +106,7 @@ export const TELEGRAM_PRICES_TEXT = [
   "",
   "<b>Услуги</b>",
   "",
-  "• <b>Консультация по поступлению</b> — <b>130 €</b> / 1 час.",
+  `• <b>Консультация по поступлению</b> — ${ADMISSION_CONSULTATION_PRICE}.`,
   "• <b>Мне только спросить</b> — <b>50 €</b> / 20 минут.",
   "• <b>Консультация по стипендии</b> — <b>135 €</b> / 1 час.",
   "• <b>Консультация «языковые курсы»</b> — <b>70 €</b> / 40 минут.",

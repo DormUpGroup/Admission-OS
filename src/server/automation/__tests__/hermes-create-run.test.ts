@@ -656,6 +656,8 @@ describe("formatLeadCard", () => {
       { direction: "OUTBOUND", body: "Перевод уже готов?" },
       { direction: "INBOUND", body: "Есть" },
     ]);
+    expect(card).toContain("Общая картина ясна.");
+    expect(card).toContain("<b>130 €</b> / 1 час");
     expect(card).toContain("Хотите консультацию?");
     expect(card).toContain("Do not send the booking link until they say yes");
     expect(card).toContain("Missing:");

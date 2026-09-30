@@ -10,6 +10,7 @@ import { TELEGRAM_PRICES_TEXT } from "@/server/channels/telegram-copy";
 import {
   clientAlreadyAgreedToConsultation,
   clientAlreadyAgreedToQuestionnaire,
+  consultationOfferMessage,
   consultationDeclineCount,
   declinedConsultation,
   declinedQuestionnaire,
@@ -169,7 +170,7 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
       "The client declined a consultation. Explain that a consultation is how they can understand their case better, then ask once more: Хотите консультацию? Do not send the link.";
   } else if (gate.ready) {
     next =
-      "Ask whether they want a consultation, in one short question: Хотите консультацию? Do not call this the last question. Do not send the booking link until they say yes. Do not ask another fact.";
+      `Ask whether they want a consultation. Send this text and do not shorten it:\n${consultationOfferMessage()}\nDo not call this the last question. Do not send the booking link until they say yes. Do not ask another fact.`;
   } else if (!questionnaireStarted && questionDeclines >= 2) {
     next =
       "The client declined the questions again. Accept it in one short sentence and do not offer the questionnaire again. Do not ask a fact.";
