@@ -57,6 +57,29 @@ export type HermesHttpOutcome =
   | { kind: "ok"; runId: string; sessionId: string | null }
   | { kind: "terminal"; status: number; message: string };
 
+/**
+ * Railway private DNS is plain HTTP. Wireguard already encrypts the hop.
+ * https://*.railway.internal never completes a TLS handshake, so Node fetch
+ * aborts with "fetch failed" and the outbox burns attempts until dead.
+ */
+export function normalizeHermesApiUrl(apiUrl: string): string {
+  const trimmed = apiUrl.trim();
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return trimmed.replace(/\/$/, "");
+  }
+  const host = url.hostname.toLowerCase();
+  if (
+    url.protocol === "https:" &&
+    (host === "railway.internal" || host.endsWith(".railway.internal"))
+  ) {
+    url.protocol = "http:";
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
 export function readHermesProfileConfig(
   env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
   agentKey: string,
@@ -71,7 +94,14 @@ export function readHermesProfileConfig(
       `HERMES_API_URL and ${HERMES_PROFILE_KEY_ENV[agentKey]} are required`,
     );
   }
-  return { apiUrl: apiUrl.replace(/\/$/, ""), apiKey, agentKey };
+  return { apiUrl: normalizeHermesApiUrl(apiUrl), apiKey, agentKey };
+}
+
+function fetchFailureMessage(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause;
+  if (cause instanceof Error && cause.message) return `${error.message}: ${cause.message}`;
+  return error.message;
 }
 
 type HermesResponseBody = {
@@ -112,8 +142,7 @@ export async function postHermesCreateRun(options: {
         signal: controller.signal,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new HermesRetryableError(message);
+      throw new HermesRetryableError(fetchFailureMessage(error));
     }
 
     const data = (await response.json().catch(() => null)) as HermesResponseBody | null;
@@ -195,8 +224,7 @@ export async function getHermesRun(options: {
         },
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new HermesRetryableError(message);
+      throw new HermesRetryableError(fetchFailureMessage(error));
     }
 
     const data = (await response.json().catch(() => null)) as

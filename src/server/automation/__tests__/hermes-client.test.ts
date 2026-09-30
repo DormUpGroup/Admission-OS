@@ -3,6 +3,7 @@ import {
   getHermesRun,
   HermesNotConfiguredError,
   HermesRetryableError,
+  normalizeHermesApiUrl,
   postHermesCreateRun,
 } from "../hermes-client";
 
@@ -17,6 +18,28 @@ const body = {
 };
 
 describe("Hermes create_run client", () => {
+  it("rewrites https on railway.internal to http before calling Hermes", async () => {
+    expect(normalizeHermesApiUrl("https://hermes.railway.internal:8642")).toBe(
+      "http://hermes.railway.internal:8642",
+    );
+    expect(normalizeHermesApiUrl("https://example.com:8642")).toBe("https://example.com:8642");
+
+    const captured: { url: string } = { url: "" };
+    const fetchImpl = (async (url: string | URL | Request) => {
+      captured.url = String(url);
+      return new Response(JSON.stringify({ run_id: "run_abc123" }), { status: 202 });
+    }) as typeof fetch;
+
+    await postHermesCreateRun({
+      env: { ...env, HERMES_API_URL: "https://hermes.railway.internal:8642/" },
+      agentKey: "intake",
+      body,
+      idempotencyKey: "k",
+      fetchImpl,
+    });
+    expect(captured.url).toBe("http://hermes.railway.internal:8642/p/intake/v1/runs");
+  });
+
   it("posts an idempotent create_run and accepts 202 with run_id", async () => {
     const captured: { url: string; init: RequestInit | undefined } = { url: "", init: undefined };
     const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
