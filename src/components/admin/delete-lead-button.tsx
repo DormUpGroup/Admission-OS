@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { deleteLeadAction } from "@/server/lead-actions";
@@ -13,14 +13,32 @@ export function DeleteLeadButton({
   open: openProp,
   onOpenChange,
   showTrigger = true,
+  startArmed = false,
+  toastIndex = 0,
+  onConfirmed,
+  onUndo,
+  onFailed,
+  onDeleted,
 }: {
   leadId: string;
   name: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTrigger?: boolean;
+  /** Starts the undo countdown on mount, after the row is already gone. */
+  startArmed?: boolean;
+  toastIndex?: number;
+  /** List takes the row away immediately and runs the countdown outside it. */
+  onConfirmed?: () => void;
+  onUndo?: () => void;
+  onFailed?: (message: string) => void;
+  onDeleted?: () => void;
 }) {
   const router = useRouter();
+  const onFailedRef = useRef(onFailed);
+  const onDeletedRef = useRef(onDeleted);
+  onFailedRef.current = onFailed;
+  onDeletedRef.current = onDeleted;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
 
@@ -28,7 +46,9 @@ export function DeleteLeadButton({
     if (openProp === undefined) setUncontrolledOpen(next);
     onOpenChange?.(next);
   }
-  const [undoUntil, setUndoUntil] = useState<number | null>(null);
+  const [undoUntil, setUndoUntil] = useState<number | null>(() =>
+    startArmed ? Date.now() + UNDO_MS : null,
+  );
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -43,13 +63,19 @@ export function DeleteLeadButton({
       setError("");
       void deleteLeadAction(leadId)
         .then(() => {
-          router.push("/admin/leads");
+          onDeletedRef.current?.();
+          if (!onDeletedRef.current) router.push("/admin/leads");
           router.refresh();
         })
         .catch((caught: unknown) => {
-          setError(caught instanceof Error ? caught.message : "Не удалось удалить лида");
+          const message = caught instanceof Error ? caught.message : "Не удалось удалить лида";
           setPending(false);
           setUndoUntil(null);
+          if (onFailedRef.current) {
+            onFailedRef.current(message);
+            return;
+          }
+          setError(message);
           setOpen(true);
         });
     }, Math.max(undoUntil - Date.now(), 0));
@@ -68,6 +94,10 @@ export function DeleteLeadButton({
   function arm() {
     setOpen(false);
     setError("");
+    if (onConfirmed) {
+      onConfirmed();
+      return;
+    }
     setPending(false);
     setSecondsLeft(5);
     setUndoUntil(Date.now() + UNDO_MS);
@@ -77,6 +107,7 @@ export function DeleteLeadButton({
     if (pending) return;
     setUndoUntil(null);
     setError("");
+    onUndo?.();
   }
 
   return (
@@ -126,7 +157,10 @@ export function DeleteLeadButton({
         </div>
       ) : null}
       {undoUntil != null ? (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+        <div
+          className="fixed inset-x-0 z-50 flex justify-center px-4"
+          style={{ bottom: `${16 + toastIndex * 72}px` }}
+        >
           <div
             className="surface-card flex w-full max-w-md items-center justify-between gap-3 rounded-full px-4 py-3 shadow-lg"
             role="status"

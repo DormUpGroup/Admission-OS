@@ -11,10 +11,12 @@ export function LeadRowMenu({
   leadId,
   name,
   conversationId,
+  onRemove,
 }: {
   leadId: string;
   name: string;
   conversationId: string | null;
+  onRemove: () => void;
 }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -82,6 +84,7 @@ export function LeadRowMenu({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         showTrigger={false}
+        onConfirmed={onRemove}
       />
     </div>
   );

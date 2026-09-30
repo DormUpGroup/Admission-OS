@@ -1,19 +1,8 @@
-import Link from "next/link";
 import { requireStaff } from "@/server/auth/guards";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeader,
-  DataTableRow,
-} from "@/components/data-table";
-import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
-import { LeadRowMenu } from "@/components/admin/lead-row-menu";
+import { LeadsTable } from "@/components/admin/leads-table";
 
 export const dynamic = "force-dynamic";
 
@@ -141,56 +130,18 @@ export default async function AdminLeadsPage({
           className="w-full max-w-sm rounded-xl border border-border bg-card px-3 py-2 text-[13px]"
         />
       </form>
-      {rows.length === 0 ? (
-        <EmptyState
-          title={query ? "Ничего не найдено" : "Пока нет лидов"}
-          description={
-            query
-              ? "Попробуйте другое имя или контакт."
-              : "Когда человек напишет и ещё не станет учеником, он появится здесь."
-          }
-        />
-      ) : (
-        <DataTable>
-          <DataTableHeader>
-            <DataTableRow>
-              <DataTableHead>Человек</DataTableHead>
-              <DataTableHead>Кабинет</DataTableHead>
-              <DataTableHead>Канал</DataTableHead>
-              <DataTableHead>Контакт</DataTableHead>
-              <DataTableHead>Куратор</DataTableHead>
-              <DataTableHead>Активность</DataTableHead>
-              <DataTableHead />
-            </DataTableRow>
-          </DataTableHeader>
-          <DataTableBody>
-            {rows.map((row) => (
-              <DataTableRow key={row.id}>
-                <DataTableCell className="font-medium">
-                  <Link href={`/admin/leads/${row.id}`} className="hover:underline">
-                    {row.title}
-                  </Link>
-                </DataTableCell>
-                <DataTableCell>
-                  {/* Signup from this chat converts the lead, so this list is guests. */}
-                  <PlatformPresenceBadge hasAccount={false} />
-                </DataTableCell>
-                <DataTableCell>{row.channel}</DataTableCell>
-                <DataTableCell>{row.contact}</DataTableCell>
-                <DataTableCell>{row.curator}</DataTableCell>
-                <DataTableCell>{formatDate(row.activity)}</DataTableCell>
-                <DataTableCell className="w-12 text-right">
-                  <LeadRowMenu
-                    leadId={row.id}
-                    name={row.title}
-                    conversationId={row.conversationId}
-                  />
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
-      )}
+      <LeadsTable
+        query={query}
+        rows={rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          channel: row.channel,
+          contact: row.contact,
+          curator: row.curator,
+          activity: formatDate(row.activity),
+          conversationId: row.conversationId,
+        }))}
+      />
     </div>
   );
 }
