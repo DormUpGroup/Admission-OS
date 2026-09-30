@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from "crypto";
 import type { Prisma } from "@prisma/client";
-import { buildLeadCard, consultationGate, factIsKnown } from "@/lib/lead-profile";
+import {
+  buildLeadCard,
+  CONSULTATION_FACT_KEYS,
+  consultationGate,
+  factIsKnown,
+} from "@/lib/lead-profile";
 import { TELEGRAM_PRICES_TEXT } from "@/server/channels/telegram-copy";
 import {
   clientAlreadyAgreedToConsultation,
@@ -44,6 +49,29 @@ const QUESTION_ORDER = [
   "studyLevel",
   ...LEAD_FACT_FIELDS.filter((field) => field !== "studyLevel"),
 ] as const;
+
+/**
+ * Questions still asked before the consultation offer.
+ * Later facts, such as budget, wait until citizenship, passport, diploma, and apostille are known.
+ */
+function questionnaireLeft(byKey: Map<string, string>): number {
+  const missingConsultation = CONSULTATION_FACT_KEYS.filter(
+    (key) => !factIsKnown(key, byKey.get(key)),
+  );
+  if (missingConsultation.length === 0) return 0;
+  const lastIndex = Math.max(
+    ...missingConsultation.map((key) => (QUESTION_ORDER as readonly string[]).indexOf(key)),
+  );
+  return QUESTION_ORDER.slice(0, lastIndex + 1).filter((key) => !factIsKnown(key, byKey.get(key)))
+    .length;
+}
+
+function questionPace(left: number): string {
+  if (left <= 1) {
+    return "This is the last question. You may say it is the last one.";
+  }
+  return "More questions remain after this one. Do not say последний вопрос, остался один вопрос, or that only one question is left.";
+}
 
 export const SCHEDULING_MCP_TOOLS = ["commit_booked_consultation"] as const;
 export const ONBOARDING_MCP_TOOLS = [
@@ -128,6 +156,7 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
   const questionDeclines = questionnaireDeclineCount(messages);
   const nextField = QUESTION_ORDER.find((field) => !factIsKnown(field, byKey.get(field)));
   const offer = questionnaireOfferMessage();
+  const pace = questionPace(questionnaireLeft(byKey));
   let next: string;
   if (gate.ready && agreed) {
     next =
@@ -140,7 +169,7 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
       "The client declined a consultation. Explain that a consultation is how they can understand their case better, then ask once more: Хотите консультацию? Do not send the link.";
   } else if (gate.ready) {
     next =
-      "Ask whether they want a consultation, in one short question: Хотите консультацию? Do not send the booking link until they say yes. Do not ask another fact.";
+      "Ask whether they want a consultation, in one short question: Хотите консультацию? Do not call this the last question. Do not send the booking link until they say yes. Do not ask another fact.";
   } else if (!questionnaireStarted && questionDeclines >= 2) {
     next =
       "The client declined the questions again. Accept it in one short sentence and do not offer the questionnaire again. Do not ask a fact.";
@@ -150,19 +179,19 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
     next = `Do not ask a fact. Offer to start and ask a few questions, in this sentence: ${offer}`;
   } else if (nextField === "studyLevel") {
     next =
-      "Ask only which level they want: бакалавриат, магистратура, or foundation. Do not ask any other fact.";
+      `Ask only which level they want: бакалавриат, магистратура, or foundation. ${pace} Do not ask any other fact.`;
   } else if (
     nextField === "apostilleTranslation" &&
     /перевод не назван/iu.test(byKey.get("apostilleTranslation") ?? "")
   ) {
-    next = "Ask only whether the translation exists. The apostille is already known. Do not ask any other fact.";
+    next = `Ask only whether the translation exists. The apostille is already known. ${pace} Do not ask any other fact.`;
   } else if (
     nextField === "apostilleTranslation" &&
     /апостиль не назван/iu.test(byKey.get("apostilleTranslation") ?? "")
   ) {
-    next = "Ask only whether the apostille exists. The translation is already known. Do not ask any other fact.";
+    next = `Ask only whether the apostille exists. The translation is already known. ${pace} Do not ask any other fact.`;
   } else if (nextField) {
-    next = `Ask only this one missing fact: ${nextField}. Do not ask anything listed in Known.`;
+    next = `Ask only this fact: ${nextField}. ${pace} Do not ask anything listed in Known.`;
   } else {
     next = "Do not ask another fact. Answer what they just said.";
   }
@@ -183,6 +212,8 @@ export function hermesRunInstructions(
   curatorRequests = 0,
 ): string {
   return [
+    "You are a girl chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
+    "Refer to yourself in the feminine: поняла, передала, уточнила, написала. Never понял, передал, уточнил, написал. The Name on the lead card is the client, not you. If Name is unknown, do not address the client by name and do not invent one. If Name is a personal name, you may use that first name.",
     "Call tools only through the admission_os MCP server.",
     `Pass grant_id exactly as ${grantId} on every tool call.`,
     "Allowed tools: get_conversation_context, get_contact_profile, update_lead_qualification, send_client_message, send_booking_link, escalate_to_human, propose_reply.",
@@ -198,7 +229,8 @@ export function hermesRunInstructions(
     "When Next says the client declined the questions, explain why they are needed and ask once more. Do not ask a fact yet.",
     "When Next says the client declined the questions again, accept it and do not offer the questionnaire again.",
     "If the latest client message repeats the previous client message in meaning, do not send another reply and do not ask the same question again.",
-    "One turn only: a short human reply and at most one fitting question.",
+    "One turn only: a human reply and at most one fitting question.",
+    "Say that this is the last question, or that one question is left, only when the Next line says this is the last question.",
     "The study destination is always Italy. Never ask which country they are considering, and never offer another country.",
     "When the person states a new fact, save it with update_lead_qualification. If it is already in Known, do not ask them to repeat it.",
     "When Next says to ask whether they want a consultation, ask only that. Do not send the booking link until they say yes.",
@@ -221,6 +253,13 @@ export function hermesRunInstructions(
     "If send_booking_link returns no_curator or booking_unavailable, call escalate_to_human and do not invent a link.",
     "Do not put timelines in the text you send. A price is allowed only when it is copied from the price catalog.",
     "Write in the client's language, usually Russian.",
+    "Sound like a person in a Telegram chat: warm, plain words, as if you are writing to someone you are helping. Not a form and not a protocol.",
+    "Put a blank line between the reply and the question.",
+    "An emoji is welcome when the moment is light: at most one in a message, and not in every message. Skip it when the topic is a problem, a refusal, or anything serious.",
+    "When you list items, use a list. Steps in order are lines starting with 1. 2. 3. Equal items, such as documents or options, are lines starting with •. One list per message, at most five items. A blank line before the list and a blank line after it. The question stays after the list, as a plain sentence. The five-item limit does not apply to the price catalog: send the whole catalog when they ask for the price list.",
+    "Bold the words that carry the fact, as Telegram HTML <b>word</b>: a level, a field, a year, a citizenship, a document, a date, a time, or a status. Two to four bold words in a message is enough. Do not bold a whole sentence. Dates look like <b>15 марта 2026</b>. Times look like <b>14:30</b>. Repeat a date or time the client already said. Do not invent dates or times.",
+    "If you include a link, put the plain URL on its own line. No headings, no tables, no italics, no asterisks. The only markup is <b> and </b>.",
+    "No corporate greeting, no \"уважаемый клиент\", no essay.",
     "Do not promise admission, a visa, or a payment. Do not mention visas or guaranteed admission unless the person asks. If they ask, say: Мы не оформляем визу и не гарантируем зачисление.",
     "Latest client message:",
     clientMessage,

@@ -255,14 +255,15 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("send_client_message");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
-      expect(sent.instructions).toContain("Next: Ask only this one missing fact: educationLevel");
+      expect(sent.instructions).toContain("Next: Ask only this fact: educationLevel");
+      expect(sent.instructions).toContain("More questions remain after this one");
       expect(sent.instructions).toContain("Never ask a Known fact again");
       expect(sent.instructions).toContain("escalate_to_human");
       expect(sent.instructions).toContain("the one action the curator should take");
       expect(sent.instructions).toContain("propose_reply");
       expect(sent.instructions).toContain("The server sends that text when the turn ends");
-      expect(sent.instructions).not.toContain("You are a girl");
-      expect(sent.instructions).not.toContain("поняла, передала");
+      expect(sent.instructions).toContain("You are a girl");
+      expect(sent.instructions).toContain("поняла, передала");
       expect(sent.instructions).toContain("do not greet again");
       expect(sent.instructions).toContain("repeats the previous client message");
       expect(sent.instructions).toContain("answer immediately");
@@ -270,7 +271,9 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("third explicit request");
       expect(sent.instructions).toContain("the curator will answer this");
       expect(sent.instructions).not.toContain("Do not put prices");
-      expect(sent.instructions).not.toContain("Sound like a person");
+      expect(sent.instructions).toContain("Sound like a person");
+      expect(sent.instructions).toContain("<b>word</b>");
+      expect(sent.instructions).toContain("at most one in a message");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
@@ -687,6 +690,8 @@ describe("formatLeadCard", () => {
       { direction: "INBOUND", body: "Да" },
     ]);
     expect(card).toContain("бакалавриат, магистратура, or foundation");
+    expect(card).toContain("More questions remain after this one");
+    expect(card).not.toContain("This is the last question");
     expect(card).not.toContain("Do not ask a fact");
   });
 
@@ -718,10 +723,31 @@ describe("formatLeadCard", () => {
     expect(twice).toContain("do not offer the questionnaire again");
   });
 
+  it("calls the question last only when one questionnaire fact remains", () => {
+    const card = formatLeadCard(
+      {
+        qualificationJson: {
+          studyLevel: "Бакалавриат",
+          educationLevel: "Школа",
+          targetField: "Дизайн",
+          desiredIntake: "2027/28",
+          citizenship: "РФ",
+          passport: "есть",
+          diploma: "аттестат есть",
+        },
+      },
+      [],
+    );
+    expect(card).toContain("Ask only this fact: apostilleTranslation");
+    expect(card).toContain("This is the last question");
+    expect(card).not.toContain("More questions remain");
+  });
+
   it("skips the offer when the level was already named", () => {
     const card = formatLeadCard(null, [{ direction: "INBOUND", body: "Хочу на мастер" }]);
     expect(card).toContain("studyLevel: Магистратура");
-    expect(card).toContain("Ask only this one missing fact: educationLevel");
+    expect(card).toContain("Ask only this fact: educationLevel");
+    expect(card).toContain("More questions remain after this one");
     expect(card).not.toContain("Начнём?");
   });
 });
