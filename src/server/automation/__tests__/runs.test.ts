@@ -62,7 +62,11 @@ describe("Intake run queue", () => {
         }),
       },
       agentDefinition: { upsert: async () => ({}) },
-      agentRun: { findUnique: async () => ({ id: "run-existing" }) },
+      agentRun: {
+        findMany: async () => [],
+        findUnique: async () => ({ id: "run-existing" }),
+      },
+      conversationMessage: { findFirst: async () => null },
       outboxEvent: outbox.outboxEvent,
     };
     const event = {
@@ -91,7 +95,9 @@ describe("Intake run queue", () => {
         }),
       },
       agentDefinition: { upsert: async () => ({}) },
+      conversationMessage: { findFirst: async () => null },
       agentRun: {
+        findMany: async () => [],
         findUnique: async () => {
           findCalls += 1;
           return findCalls === 1 ? null : { id: "run-winner" };
@@ -189,5 +195,96 @@ describe("Intake run queue", () => {
         },
       }),
     ).toEqual({ queued: false, reason: "appointment_confirmed" });
+  });
+
+  it("does not answer an earlier message when a newer one is already stored", async () => {
+    let created = false;
+    const db = {
+      conversation: {
+        findUnique: async () => ({
+          id: "conversation-1",
+          leadId: "lead-1",
+          studentId: null,
+          automationPausedAt: null,
+          messages: [{ body: "Магистратура", attachmentsJson: null }],
+        }),
+      },
+      conversationMessage: {
+        findFirst: async (args: { where?: { createdAt?: unknown; id?: unknown } }) => {
+          if (args.where?.createdAt) return { id: "message-later" };
+          if (typeof args.where?.id === "string") {
+            return { createdAt: new Date("2026-09-30T10:00:00.000Z") };
+          }
+          return null;
+        },
+      },
+      agentRun: {
+        create: async () => {
+          created = true;
+          throw new Error("should not queue");
+        },
+      },
+    };
+    const result = await queueIntakeRunForMessageReceived(db as never, {
+      aggregateId: "message-1",
+      eventType: "message.received",
+      idempotencyKey: "event-burst",
+      payloadJson: { conversationId: "conversation-1", messageId: "message-1" },
+    });
+    expect(result).toEqual({ queued: false, reason: "later_client_message" });
+    expect(created).toBe(false);
+  });
+
+  it("drops an in-flight reply and starts again for the newer message", async () => {
+    const outbox = outboxMock();
+    const open = {
+      id: "run-old",
+      status: "RUNNING",
+      inputJson: { messageId: "message-old" },
+    };
+    const grant = { agentRunId: "run-old", revokedAt: null as Date | null };
+    const db = {
+      conversation: {
+        findUnique: async () => ({
+          id: "conversation-1",
+          leadId: "lead-1",
+          studentId: null,
+          automationPausedAt: null,
+          messages: [{ body: "Турин", attachmentsJson: null }],
+        }),
+      },
+      conversationMessage: { findFirst: async () => null },
+      agentDefinition: { upsert: async () => ({}) },
+      agentCapabilityGrant: {
+        updateMany: async ({ data }: { data: { revokedAt: Date } }) => {
+          if (grant.revokedAt) return { count: 0 };
+          grant.revokedAt = data.revokedAt;
+          return { count: 1 };
+        },
+      },
+      agentRun: {
+        findMany: async () => [open],
+        findUnique: async () => null,
+        updateMany: async ({ data }: { data: { status: string } }) => {
+          Object.assign(open, data);
+          return { count: 1 };
+        },
+        create: async ({ data }: { data: { idempotencyKey: string } }) => ({
+          id: "run-new",
+          ...data,
+        }),
+      },
+      outboxEvent: outbox.outboxEvent,
+    };
+    const result = await queueIntakeRunForMessageReceived(db as never, {
+      aggregateId: "message-new",
+      eventType: "message.received",
+      idempotencyKey: "event-new",
+      payloadJson: { conversationId: "conversation-1", messageId: "message-new" },
+    });
+    expect(result).toEqual({ queued: true, agentRunId: "run-new", duplicate: false });
+    expect(open.status).toBe("COMPLETED");
+    expect(grant.revokedAt).toBeInstanceOf(Date);
+    expect(outbox.created).toEqual(["hermes.create_run:run-new"]);
   });
 });

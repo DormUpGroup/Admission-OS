@@ -14,6 +14,7 @@ import {
   POLICY_DECISIONS,
   type PolicyEvaluation,
 } from "./policy";
+import { hasLaterInboundMessage, messageIdFromRunInput } from "./client-burst";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import type { DbClient } from "@/server/commands/outbox";
 import { prisma } from "@/lib/db";
@@ -66,6 +67,24 @@ export async function sendAgentClientMessage(input: {
       },
     });
     return { status: "APPROVAL_REQUIRED", policy, ...approval };
+  }
+
+  if (input.agentRunId) {
+    const run = await prisma.agentRun.findUnique({
+      where: { id: input.agentRunId },
+      select: { inputJson: true, conversationId: true },
+    });
+    const messageId = messageIdFromRunInput(run?.inputJson);
+    const conversationId = run?.conversationId ?? input.conversationId;
+    if (
+      messageId &&
+      (await hasLaterInboundMessage(prisma, { conversationId, messageId }))
+    ) {
+      return {
+        status: "DENIED",
+        policy: { decision: POLICY_DECISIONS.DENY, reasons: ["later_client_message"] },
+      };
+    }
   }
 
   const sent = await requestTelegramSend({

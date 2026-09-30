@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
 import { revokeCapabilityGrant } from "./capability-grant";
+import { hasLaterInboundMessage, messageIdFromRunInput } from "./client-burst";
 import { commitBookedConsultation, commitSchedulingRunCalendar } from "./commit-consultation";
 import { sendUnsentRunDraft } from "./deliver-draft";
 import {
@@ -71,6 +72,25 @@ export async function dispatchHermesPollRun(
     throw new HermesRetryableError(`AgentRun ${agentRunId} has no hermesRunId`);
   }
 
+  const triggerMessageId = messageIdFromRunInput(run.inputJson);
+  if (
+    run.agentKey === "intake" &&
+    run.conversationId &&
+    triggerMessageId &&
+    (await hasLaterInboundMessage(db, {
+      conversationId: run.conversationId,
+      messageId: triggerMessageId,
+    }))
+  ) {
+    await finishRun(db, run.id, run.outputJson, {
+      status: "COMPLETED",
+      errorCode: "later_client_message",
+      errorMessage: "A newer client message is answered instead",
+      now,
+    });
+    return { status: "skipped" };
+  }
+
   const snapshot = await getHermesRun({
     env,
     agentKey: run.agentKey,
@@ -139,6 +159,7 @@ export async function dispatchHermesPollRun(
       conversationId: run.conversationId,
       outputJson,
       startedAt: run.startedAt,
+      messageId: messageIdFromRunInput(run.inputJson),
     });
   }
 

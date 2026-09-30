@@ -110,4 +110,42 @@ describe("sendUnsentRunDraft", () => {
     expect(result).toEqual({ status: "held", reason: "automation_paused" });
     expect(called).toBe(false);
   });
+
+  it("does not send a draft after a newer client message arrived", async () => {
+    let called = false;
+    const db = {
+      conversationMessage: {
+        findFirst: async (args: { where?: { direction?: string; createdAt?: unknown; id?: unknown } }) => {
+          if (args.where?.direction === "OUTBOUND") return null;
+          if (args.where?.createdAt) return { id: "later" };
+          if (typeof args.where?.id === "string") {
+            return { createdAt: new Date("2026-09-28T10:00:00.000Z") };
+          }
+          return null;
+        },
+      },
+    };
+    const result = await sendUnsentRunDraft(
+      db as never,
+      {
+        agentRunId: "run-1",
+        conversationId: "conv-1",
+        outputJson: draft,
+        startedAt,
+        messageId: "message-1",
+      },
+      {
+        evaluate: async () => {
+          called = true;
+          return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
+        },
+        send: async () => {
+          called = true;
+          throw new Error("should not send");
+        },
+      },
+    );
+    expect(result).toEqual({ status: "skipped", reason: "later_client_message" });
+    expect(called).toBe(false);
+  });
 });

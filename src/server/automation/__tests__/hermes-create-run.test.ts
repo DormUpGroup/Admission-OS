@@ -57,6 +57,8 @@ function harness(options: {
   fetchImpl?: typeof fetch;
   appointment?: typeof bookedAppointment | null;
   uniqueConflict?: boolean;
+  laterInbound?: boolean;
+  messages?: Array<{ direction: string; body: string | null }>;
 }) {
   const outboxCreates: Array<{ eventType: string; idempotencyKey: string }> = [];
   const runUpdates: Array<Record<string, unknown>> = [];
@@ -127,13 +129,21 @@ function harness(options: {
       },
     },
     conversationMessage: {
-      findFirst: async () =>
-        options.body === undefined ? { body: "Хочу поступить" } : { body: options.body },
-      findMany: async () => [
-        { direction: "INBOUND", body: options.body === undefined ? "Хочу поступить" : options.body },
-        { direction: "OUTBOUND", body: "Какой уровень вас интересует?" },
-        { direction: "INBOUND", body: "Бакалавриат" },
-      ],
+      findFirst: async (args?: { where?: { id?: unknown; createdAt?: unknown } }) => {
+        const where = args?.where ?? {};
+        const body = options.body === undefined ? "Хочу поступить" : options.body;
+        if (where.createdAt) return options.laterInbound ? { id: "message-later" } : null;
+        if (where.id) {
+          return { id: "message-1", body, createdAt: new Date("2026-09-27T07:59:00.000Z") };
+        }
+        return { body };
+      },
+      findMany: async () =>
+        options.messages ?? [
+          { direction: "INBOUND", body: options.body === undefined ? "Хочу поступить" : options.body },
+          { direction: "OUTBOUND", body: "Какой уровень вас интересует?" },
+          { direction: "INBOUND", body: "Бакалавриат" },
+        ],
     },
     agentCapabilityGrant: {
       findUnique: async ({ where }: { where: { agentRunId?: string; id?: string } }) =>
@@ -265,6 +275,7 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("You are a girl");
       expect(sent.instructions).toContain("поняла, передала");
       expect(sent.instructions).toContain("do not greet again");
+      expect(sent.instructions).toContain("one thought");
       expect(sent.instructions).toContain("repeats the previous client message");
       expect(sent.instructions).toContain("answer immediately");
       expect(sent.instructions).toContain("1599 €");
@@ -308,6 +319,63 @@ describe("hermes.create_run dispatch", () => {
     ]);
     expect(box.grants[0]?.revokedAt).toBeNull();
     expect(box.session()).toBe("old-conversation-session");
+  });
+
+  it("sends one thought when several client messages arrived in a row", async () => {
+    let sentInput = "";
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      sentInput = (JSON.parse(String(init?.body)) as { input: string }).input;
+      return new Response(JSON.stringify({ run_id: "hermes-burst", status: "started" }), {
+        status: 202,
+      });
+    }) as typeof fetch;
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "intake",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:intake:event-burst",
+        conversationId: "conversation-1",
+        inputJson: { messageId: "message-3" },
+      },
+      body: "Турин",
+      messages: [
+        { direction: "INBOUND", body: "Турин" },
+        { direction: "INBOUND", body: "Право" },
+        { direction: "INBOUND", body: "Магистратура" },
+        { direction: "OUTBOUND", body: "Какой уровень вас интересует?" },
+      ],
+      fetchImpl,
+    });
+    await dispatchHermesCreateRun(box.db as never, "run-1", { env, fetchImpl, now });
+    expect(sentInput).toBe("Магистратура\nПраво\nТурин");
+  });
+
+  it("does not start Hermes when a newer client message is already stored", async () => {
+    let fetchCalls = 0;
+    const fetchImpl = (async () => {
+      fetchCalls += 1;
+      return new Response(JSON.stringify({ run_id: "hermes-no", status: "started" }), { status: 202 });
+    }) as typeof fetch;
+    const box = harness({
+      run: {
+        id: "run-1",
+        agentKey: "intake",
+        status: "QUEUED",
+        hermesRunId: null,
+        idempotencyKey: "agent:intake:event-old",
+        conversationId: "conversation-1",
+        inputJson: { messageId: "message-1" },
+      },
+      laterInbound: true,
+      fetchImpl,
+    });
+    await expect(
+      dispatchHermesCreateRun(box.db as never, "run-1", { env, fetchImpl, now }),
+    ).resolves.toEqual({ status: "skipped", hermesRunId: null });
+    expect(fetchCalls).toBe(0);
+    expect(box.state.status).toBe("COMPLETED");
   });
 
   it("does not call Hermes again once hermesRunId is stored", async () => {

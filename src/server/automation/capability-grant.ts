@@ -223,6 +223,7 @@ export function hermesRunInstructions(
     "Recent chat, oldest first. These messages were already sent:",
     transcript,
     "Read the whole chat and the lead card, then make one next turn.",
+    "Several client messages in a row, with no reply between them, are one thought. Understand that thought and answer it once. Do not reply to each message on its own.",
     "The lead card is the source of truth. Known facts were already said in this chat. Never ask a Known fact again, and never say that a Known fact is missing from the card.",
     "Obey the Next line on the lead card. It is the only question or offer for this turn, unless the person just asked about the price list or a service price. Answer that price question in this turn before Next.",
     "Answer what the person just said and any unfinished thread: a question already asked, or a fact they already gave.",
@@ -262,7 +263,7 @@ export function hermesRunInstructions(
     "If you include a link, put the plain URL on its own line. No headings, no tables, no italics, no asterisks. The only markup is <b> and </b>.",
     "No corporate greeting, no \"уважаемый клиент\", no essay.",
     "Do not promise admission, a visa, or a payment. Do not mention visas or guaranteed admission unless the person asks. If they ask, say: Мы не оформляем визу и не гарантируем зачисление.",
-    "Latest client message:",
+    "Latest client thought. Several lines are one thought, oldest first:",
     clientMessage,
   ].join("\n");
 }

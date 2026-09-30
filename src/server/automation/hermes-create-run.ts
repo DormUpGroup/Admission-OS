@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { chatFactsToSave } from "@/lib/lead-profile";
 import { enqueueOutbox, type DbClient } from "@/server/commands/outbox";
+import { hasLaterInboundMessage, unansweredClientThought } from "./client-burst";
 import {
   ensureCapabilityGrant,
   formatChatTranscript,
@@ -98,6 +99,24 @@ async function markFailed(
     },
   });
   return result.count > 0;
+}
+
+async function completeWithoutReply(
+  db: DbClient,
+  agentRunId: string,
+  errorCode: string,
+  errorMessage: string,
+  now: Date,
+): Promise<void> {
+  await db.agentRun.updateMany({
+    where: { id: agentRunId, status: "QUEUED", hermesRunId: null },
+    data: {
+      status: "COMPLETED",
+      errorCode,
+      errorMessage,
+      completedAt: now,
+    },
+  });
 }
 
 type QueuedProfileRun = {
@@ -366,6 +385,20 @@ export async function dispatchHermesCreateRun(
     throw new HermesRetryableError(`Conversation ${run.conversationId} not found`);
   }
 
+  if (
+    messageId &&
+    (await hasLaterInboundMessage(db, { conversationId: conversation.id, messageId }))
+  ) {
+    await completeWithoutReply(
+      db,
+      run.id,
+      "later_client_message",
+      "A newer client message is answered instead",
+      now,
+    );
+    return { status: "skipped", hermesRunId: null };
+  }
+
   const message = messageId
     ? await db.conversationMessage.findFirst({
         where: { id: messageId, conversationId: conversation.id },
@@ -390,6 +423,7 @@ export async function dispatchHermesCreateRun(
     select: { direction: true, body: true },
   });
   const chronological = [...history].reverse();
+  const thought = unansweredClientThought(chronological).trim() || text;
   const transcript = formatChatTranscript(chronological.slice(-12));
   const remembered = chatFactsToSave(
     conversation.lead?.qualificationJson,
@@ -421,11 +455,11 @@ export async function dispatchHermesCreateRun(
     now,
   });
   const body: HermesCreateRunBody = {
-    input: text,
+    input: thought,
     session_id: sessionId,
     instructions: hermesRunInstructions(
       grant.id,
-      text,
+      thought,
       transcript,
       formatLeadCard(
         conversation.lead ? { ...conversation.lead, qualificationJson } : conversation.lead,

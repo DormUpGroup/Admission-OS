@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { sendAgentClientMessage } from "./actions";
+import { hasLaterInboundMessage } from "./client-burst";
 import {
   evaluateActionPolicyForConversation,
   POLICY_DECISIONS,
@@ -55,6 +56,7 @@ export async function sendUnsentRunDraft(
     conversationId: string;
     outputJson: Prisma.JsonValue | null;
     startedAt: Date | null;
+    messageId?: string | null;
   },
   deps: DraftDeliveryDeps = {},
 ): Promise<DraftDelivery> {
@@ -71,6 +73,16 @@ export async function sendUnsentRunDraft(
       select: { id: true },
     });
     if (outbound) return { status: "skipped", reason: "already_outbound" };
+  }
+
+  if (
+    input.messageId &&
+    (await hasLaterInboundMessage(db, {
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+    }))
+  ) {
+    return { status: "skipped", reason: "later_client_message" };
   }
 
   const evaluate = deps.evaluate ?? evaluateActionPolicyForConversation;

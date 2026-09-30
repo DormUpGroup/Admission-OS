@@ -9,7 +9,10 @@ const env = {
 };
 const now = new Date("2026-09-27T12:00:00.000Z");
 
-function harness(status = "RUNNING") {
+function harness(
+  status = "RUNNING",
+  options?: { messageId?: string; laterInbound?: boolean },
+) {
   const state: {
     id: string;
     agentKey: string;
@@ -18,6 +21,7 @@ function harness(status = "RUNNING") {
     conversationId: string | null;
     startedAt: Date | null;
     outputJson: unknown;
+    inputJson: { messageId?: string } | null;
     errorCode: string | null;
     completedAt?: Date;
   } = {
@@ -28,6 +32,7 @@ function harness(status = "RUNNING") {
     conversationId: "conv-1",
     startedAt: new Date("2026-09-27T11:00:00.000Z"),
     outputJson: { drafts: [{ body: "Черновик" }] },
+    inputJson: options?.messageId ? { messageId: options.messageId } : null,
     errorCode: null,
   };
   const grant = { agentRunId: "run-1", revokedAt: null as Date | null };
@@ -45,6 +50,16 @@ function harness(status = "RUNNING") {
         if (grant.revokedAt) return { count: 0 };
         grant.revokedAt = data.revokedAt;
         return { count: 1 };
+      },
+    },
+    conversationMessage: {
+      findFirst: async (args?: { where?: { createdAt?: unknown; id?: unknown } }) => {
+        if (!options?.laterInbound) return null;
+        if (args?.where?.createdAt) return { id: "message-later" };
+        if (typeof args?.where?.id === "string") {
+          return { createdAt: new Date("2026-09-27T11:00:00.000Z") };
+        }
+        return null;
       },
     },
   };
@@ -111,6 +126,29 @@ describe("hermes.poll_run", () => {
       drafts: [{ body: "Черновик" }],
       hermesOutput: "Готово",
     });
+    expect(box.grant.revokedAt).toEqual(now);
+  });
+
+  it("drops the reply when a newer client message arrived while it was being prepared", async () => {
+    const box = harness("RUNNING", { messageId: "message-1", laterInbound: true });
+    const sent = spy();
+    let fetched = false;
+    const fetchImpl = (async () => {
+      fetched = true;
+      return new Response(JSON.stringify({ status: "completed", output: "Готово" }), { status: 200 });
+    }) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(box.db as never, "run-1", {
+        env,
+        fetchImpl,
+        now,
+        deliverDraft: sent.deliverDraft,
+      }),
+    ).resolves.toEqual({ status: "skipped" });
+    expect(fetched).toBe(false);
+    expect(sent.calls).toEqual([]);
+    expect(box.state.status).toBe("COMPLETED");
+    expect(box.state.errorCode).toBe("later_client_message");
     expect(box.grant.revokedAt).toEqual(now);
   });
 

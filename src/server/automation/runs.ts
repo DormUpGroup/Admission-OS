@@ -1,6 +1,7 @@
 import type { OutboxEvent } from "@prisma/client";
 import { jsonHasBlockedMedia } from "@/server/channels/telegram";
 import type { DbClient } from "@/server/commands/outbox";
+import { dropInFlightIntakeReply, hasLaterInboundMessage } from "./client-burst";
 import { enqueueHermesCreateRun } from "./hermes-create-run";
 import { AGENT_DEFINITIONS_BY_KEY, syncAgentDefinitions } from "./registry";
 
@@ -66,6 +67,10 @@ export async function queueIntakeRunForMessageReceived(
   if (jsonHasBlockedMedia(conversation.messages[0]?.attachmentsJson)) {
     return { queued: false, reason: "blocked_media" };
   }
+  if (await hasLaterInboundMessage(db, { conversationId, messageId })) {
+    return { queued: false, reason: "later_client_message" };
+  }
+  await dropInFlightIntakeReply(db, { conversationId, messageId });
 
   await syncAgentDefinitions(db);
   const definition = AGENT_DEFINITIONS_BY_KEY.get("intake");
