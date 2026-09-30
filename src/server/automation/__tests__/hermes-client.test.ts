@@ -1,9 +1,11 @@
+import { createServer } from "node:http";
 import { describe, expect, it } from "vitest";
 import {
   getHermesRun,
   HermesNotConfiguredError,
   HermesRetryableError,
   normalizeHermesApiUrl,
+  orderHermesAddresses,
   postHermesCreateRun,
 } from "../hermes-client";
 
@@ -18,6 +20,53 @@ const body = {
 };
 
 describe("Hermes create_run client", () => {
+  it("dials IPv4 before the Railway IPv6 address", () => {
+    expect(
+      orderHermesAddresses([
+        { address: "fd12::1", family: 6 },
+        { address: "10.0.0.8", family: 4 },
+      ]),
+    ).toEqual([
+      { address: "10.0.0.8", family: 4 },
+      { address: "fd12::1", family: 6 },
+    ]);
+  });
+
+  it("posts create_run through the private-network transport", async () => {
+    const seen: { host: string | undefined; authorization: string | undefined } = {
+      host: undefined,
+      authorization: undefined,
+    };
+    const server = createServer((req, res) => {
+      seen.host = req.headers.host;
+      seen.authorization = req.headers.authorization;
+      res.writeHead(202, { "content-type": "application/json" });
+      res.end(JSON.stringify({ run_id: "run_local" }));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+    const address = server.address();
+    const port = address && typeof address === "object" ? address.port : 0;
+    try {
+      await expect(
+        postHermesCreateRun({
+          env: {
+            HERMES_API_URL: `http://127.0.0.1:${port}`,
+            HERMES_API_KEY_INTAKE: "intake-secret",
+          },
+          agentKey: "intake",
+          body,
+          idempotencyKey: "k",
+        }),
+      ).resolves.toEqual({ kind: "ok", runId: "run_local", sessionId: null });
+      expect(seen.authorization).toBe("Bearer intake-secret");
+      expect(seen.host).toBe(`127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
   it("rewrites https on railway.internal to http before calling Hermes", async () => {
     expect(normalizeHermesApiUrl("https://hermes.railway.internal:8642")).toBe(
       "http://hermes.railway.internal:8642",

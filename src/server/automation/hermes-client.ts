@@ -1,4 +1,11 @@
+import http from "node:http";
+import https from "node:https";
+import { lookup } from "node:dns/promises";
+
 export const HERMES_HTTP_TIMEOUT_MS = 20_000;
+
+/** One Railway private-network address. IPv6 to an IPv4-only listener blackholes. */
+const HERMES_CONNECT_TIMEOUT_MS = 5_000;
 
 /** Profiles the worker may call. default is the gateway host and is not one of them. */
 export const HERMES_PROFILE_KEYS = ["intake", "scheduling", "onboarding"] as const;
@@ -104,6 +111,129 @@ function fetchFailureMessage(error: unknown): string {
   return error.message;
 }
 
+export type HermesSocketAddress = { address: string; family: number };
+
+/**
+ * Hermes binds API_SERVER_HOST=0.0.0.0. Railway private DNS often lists the
+ * IPv6 address first, and undici's 10s connect budget dies on that address
+ * before IPv4 is tried (Connect Timeout Error).
+ */
+export function orderHermesAddresses<T extends { family: number }>(addresses: readonly T[]): T[] {
+  return [...addresses].sort((a, b) => a.family - b.family);
+}
+
+async function resolveHermesAddresses(hostname: string): Promise<HermesSocketAddress[]> {
+  const addresses = await lookup(hostname, { all: true, verbatim: true });
+  return orderHermesAddresses(addresses);
+}
+
+function headerRecord(headers: HeadersInit | undefined): Record<string, string> {
+  if (!headers) return {};
+  if (Array.isArray(headers)) return Object.fromEntries(headers);
+  if (typeof Headers !== "undefined" && headers instanceof Headers) {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  return { ...(headers as Record<string, string>) };
+}
+
+function isAbortError(error: unknown, signal: AbortSignal | undefined): boolean {
+  if (signal?.aborted) return true;
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function requestHermesOnce(
+  target: URL,
+  init: RequestInit | undefined,
+  body: string | undefined,
+  chosen: HermesSocketAddress,
+): Promise<Response> {
+  const isHttps = target.protocol === "https:";
+  const transport = isHttps ? https : http;
+  const port = target.port || (isHttps ? "443" : "80");
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+    const succeed = (response: Response) => {
+      if (settled) return;
+      settled = true;
+      resolve(response);
+    };
+    const req = transport.request(
+      {
+        agent: false,
+        hostname: chosen.address,
+        port,
+        family: chosen.family === 6 ? 6 : 4,
+        path: `${target.pathname}${target.search}`,
+        method: init?.method ?? "GET",
+        headers: { ...headerRecord(init?.headers), host: target.host },
+        servername: target.hostname,
+        signal: init?.signal ?? undefined,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          succeed(new Response(new Uint8Array(Buffer.concat(chunks)), { status: res.statusCode ?? 0 }));
+        });
+        res.on("error", (error) => finish(error));
+      },
+    );
+    req.on("socket", (socket) => {
+      if (!socket.connecting) return;
+      socket.setTimeout(HERMES_CONNECT_TIMEOUT_MS);
+      const onTimeout = () => {
+        req.destroy(
+          new Error(
+            `Connect Timeout Error (attempted address: ${chosen.address}:${port}, timeout: ${HERMES_CONNECT_TIMEOUT_MS}ms)`,
+          ),
+        );
+      };
+      socket.once("timeout", onTimeout);
+      socket.once("connect", () => {
+        socket.setTimeout(0);
+        socket.off("timeout", onTimeout);
+      });
+    });
+    req.on("error", (error) => finish(error));
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+/** IPv4 first, then IPv6. Global fetch is undici, which times out on the v6 blackhole. */
+async function hermesTransport(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  const href = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const target = new URL(href);
+  const body = typeof init?.body === "string" || init?.body == null ? (init?.body ?? undefined) : undefined;
+  if (init?.body != null && typeof init.body !== "string") {
+    throw new Error("Hermes request body must be a string");
+  }
+  const addresses = await resolveHermesAddresses(target.hostname);
+  if (addresses.length === 0) {
+    throw new Error(`getaddrinfo ENOTFOUND ${target.hostname}`);
+  }
+  const failures: Error[] = [];
+  for (const chosen of addresses) {
+    try {
+      return await requestHermesOnce(target, init, body, chosen);
+    } catch (error) {
+      const wrapped = error instanceof Error ? error : new Error(String(error));
+      if (isAbortError(wrapped, init?.signal ?? undefined)) throw wrapped;
+      failures.push(wrapped);
+    }
+  }
+  throw new Error(failures.map((error) => error.message).join("; "));
+}
+
 type HermesResponseBody = {
   run_id?: unknown;
   session_id?: unknown;
@@ -125,7 +255,7 @@ export async function postHermesCreateRun(options: {
   fetchImpl?: typeof fetch;
 }): Promise<HermesHttpOutcome> {
   const { apiUrl, apiKey, agentKey } = readHermesProfileConfig(options.env, options.agentKey);
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? hermesTransport;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HERMES_HTTP_TIMEOUT_MS);
   try {
@@ -209,7 +339,7 @@ export async function getHermesRun(options: {
   fetchImpl?: typeof fetch;
 }): Promise<HermesRunPoll> {
   const { apiUrl, apiKey, agentKey } = readHermesProfileConfig(options.env, options.agentKey);
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? hermesTransport;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HERMES_HTTP_TIMEOUT_MS);
   try {

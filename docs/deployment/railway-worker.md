@@ -57,7 +57,7 @@ calls it over Railway private networking.
 
 Worker env (the web service does not call Hermes):
 
-- `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8642`. Use `http`. Private networking is already encrypted, and `https` never finishes a TLS handshake, so the worker logs `fetch failed` and dead-letters the run.
+- `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8642`. Use `http`. Private networking is already encrypted, and `https` never finishes a TLS handshake, so the worker logs `fetch failed` and dead-letters the run. Keep `API_SERVER_HOST=0.0.0.0` on Hermes. The worker dials the IPv4 address first: Railway's IPv6 address does not accept that bind, and undici then reports `Connect Timeout Error`.
 - `HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING` — each profile's `API_SERVER_KEY`. Sent as `Authorization: Bearer` on `POST /p/<profile>/v1/runs` and the matching GET. The default gateway key is not used for these calls.
 
 The body is `{ "input", "session_id", "instructions" }`. `instructions` carries the
