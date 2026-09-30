@@ -16,6 +16,8 @@ export type RequestTelegramSendInput = {
   replyMarkup?: TelegramInlineKeyboard | null;
   /** When set, run inside this transaction (caller already holds conversation). */
   tx?: DbClient;
+  /** Hold telegram.send so an in-flight direct send can land first. */
+  outboxNotBefore?: Date;
 };
 
 export async function requestTelegramSend(input: RequestTelegramSendInput) {
@@ -85,6 +87,7 @@ export async function requestTelegramSend(input: RequestTelegramSendInput) {
         ...(input.replyMarkup ? { replyMarkup: input.replyMarkup } : {}),
       },
       idempotencyKey: `telegram.send:${message.id}`,
+      nextAttemptAt: input.outboxNotBefore,
     });
 
     return { message, duplicate: false as const };

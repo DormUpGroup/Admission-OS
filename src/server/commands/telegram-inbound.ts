@@ -39,15 +39,22 @@ export type IngestTelegramResult =
       outboxEventId: string;
       /** Bot replies created in this update. Deliver after the transaction commits. */
       outboundMessageIds: string[];
+      /** Set when this update stored a new /start greeting. */
+      welcomeMessageId: string | null;
     };
 
 /** Pooler RTT + cold start can exceed Prisma's 5s interactive default. */
 const INGEST_TX_MAX_WAIT_MS = 10_000;
 const INGEST_TX_TIMEOUT_MS = 20_000;
 
+/** Worker must not send the greeting while the webhook is still posting it. */
+export const WELCOME_OUTBOX_HOLD_MS = 60_000;
+
 export async function ingestTelegramUpdate(input: {
   rawPayload: unknown;
   message: NormalizedTelegramMessage;
+  /** The /start text is already on its way to Telegram. */
+  deliverWelcomeOutside?: boolean;
 }): Promise<IngestTelegramResult> {
   const { rawPayload, message } = input;
   const now = new Date();
@@ -185,6 +192,7 @@ export async function ingestTelegramUpdate(input: {
     }
 
     const outboundMessageIds: string[] = [];
+    let welcomeMessageId: string | null = null;
     let appointmentConfirmed = false;
     if (createdInbound && message.text?.trim()) {
       const confirmed = await confirmAppointmentFromChat(tx, {
@@ -256,10 +264,19 @@ export async function ingestTelegramUpdate(input: {
           await sendOnce(TELEGRAM_HELP_TEXT, `telegram:help:${message.providerEventId}`);
         }
       } else if (command === "start") {
-        await sendOnce(
-          telegramWelcomeText(message.displayName),
-          `telegram:welcome:${conversation.id}`,
-        );
+        const sent = await requestTelegramSend({
+          tx,
+          conversationId: conversation.id,
+          body: telegramWelcomeText(message.displayName),
+          clientRequestId: `telegram:welcome:${conversation.id}`,
+          outboxNotBefore: input.deliverWelcomeOutside
+            ? new Date(now.getTime() + WELCOME_OUTBOX_HOLD_MS)
+            : undefined,
+        });
+        if (!sent.duplicate) {
+          outboundMessageIds.push(sent.message.id);
+          welcomeMessageId = sent.message.id;
+        }
       } else if (isTelegramPriceCommand(command)) {
         if (!repeatedCommand) {
           await sendOnce(TELEGRAM_PRICES_TEXT, `telegram:prices:${message.providerEventId}`);
@@ -291,6 +308,7 @@ export async function ingestTelegramUpdate(input: {
       studentId,
       outboxEventId: outbox.id,
       outboundMessageIds,
+      welcomeMessageId,
     };
     },
     { maxWait: INGEST_TX_MAX_WAIT_MS, timeout: INGEST_TX_TIMEOUT_MS },

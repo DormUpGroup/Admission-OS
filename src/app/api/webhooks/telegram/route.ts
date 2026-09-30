@@ -5,6 +5,7 @@ import { handleAppointmentCallback } from "@/server/commands/appointment-callbac
 import { ingestTelegramUpdate } from "@/server/commands/telegram-inbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { maybeSendIntakeTyping } from "@/server/delivery/telegram-typing";
+import { beginInstantWelcome, finishInstantWelcome } from "@/server/delivery/telegram-welcome";
 
 export const runtime = "nodejs";
 
@@ -41,10 +42,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, callback: true, ...result });
     }
 
+    const instant = await beginInstantWelcome(update);
     const result = await ingestTelegramUpdate({
       rawPayload: payload,
       message: update,
+      deliverWelcomeOutside: instant != null,
     });
+    if (!result.duplicate && instant) {
+      await finishInstantWelcome(instant, result.welcomeMessageId);
+    }
     if (!result.duplicate) {
       await maybeSendIntakeTyping({
         db: prisma,

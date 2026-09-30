@@ -292,6 +292,51 @@ export async function prepareTelegramDelivery(
   });
 }
 
+/** Template text straight to a chat. Used for the /start greeting, before the ingest transaction finishes. */
+export async function sendTelegramChatText(
+  chatId: string,
+  body: string,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const token = env.TELEGRAM_BOT_TOKEN?.trim();
+  const id = chatId.trim();
+  const text = body.trim();
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  if (!id || !text) throw new Error("Telegram chat and text are required");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: id,
+        text: formatTelegramHtml(text),
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+      signal: controller.signal,
+    });
+    const data = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: { message_id?: number | string };
+      description?: string;
+    } | null;
+    if (!response.ok || !data?.ok || data.result?.message_id == null) {
+      const err = new Error(data?.description ?? `Telegram HTTP ${response.status}`) as Error & {
+        status?: number;
+      };
+      err.status = response.status;
+      throw err;
+    }
+    return String(data.result.message_id);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function callTelegramDelivery(
   prepared: PreparedTelegramDelivery,
   env: NodeJS.ProcessEnv = process.env,
