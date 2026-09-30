@@ -13,6 +13,7 @@ import {
   DataTableRow,
 } from "@/components/data-table";
 import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
+import { LeadRowMenu } from "@/components/admin/lead-row-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -121,10 +122,7 @@ export default async function AdminLeadsPage({
           conversation?.updatedAt,
           lead.updatedAt,
         ]),
-        chatHref:
-          conversation?.channel === "TELEGRAM"
-            ? `/admin/messages/telegram?conversationId=${conversation.id}`
-            : null,
+        conversationId: conversation?.id ?? null,
       };
     })
     .sort((a, b) => (b.activity?.getTime() ?? 0) - (a.activity?.getTime() ?? 0));
@@ -181,17 +179,12 @@ export default async function AdminLeadsPage({
                 <DataTableCell>{row.contact}</DataTableCell>
                 <DataTableCell>{row.curator}</DataTableCell>
                 <DataTableCell>{formatDate(row.activity)}</DataTableCell>
-                <DataTableCell>
-                  <span className="inline-flex gap-3">
-                    <Link href={`/admin/leads/${row.id}`} className="text-[var(--brand)] hover:underline">
-                      Профиль
-                    </Link>
-                    {row.chatHref ? (
-                      <Link href={row.chatHref} className="text-muted-foreground hover:underline">
-                        Чат
-                      </Link>
-                    ) : null}
-                  </span>
+                <DataTableCell className="w-12 text-right">
+                  <LeadRowMenu
+                    leadId={row.id}
+                    name={row.title}
+                    conversationId={row.conversationId}
+                  />
                 </DataTableCell>
               </DataTableRow>
             ))}

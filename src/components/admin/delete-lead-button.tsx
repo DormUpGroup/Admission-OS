@@ -7,9 +7,27 @@ import { deleteLeadAction } from "@/server/lead-actions";
 
 const UNDO_MS = 5000;
 
-export function DeleteLeadButton({ leadId, name }: { leadId: string; name: string }) {
+export function DeleteLeadButton({
+  leadId,
+  name,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
+}: {
+  leadId: string;
+  name: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+
+  function setOpen(next: boolean) {
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  }
   const [undoUntil, setUndoUntil] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [pending, setPending] = useState(false);
@@ -63,9 +81,11 @@ export function DeleteLeadButton({ leadId, name }: { leadId: string; name: strin
 
   return (
     <>
-      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} disabled={undoUntil != null}>
-        Удалить лида
-      </Button>
+      {showTrigger ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} disabled={undoUntil != null}>
+          Удалить лида
+        </Button>
+      ) : null}
       {open ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
