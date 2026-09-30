@@ -150,7 +150,7 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
     next = `Do not ask a fact. Offer to start and ask a few questions, in this sentence: ${offer}`;
   } else if (nextField === "studyLevel") {
     next =
-      "Ask only which level they want: магистратура, foundation, or мастер. Do not ask any other fact.";
+      "Ask only which level they want: бакалавриат, магистратура, or foundation. Do not ask any other fact.";
   } else if (
     nextField === "apostilleTranslation" &&
     /перевод не назван/iu.test(byKey.get("apostilleTranslation") ?? "")

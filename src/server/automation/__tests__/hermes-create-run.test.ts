@@ -675,10 +675,10 @@ describe("formatLeadCard", () => {
     ]);
     expect(card).toContain("Начнём?");
     expect(card).toContain("Do not ask a fact");
-    expect(card).not.toContain("магистратура, foundation, or мастер");
+    expect(card).not.toContain("бакалавриат, магистратура, or foundation");
   });
 
-  it("asks магистратура, foundation, or мастер after they agree", () => {
+  it("asks бакалавриат, магистратура, or foundation after they agree", () => {
     const card = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
@@ -686,7 +686,7 @@ describe("formatLeadCard", () => {
       },
       { direction: "INBOUND", body: "Да" },
     ]);
-    expect(card).toContain("магистратура, foundation, or мастер");
+    expect(card).toContain("бакалавриат, магистратура, or foundation");
     expect(card).not.toContain("Do not ask a fact");
   });
 
