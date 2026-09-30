@@ -89,5 +89,5 @@ export async function commitSchedulingRunCalendar(
     ...(current ?? {}),
     consultationCommitted: true,
     appointmentId: appointmentId.trim(),
-  } as Prisma.InputJsonValue;
+  } as Prisma.JsonValue;
 }
