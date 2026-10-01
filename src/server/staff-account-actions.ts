@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { invalidateUserSessionCache } from "@/server/auth";
 import { requireRole, requireStaff } from "@/server/auth/guards";
 import {
   normalizeStaffEmail,
@@ -14,8 +15,8 @@ function teamError(message: string): never {
   redirect(`/admin/team?error=${encodeURIComponent(message)}`);
 }
 
-function settingsError(message: string): never {
-  redirect(`/admin/settings?error=${encodeURIComponent(message)}`);
+function profileError(message: string): never {
+  redirect(`/admin/settings/profile?error=${encodeURIComponent(message)}`);
 }
 
 export async function createCuratorAction(formData: FormData) {
@@ -101,31 +102,49 @@ export async function deleteCuratorAction(formData: FormData) {
   redirect("/admin/team");
 }
 
+export async function changeOwnNameAction(formData: FormData) {
+  const session = await requireStaff();
+  const userId = session.user.id;
+  if (!userId) profileError("Сессия не содержит аккаунт.");
+
+  const name = String(formData.get("name") || "").trim();
+  if (!name) profileError("Укажите имя.");
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name },
+    select: { email: true },
+  });
+  invalidateUserSessionCache(user.email);
+
+  redirect("/admin/settings/profile?saved=name");
+}
+
 export async function changeOwnPasswordAction(formData: FormData) {
   const session = await requireStaff();
   const userId = session.user.id;
-  if (!userId) settingsError("Сессия не содержит аккаунт.");
+  if (!userId) profileError("Сессия не содержит аккаунт.");
 
   const currentPassword = String(formData.get("currentPassword") || "");
   const nextPassword = String(formData.get("nextPassword") || "");
   const confirmPassword = String(formData.get("confirmPassword") || "");
 
   if (nextPassword !== confirmPassword) {
-    settingsError("Новый пароль и повтор не совпадают.");
+    profileError("Новый пароль и повтор не совпадают.");
   }
   const passwordIssue = staffPasswordIssue(nextPassword);
-  if (passwordIssue) settingsError(passwordIssue);
+  if (passwordIssue) profileError(passwordIssue);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) settingsError("Аккаунт не найден.");
+  if (!user) profileError("Аккаунт не найден.");
 
   const matches = await bcrypt.compare(currentPassword, user.passwordHash);
-  if (!matches) settingsError("Текущий пароль неверный.");
+  if (!matches) profileError("Текущий пароль неверный.");
 
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash: await bcrypt.hash(nextPassword, 10) },
   });
 
-  redirect("/admin/settings?saved=password");
+  redirect("/admin/settings/profile?saved=password");
 }

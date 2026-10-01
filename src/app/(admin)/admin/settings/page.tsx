@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { labelOf } from "@/lib/labels";
 import { updateIntakeSeatLimitAction } from "@/server/actions";
-import { changeOwnPasswordAction } from "@/server/staff-account-actions";
+import { AddIntakeForm } from "@/components/settings/add-intake-form";
 import {
   formatIntakeLabel,
   occupiedSeatsForIntake,
@@ -24,7 +24,7 @@ import { AccompanimentStatus } from "@/lib/enums";
 export default async function AdminSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const session = await requireStaff();
   const query = await searchParams;
@@ -59,6 +59,30 @@ export default async function AdminSettingsPage({
         </p>
       ) : null}
 
+      <div className="flex items-start gap-3">
+        <Card className="min-w-0 flex-1">
+          <CardHeader>
+            <CardTitle>Рабочее пространство</CardTitle>
+            <CardDescription>IMMIGROME OS</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex justify-between gap-4">
+              <span>Вы вошли как</span>
+              <span className="text-foreground font-medium">
+                {session.user.name} ({labelOf(session.user.role)})
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Email</span>
+              <span className="text-foreground">{session.user.email}</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link href="/admin/settings/profile">Настройки профиля</Link>
+        </Button>
+      </div>
+
       {canEditLimit ? (
       <Card>
         <CardHeader>
@@ -84,23 +108,28 @@ export default async function AdminSettingsPage({
                 className="space-y-3 border-b border-border pb-4 last:border-b-0 last:pb-0"
               >
                 <input type="hidden" name="intake" value={intake} />
-                <p className="text-sm font-medium">Набор {formatIntakeLabel(intake)}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-medium">Набор {formatIntakeLabel(intake)}</p>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`limit-${intake}`} className="shrink-0">
+                      Лимит мест
+                    </Label>
+                    <Input
+                      id={`limit-${intake}`}
+                      name="seatLimit"
+                      type="number"
+                      min={0}
+                      defaultValue={cohort?.seatLimit ?? ""}
+                      placeholder="—"
+                      disabled={!canEditLimit}
+                      className="w-24"
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Принято сейчас: {occupied}
                   {cohort?.isActive ? " · текущий набор" : ""}
                 </p>
-                <div className="space-y-1">
-                  <Label htmlFor={`limit-${intake}`}>Лимит мест</Label>
-                  <Input
-                    id={`limit-${intake}`}
-                    name="seatLimit"
-                    type="number"
-                    min={0}
-                    defaultValue={cohort?.seatLimit ?? ""}
-                    placeholder="Не задан"
-                    disabled={!canEditLimit}
-                  />
-                </div>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -123,101 +152,10 @@ export default async function AdminSettingsPage({
             );
           })}
 
-          {canEditLimit ? (
-            <form action={updateIntakeSeatLimitAction} className="space-y-3">
-              <p className="text-sm font-medium">Добавить набор</p>
-              <div className="space-y-1">
-                <Label htmlFor="new-intake">Набор (например 2028/29)</Label>
-                <Input id="new-intake" name="intake" required placeholder="2028/29" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-limit">Лимит мест</Label>
-                <Input
-                  id="new-limit"
-                  name="seatLimit"
-                  type="number"
-                  min={0}
-                  placeholder="Не задан"
-                />
-              </div>
-              <Button type="submit" size="sm" variant="outline">
-                Добавить набор
-              </Button>
-            </form>
-          ) : null}
+          {canEditLimit ? <AddIntakeForm /> : null}
         </CardContent>
       </Card>
       ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Пароль</CardTitle>
-          <CardDescription>
-            Меняется только пароль аккаунта, под которым вы вошли.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {query.saved === "password" ? (
-            <p className="mb-4 text-sm text-foreground">Пароль обновлён.</p>
-          ) : null}
-          <form action={changeOwnPasswordAction} className="grid max-w-md gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Текущий пароль</Label>
-              <Input
-                id="current-password"
-                name="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="next-password">Новый пароль</Label>
-              <Input
-                id="next-password"
-                name="nextPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Повтор нового пароля</Label>
-              <Input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
-            </div>
-            <div>
-              <Button type="submit">Сохранить пароль</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Рабочее пространство</CardTitle>
-          <CardDescription>IMMIGROME OS</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div className="flex justify-between gap-4">
-            <span>Вы вошли как</span>
-            <span className="text-foreground font-medium">
-              {session.user.name} ({labelOf(session.user.role)})
-            </span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span>Email</span>
-            <span className="text-foreground">{session.user.email}</span>
-          </div>
-        </CardContent>
-      </Card>
 
       {canEditLimit ? (
         <Card>

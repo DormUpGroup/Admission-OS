@@ -28,6 +28,10 @@ declare module "next-auth/jwt" {
 const USER_RESYNC_MS = 5 * 60 * 1000;
 const lastUserResyncAt = new Map<string, number>();
 
+export function invalidateUserSessionCache(email: string) {
+  lastUserResyncAt.delete(email);
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
