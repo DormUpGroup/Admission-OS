@@ -1,17 +1,17 @@
-# IMMIGROME Admissions OS
+# Admission OS
 
-Internal admissions operations system for IMMIGROME agency.
+Operations system for Italian-university admissions. Staff run cases from an inbound lead through program matching, applications, documents, deadlines, and consultations. Students use a separate portal for their own case.
 
-> Student → Applications → Requirements → Documents → Tasks → Deadlines → Risk → Next Action
+## Stack
 
-## Stack (V1)
-
-- **Next.js 15** (App Router) + TypeScript + Tailwind
-- **Prisma** + **Supabase Postgres** (session pooler)
-- **Auth.js (NextAuth v5)** credentials auth with roles: `ADMIN`, `CURATOR`, `STUDENT`
-- **Supabase Storage** for student documents (private bucket, served via `/api/files`)
+- **Next.js 15** (App Router) + TypeScript + Tailwind CSS 4
+- **Prisma** + Postgres
+- **Auth.js** credentials auth with roles `ADMIN`, `CURATOR`, and `STUDENT`
+- Private file storage, served only after an access check
 
 ## Quick start
+
+Copy `.env.example` to `.env` and fill in local values. Do not commit `.env`.
 
 ```bash
 npm install
@@ -20,36 +20,32 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) → login.
+Open [http://localhost:3000](http://localhost:3000). The seed script creates local sample accounts; use those only against a local database.
 
-### Demo accounts (password: `password123`)
+## Areas
 
-| Email | Role |
-|-------|------|
-| `anna@immigrome.local` | Curator |
-| `admin@immigrome.local` | Admin |
-| `alina.sokolova@student.local` | Student portal |
+**Staff**
 
-## Routes
+- Work queue, students, and leads
+- Applications, documents, tasks, and deadlines
+- University and program catalog, including match and shortlist
+- Consultations
+- Message inbox
+- Automation that asks a person to approve sensitive actions
 
-- `/admin` — Curator dashboard (Needs Attention, KPIs, tasks, waiting, deadlines)
-- `/admin/students` — Students + profile + applications + documents
-- `/admin/documents` — Document review inbox
-- `/admin/tasks`, `/admin/deadlines`, `/admin/applications`
-- `/admin/universities`, `/admin/programs`, `/admin/team`
-- `/portal` — Student portal (action required, upload, apps, deadlines)
+**Student portal**
 
-## Core loop
+- Case progress, programs, documents, messages, and booking a consultation
 
-Request document → student sees Action Required → upload → curator inbox → approve → requirement completed → readiness/risk/next action recalculated → activity logged.
+Public booking and registration links are token-based and do not require an account until the person is invited in.
 
 ## Scripts
 
 - `npm run dev` — development server
-- `npm run db:seed` — seed demo data
-- `npm run db:reset` — reset DB + seed
+- `npm run worker` — background worker
+- `npm run db:seed` — load local sample data
+- `npm run db:reset` — reset the local database and seed it again
+- `npm run test` — tests
 - `npm run build` — production build
 
-## Note on Supabase
-
-`DATABASE_URL` points at the hosted Supabase session pooler. Student files go to a private Storage bucket and are served through `/api/files` after Auth.js access checks. Auth is still Auth.js, not Supabase Auth.
+Program catalog scripts (`programs:*`) are for maintaining university data. Run them only against a database you are allowed to change.
