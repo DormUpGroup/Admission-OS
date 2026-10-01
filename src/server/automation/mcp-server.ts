@@ -584,7 +584,7 @@ async function callTool(
       agentRunId: grant.agentRunId,
       conversationId: grant.conversationId,
     });
-    const failed = text === "no_curator" || text.startsWith("booking_unavailable");
+    const failed = text.startsWith("booking_unavailable");
     logLine(failed ? "booking_unavailable" : "ok");
     return { status: 200, body: toolResult(id, text, failed) };
   }

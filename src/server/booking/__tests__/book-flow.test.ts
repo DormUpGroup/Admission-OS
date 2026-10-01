@@ -182,4 +182,111 @@ describeDb("client books a consultation from the site", () => {
     const consumed = await prisma.bookingInvite.findUnique({ where: { id: invite!.id } });
     expect(consumed?.appointmentId).toBe(appointment.id);
   }, 30000);
+
+  it("sends the booking link without a curator and does not pause the chat", async () => {
+    const bareLead = await prisma.lead.create({
+      data: {
+        firstName: "Боря",
+        lastName: "Тест",
+        source: "TELEGRAM",
+        status: "NEW",
+      },
+    });
+    const bareConversation = await prisma.conversation.create({
+      data: {
+        channel: "TELEGRAM",
+        leadId: bareLead.id,
+      },
+    });
+    await prisma.channelIdentity.create({
+      data: {
+        channel: "TELEGRAM",
+        externalId: `${prefix}-bare`,
+        leadId: bareLead.id,
+      },
+    });
+
+    try {
+      const sent = await sendBookingLinkForConversation({
+        conversationId: bareConversation.id,
+        env: { AUTH_URL: "https://admission-os-production.up.railway.app" },
+      });
+      expect(sent).toBe("sent");
+
+      const invite = await prisma.bookingInvite.findFirst({
+        where: { conversationId: bareConversation.id, appointmentId: null },
+      });
+      expect(invite?.curatorId).toBeNull();
+
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: bareConversation.id },
+        select: { automationPausedAt: true, automationPauseReason: true },
+      });
+      expect(conversation?.automationPausedAt).toBeNull();
+      expect(conversation?.automationPauseReason).toBeNull();
+
+      const slots = await listOpenSlots({
+        curatorId: null,
+        from: new Date(),
+        to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      });
+      expect(slots.length).toBeGreaterThan(0);
+
+      const guestEmail = `${prefix}-bare@student.test`;
+      const appointment = await appointmentBookByGuest({
+        token: invite!.token,
+        guestName: "Боря Тест",
+        guestEmail,
+        startsAt: slots[0].startsAt,
+      });
+      expect(appointment.assignedCuratorId).toBeNull();
+      expect(appointment.guestEmail).toBe(guestEmail);
+
+      const admin = await prisma.user.findFirst({
+        where: { role: "ADMIN" },
+        select: { id: true },
+      });
+      if (admin) {
+        const notification = await prisma.inAppNotification.findFirst({
+          where: { userId: admin.id, type: "appointment.booked" },
+        });
+        expect(notification?.body).toContain(guestEmail);
+      }
+    } finally {
+      const appointments = await prisma.appointment.findMany({
+        where: { leadId: bareLead.id },
+        select: { id: true },
+      });
+      const messages = await prisma.conversationMessage.findMany({
+        where: { conversationId: bareConversation.id },
+        select: { id: true },
+      });
+      await prisma.deliveryAttempt.deleteMany({
+        where: { messageId: { in: messages.map((message) => message.id) } },
+      });
+      await prisma.outboxEvent.deleteMany({
+        where: {
+          OR: [
+            { aggregateId: { in: appointments.map((row) => row.id) } },
+            { aggregateId: { in: messages.map((row) => row.id) } },
+          ],
+        },
+      });
+      await prisma.bookingInvite.deleteMany({ where: { conversationId: bareConversation.id } });
+      await prisma.inAppNotification.deleteMany({
+        where: {
+          metadataJson: { contains: bareConversation.id },
+        },
+      });
+      await prisma.appointment.deleteMany({
+        where: { id: { in: appointments.map((row) => row.id) } },
+      });
+      await prisma.conversationMessage.deleteMany({
+        where: { conversationId: bareConversation.id },
+      });
+      await prisma.conversation.delete({ where: { id: bareConversation.id } }).catch(() => undefined);
+      await prisma.channelIdentity.deleteMany({ where: { externalId: `${prefix}-bare` } });
+      await prisma.lead.delete({ where: { id: bareLead.id } }).catch(() => undefined);
+    }
+  }, 30000);
 });

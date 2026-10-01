@@ -144,7 +144,7 @@ export default async function BookInvitePage({
         Запись на консультацию
       </h1>
       <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
-        Аккаунт не нужен. Выберите свободное время куратора.
+        Аккаунт не нужен. Выберите свободное время.
       </p>
       <BookingCalendar
         slots={slots.map((slot) => ({ startsAt: slot.startsAt.toISOString() }))}

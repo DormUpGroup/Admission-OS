@@ -20,14 +20,12 @@ export function bookingInviteMessage(url: string): string {
   ].join("\n");
 }
 
-/** Assigned curator wins. Otherwise the only CURATOR account in the system. */
+/** Already-assigned curator only. Sending a booking link never requires one. */
 export function pickBookingCuratorId(
   assigned: Array<string | null | undefined>,
-  curatorUserIds: string[],
 ): string | null {
   for (const id of assigned) {
     if (id) return id;
   }
-  if (curatorUserIds.length === 1) return curatorUserIds[0];
   return null;
 }

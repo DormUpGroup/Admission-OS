@@ -307,6 +307,10 @@ export async function prepareCalendarUpsert(
     });
     curatorEmail = curator?.email?.trim() || null;
   }
+  // Shared calendar owner gets the Meet invite when no curator is assigned.
+  if (!curatorEmail) {
+    curatorEmail = env.GOOGLE_CALENDAR_SUBJECT?.trim().replace(/\r/g, "") || null;
+  }
 
   return {
     action,

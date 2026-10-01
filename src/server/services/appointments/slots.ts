@@ -236,14 +236,15 @@ export function generateCandidateSlots(
 }
 
 export async function listBusyIntervals(input: {
-  curatorId: string;
+  /** When set, only that curator's appointments. When null, the shared pool. */
+  curatorId?: string | null;
   from: Date;
   to: Date;
   excludeAppointmentId?: string;
 }): Promise<BusyInterval[]> {
   const rows = await prisma.appointment.findMany({
     where: {
-      assignedCuratorId: input.curatorId,
+      ...(input.curatorId ? { assignedCuratorId: input.curatorId } : {}),
       status: { in: [...ACTIVE_STATUSES] },
       ...(input.excludeAppointmentId
         ? { id: { not: input.excludeAppointmentId } }
@@ -268,7 +269,8 @@ export async function listBusyIntervals(input: {
 }
 
 export async function listOpenSlots(input: {
-  curatorId: string;
+  /** When set, only that curator's calendar. When null, the shared pool. */
+  curatorId?: string | null;
   from: Date;
   to: Date;
   excludeAppointmentId?: string;

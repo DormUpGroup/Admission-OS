@@ -1,10 +1,7 @@
 import { randomBytes } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import {
-  escalateAgentToHuman,
-  sendAgentClientMessage,
-} from "@/server/automation/actions";
+import { sendAgentClientMessage } from "@/server/automation/actions";
 import { APPOINTMENT_STATUS } from "@/server/commands/appointments";
 import {
   APPOINTMENT_TIMEZONE,
@@ -26,7 +23,6 @@ const ACTIVE = [
 export type SendBookingLinkResult =
   | "sent"
   | "already_sent"
-  | "no_curator"
   | `already_booked:${string}`
   | `booking_unavailable:${string}`;
 
@@ -73,7 +69,7 @@ function inviteExpiry(now: Date) {
 
 async function ensureOpenInvite(input: {
   conversation: ConversationForBooking;
-  curatorId: string;
+  curatorId: string | null;
   now: Date;
 }) {
   const open = await prisma.bookingInvite.findFirst({
@@ -115,14 +111,19 @@ async function ensureOpenInvite(input: {
     if (raced.expiresAt > input.now) return raced;
     return prisma.bookingInvite.update({
       where: { id: raced.id },
-      data: { token: newToken(), expiresAt: inviteExpiry(input.now), curatorId: input.curatorId },
+      data: {
+        token: newToken(),
+        expiresAt: inviteExpiry(input.now),
+        curatorId: input.curatorId,
+      },
     });
   }
 }
 
 /**
  * Hermes calls this instead of offering times in chat. The message text and
- * URL are built here so the model cannot invent a link.
+ * URL are built here so the model cannot invent a link. A curator is not
+ * required: the shared Google Calendar owns the slot.
  */
 export async function sendBookingLinkForConversation(input: {
   agentRunId?: string | null;
@@ -159,45 +160,11 @@ export async function sendBookingLinkForConversation(input: {
     return `already_booked:${when}`;
   }
 
-  const curators = await prisma.user.findMany({
-    where: { role: "CURATOR" },
-    select: { id: true },
-    take: 2,
-  });
-  const curatorId = pickBookingCuratorId(
-    [
-      conversation.assignedCuratorId,
-      conversation.lead?.assignedCuratorId,
-      conversation.student?.curatorId,
-    ],
-    curators.map((user) => user.id),
-  );
-  if (!curatorId) {
-    await escalateAgentToHuman({
-      conversationId: conversation.id,
-      reason: "Некому назначить консультацию: у диалога нет куратора.",
-    });
-    return "no_curator";
-  }
-
-  if (!conversation.assignedCuratorId) {
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { assignedCuratorId: curatorId },
-    });
-  }
-  if (conversation.lead && !conversation.lead.assignedCuratorId) {
-    await prisma.lead.update({
-      where: { id: conversation.lead.id },
-      data: { assignedCuratorId: curatorId },
-    });
-  }
-  if (conversation.student && !conversation.student.curatorId) {
-    await prisma.student.update({
-      where: { id: conversation.student.id },
-      data: { curatorId },
-    });
-  }
+  const curatorId = pickBookingCuratorId([
+    conversation.assignedCuratorId,
+    conversation.lead?.assignedCuratorId,
+    conversation.student?.curatorId,
+  ]);
 
   let invite: Awaited<ReturnType<typeof ensureOpenInvite>>;
   let url: string;

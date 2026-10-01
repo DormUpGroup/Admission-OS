@@ -110,7 +110,8 @@ export function isAppointmentConfirmation(
 async function assertNoCuratorConflict(
   db: DbClient,
   input: {
-    curatorId: string;
+    /** When null, conflict-check the shared consultation pool. */
+    curatorId?: string | null;
     startsAt: Date;
     endsAt: Date;
     excludeId?: string;
@@ -118,7 +119,7 @@ async function assertNoCuratorConflict(
 ) {
   const conflict = await db.appointment.findFirst({
     where: {
-      assignedCuratorId: input.curatorId,
+      ...(input.curatorId ? { assignedCuratorId: input.curatorId } : {}),
       status: {
         in: [
           APPOINTMENT_STATUS.AWAITING_CLIENT,
@@ -723,9 +724,6 @@ export async function appointmentSelectAltSlot(
     if (current.confirmationToken !== token) {
       return { ok: false as const, reason: "bad_token" };
     }
-    if (!current.assignedCuratorId) {
-      return { ok: false as const, reason: "no_curator" };
-    }
 
     await assertNoCuratorConflict(tx, {
       curatorId: current.assignedCuratorId,
@@ -1036,7 +1034,9 @@ export async function appointmentBookByGuest(input: {
         firstName: names.firstName,
         lastName: names.lastName || invite.lead?.lastName || null,
         email: guestEmail,
-        assignedCuratorId: invite.lead?.assignedCuratorId ?? curatorId,
+        ...(curatorId && !invite.lead?.assignedCuratorId
+          ? { assignedCuratorId: curatorId }
+          : {}),
       },
     });
 
@@ -1071,18 +1071,29 @@ export async function appointmentBookByGuest(input: {
     });
 
     const whenLabel = formatSlotLabel(created.startsAt, created.timezone);
-    await tx.inAppNotification.create({
-      data: {
-        userId: curatorId,
-        type: "appointment.booked",
-        title: "Клиент записался на консультацию",
-        body: [names.guestName, guestEmail, whenLabel].filter(Boolean).join("\n"),
-        metadataJson: JSON.stringify({
-          appointmentId: created.id,
-          conversationId: invite.conversationId,
-        }),
-      },
-    });
+    const notifyUserIds = curatorId
+      ? [curatorId]
+      : (
+          await tx.user.findMany({
+            where: { role: "ADMIN" },
+            select: { id: true },
+            take: 20,
+          })
+        ).map((user) => user.id);
+    for (const userId of notifyUserIds) {
+      await tx.inAppNotification.create({
+        data: {
+          userId,
+          type: "appointment.booked",
+          title: "Клиент записался на консультацию",
+          body: [names.guestName, guestEmail, whenLabel].filter(Boolean).join("\n"),
+          metadataJson: JSON.stringify({
+            appointmentId: created.id,
+            conversationId: invite.conversationId,
+          }),
+        },
+      });
+    }
 
     const noticeId = await notifyClientOnTelegram(tx, created, {
       body: formatAppointmentBookedNotice({

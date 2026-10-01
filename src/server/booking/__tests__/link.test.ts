@@ -24,9 +24,10 @@ describe("booking link", () => {
     expect(body).not.toContain("личный кабинет");
   });
 
-  it("uses the assigned curator, or the only curator account", () => {
-    expect(pickBookingCuratorId(["lead-curator", null], ["only"])).toBe("lead-curator");
-    expect(pickBookingCuratorId([null, null], ["only"])).toBe("only");
-    expect(pickBookingCuratorId([null], ["a", "b"])).toBeNull();
+  it("keeps an already assigned curator and never invents one", () => {
+    expect(pickBookingCuratorId(["lead-curator", null])).toBe("lead-curator");
+    expect(pickBookingCuratorId([null, "student-curator"])).toBe("student-curator");
+    expect(pickBookingCuratorId([null, null])).toBeNull();
+    expect(pickBookingCuratorId([])).toBeNull();
   });
 });
