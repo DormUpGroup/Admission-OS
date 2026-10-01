@@ -51,14 +51,19 @@ export function explicitTelegramLeadName(displayName: string | null | undefined)
 }
 
 const WELCOME_BODY = [
-  "Я помощник кураторов Immigrome.",
+  "- Узнаем друг друга чуть лучше, чтобы работать максимально легко и быстро!",
   "",
-  "Готовы начать?",
+  "- Помогу, отвечу на вопросы и неясности!",
+  "",
+  "- Как узнаем друг друга — передам тебя куратору!",
+  "",
+  "",
+  "Начнем?",
 ].join("\n");
 
 export function telegramWelcomeText(displayName: string | null | undefined): string {
   const name = explicitTelegramFirstName(displayName);
-  const hello = name ? `Здравствуйте, ${name}.` : "Здравствуйте.";
+  const hello = name ? `Здравствуйте, ${name}!` : "Здравствуйте!";
   return [hello, "", WELCOME_BODY].join("\n");
 }
 

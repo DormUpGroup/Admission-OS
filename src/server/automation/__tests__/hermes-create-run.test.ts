@@ -283,8 +283,11 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("the curator will answer this");
       expect(sent.instructions).not.toContain("Do not put prices");
       expect(sent.instructions).toContain("Sound like a person");
+      expect(sent.instructions).toContain("support and encouragement");
+      expect(sent.instructions).toContain("pleasant, supportive, and encouraging");
       expect(sent.instructions).toContain("<b>word</b>");
-      expect(sent.instructions).toContain("at most one in a message");
+      expect(sent.instructions).toContain("different emoji");
+      expect(sent.instructions).toContain("blank line before it");
       expect(sent.instructions).toContain("send_booking_link");
       expect(sent.instructions).toContain("Do not offer days or times");
       expect(sent.instructions).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
@@ -742,7 +745,7 @@ describe("formatLeadCard", () => {
     const card = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
-        body: "Здравствуйте.\n\nЯ помощник кураторов Immigrome.\n\nГотовы начать?",
+        body: "Здравствуйте!\n\n- Узнаем друг друга чуть лучше, чтобы работать максимально легко и быстро!\n\n- Помогу, отвечу на вопросы и неясности!\n\n- Как узнаем друг друга — передам тебя куратору!\n\n\nНачнем?",
       },
       { direction: "INBOUND", body: "Да" },
     ]);

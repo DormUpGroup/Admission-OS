@@ -34,7 +34,7 @@ describe("instant /start greeting", () => {
     expect(String(call?.[0])).toContain("/sendMessage");
     const payload = JSON.parse(String((call?.[1] as RequestInit).body));
     expect(payload.chat_id).toBe("100");
-    expect(payload.text).toBe("Здравствуйте, Мария.\n\nЯ помощник кураторов Immigrome.\n\nГотовы начать?");
+    expect(payload.text).toBe(telegramWelcomeText("Мария Иванова"));
   });
 
   it("leaves ordinary messages and a disabled bot on the slow path", async () => {

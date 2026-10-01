@@ -12,9 +12,10 @@ describe("telegram greeting name", () => {
   it("greets by the Telegram first name", () => {
     expect(explicitTelegramFirstName("Мария Иванова")).toBe("Мария");
     const welcome = telegramWelcomeText("Мария Иванова");
-    expect(welcome.startsWith("Здравствуйте, Мария.")).toBe(true);
-    expect(welcome).toContain("Я помощник кураторов Immigrome");
-    expect(welcome).toContain("Готовы начать?");
+    expect(welcome.startsWith("Здравствуйте, Мария!")).toBe(true);
+    expect(welcome).toContain("Узнаем друг друга чуть лучше");
+    expect(welcome).toContain("передам тебя куратору");
+    expect(welcome).toContain("Начнем?");
     expect(welcome).not.toContain("/prices");
     expect(welcome).not.toContain("визу");
     expect(welcome).not.toContain("несколько вопросов");
@@ -31,7 +32,7 @@ describe("telegram greeting name", () => {
     expect(explicitTelegramFirstName("user")).toBeNull();
     expect(explicitTelegramFirstName(null)).toBeNull();
     const unnamed = telegramWelcomeText("user_12");
-    expect(unnamed.startsWith("Здравствуйте.\n")).toBe(true);
+    expect(unnamed.startsWith("Здравствуйте!\n")).toBe(true);
     expect(unnamed.includes("user_12")).toBe(false);
     expect(explicitTelegramLeadName("nick_name")).toEqual({
       firstName: null,
