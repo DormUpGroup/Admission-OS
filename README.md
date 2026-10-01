@@ -1,6 +1,6 @@
-# Admission OS
+# AOS
 
-**Admissions operations system that turns fragmented, repetitive agency work into structured and automated workflows.**
+**Admissions Operations System that turns fragmented, repetitive agency work into structured and automated workflows.**
 
 Admission OS is an internal platform built for an education consultancy working with students applying to universities in Italy.
 
