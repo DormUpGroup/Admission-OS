@@ -50,7 +50,7 @@ export default async function PortalBookPage() {
             await listOpenSlots({
               curatorId: student.curatorId,
               from: new Date(),
-              to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+              to: new Date(Date.now() + 62 * 24 * 60 * 60 * 1000),
             })
           ).map((slot) => ({ startsAt: slot.startsAt.toISOString() }))}
         />

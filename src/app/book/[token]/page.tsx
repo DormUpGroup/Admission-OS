@@ -132,7 +132,7 @@ export default async function BookInvitePage({
   const slots = await listOpenSlots({
     curatorId: invite.curatorId,
     from: new Date(),
-    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+    to: new Date(Date.now() + 62 * 24 * 60 * 60 * 1000),
   });
 
   return (
@@ -144,7 +144,7 @@ export default async function BookInvitePage({
         Запись на консультацию
       </h1>
       <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
-        Аккаунт не нужен. Выберите свободное время.
+        Аккаунт не нужен. Сначала выберите день в календаре, затем удобный час.
       </p>
       <BookingCalendar
         slots={slots.map((slot) => ({ startsAt: slot.startsAt.toISOString() }))}
