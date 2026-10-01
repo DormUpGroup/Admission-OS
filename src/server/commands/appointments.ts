@@ -219,6 +219,12 @@ export function formatAppointmentCancelNotice(input: {
   return `Консультация «${input.title}» отменена.\n${input.whenLabel} (${input.timezone})`;
 }
 
+/** Calendar and inbox title. Always includes the client name when known. */
+export function consultationTitle(clientName?: string | null): string {
+  const name = clientName?.trim().replace(/\s+/g, " ");
+  return name ? `Консультация: ${name}` : "Консультация";
+}
+
 export function formatAppointmentBookedNotice(input: {
   title: string;
   whenLabel: string;
@@ -884,7 +890,9 @@ export async function appointmentBookByClient(input: {
         studentId: student.id,
         conversationId: conversation?.id ?? null,
         assignedCuratorId: curatorId,
-        title: "Консультация",
+        title: consultationTitle(
+          [student.firstName, student.lastName].filter(Boolean).join(" "),
+        ),
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
         timezone: APPOINTMENT_TIMEZONE,
@@ -1046,7 +1054,7 @@ export async function appointmentBookByGuest(input: {
         leadId: invite.leadId,
         conversationId: invite.conversationId,
         assignedCuratorId: curatorId,
-        title: "Консультация",
+        title: consultationTitle(names.guestName),
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
         timezone: APPOINTMENT_TIMEZONE,

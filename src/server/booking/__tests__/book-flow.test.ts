@@ -144,6 +144,7 @@ describeDb("client books a consultation from the site", () => {
     });
     expect(appointment.status).toBe("PENDING");
     expect(appointment.assignedCuratorId).toBe(curatorId);
+    expect(appointment.title).toBe("Консультация: Аня Тест");
     expect(appointment.studentId).toBeNull();
     expect(appointment.leadId).toBe(leadId);
     expect(appointment.guestEmail).toBe(email);
@@ -240,6 +241,7 @@ describeDb("client books a consultation from the site", () => {
         startsAt: slots[0].startsAt,
       });
       expect(appointment.assignedCuratorId).toBeNull();
+      expect(appointment.title).toBe("Консультация: Боря Тест");
       expect(appointment.guestEmail).toBe(guestEmail);
 
       const admin = await prisma.user.findFirst({
@@ -248,9 +250,15 @@ describeDb("client books a consultation from the site", () => {
       });
       if (admin) {
         const notification = await prisma.inAppNotification.findFirst({
-          where: { userId: admin.id, type: "appointment.booked" },
+          where: {
+            userId: admin.id,
+            type: "appointment.booked",
+            body: { contains: guestEmail },
+          },
+          orderBy: { createdAt: "desc" },
         });
         expect(notification?.body).toContain(guestEmail);
+        expect(notification?.body).toContain("Боря Тест");
       }
     } finally {
       const appointments = await prisma.appointment.findMany({

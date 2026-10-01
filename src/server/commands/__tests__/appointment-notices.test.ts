@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  consultationTitle,
   formatAppointmentBookedNotice,
   formatAppointmentCancelNotice,
   formatMeetingLinkNotice,
@@ -7,6 +8,13 @@ import {
 } from "@/server/commands/appointments";
 
 describe("appointment client notices", () => {
+  it("puts the client name into the consultation title", () => {
+    expect(consultationTitle("Аня Тест")).toBe("Консультация: Аня Тест");
+    expect(consultationTitle("  Аня   ")).toBe("Консультация: Аня");
+    expect(consultationTitle(null)).toBe("Консультация");
+    expect(consultationTitle("")).toBe("Консультация");
+  });
+
   it("tells the client the consultation was cancelled", () => {
     expect(
       formatAppointmentCancelNotice({
@@ -22,11 +30,13 @@ describe("appointment client notices", () => {
   it("tells the client the consultation was booked", () => {
     expect(
       formatAppointmentBookedNotice({
-        title: "Консультация",
+        title: "Консультация: Аня Тест",
         whenLabel: "пт, 26 сент., 09:00",
         timezone: "Europe/Rome",
       }),
-    ).toBe("Консультация назначена: Консультация\nпт, 26 сент., 09:00 (Europe/Rome)");
+    ).toBe(
+      "Консультация назначена: Консультация: Аня Тест\nпт, 26 сент., 09:00 (Europe/Rome)",
+    );
   });
 
   it("promises the call link in Telegram and on the booking email", () => {

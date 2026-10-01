@@ -186,9 +186,12 @@ export function buildCalendarEventBody(
   providerEventId: string,
   curatorEmail?: string | null,
 ) {
-  const summary = appointment.guestName?.trim()
-    ? `${appointment.title}: ${appointment.guestName.trim()}`
-    : appointment.title;
+  const guest = appointment.guestName?.trim();
+  const title = appointment.title.trim() || "Консультация";
+  const summary =
+    guest && !title.toLowerCase().includes(guest.toLowerCase())
+      ? `${title}: ${guest}`
+      : title;
   const body: Record<string, unknown> = {
     id: providerEventId,
     summary,

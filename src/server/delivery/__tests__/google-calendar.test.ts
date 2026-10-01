@@ -216,7 +216,7 @@ describe("google calendar helpers (unit)", () => {
         studentId: null,
         conversationId: null,
         assignedCuratorId: null,
-        title: "Консультация",
+        title: "Консультация: Аня",
         startsAt: new Date("2026-10-01T10:00:00.000Z"),
         endsAt: new Date("2026-10-01T11:00:00.000Z"),
         timezone: "Europe/Rome",
@@ -239,6 +239,7 @@ describe("google calendar helpers (unit)", () => {
       },
       "event-id",
     );
+    expect(body.summary).toBe("Консультация: Аня");
     expect(body.attendees).toEqual([{ email: "anya@example.com" }]);
     const invited = buildCalendarEventBody(
       {
@@ -272,6 +273,7 @@ describe("google calendar helpers (unit)", () => {
       "event-id",
       "curator@example.com",
     );
+    expect(invited.summary).toBe("Консультация: Аня");
     expect(invited.attendees).toEqual([
       { email: "anya@example.com" },
       { email: "curator@example.com" },
