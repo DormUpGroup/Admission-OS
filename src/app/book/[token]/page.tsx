@@ -132,7 +132,7 @@ export default async function BookInvitePage({
   const slots = await listOpenSlots({
     curatorId: invite.curatorId,
     from: new Date(),
-    to: new Date(Date.now() + 62 * 24 * 60 * 60 * 1000),
+    to: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
   });
 
   return (
