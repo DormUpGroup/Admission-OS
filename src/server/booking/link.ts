@@ -20,6 +20,22 @@ export function bookingInviteMessage(url: string): string {
   ].join("\n");
 }
 
+/** Link to pick a new slot when a consultation is already on the calendar. */
+export function bookingRescheduleMessage(
+  url: string,
+  whenLabel: string,
+  timezone: string,
+): string {
+  return [
+    `Консультация сейчас: ${whenLabel} (${timezone})`,
+    "",
+    "Чтобы поменять время, выберите новое по ссылке:",
+    url,
+    "",
+    "Ссылку на звонок пришлём в этот чат и на почту, которую укажете в форме.",
+  ].join("\n");
+}
+
 /** Already-assigned curator only. Sending a booking link never requires one. */
 export function pickBookingCuratorId(
   assigned: Array<string | null | undefined>,

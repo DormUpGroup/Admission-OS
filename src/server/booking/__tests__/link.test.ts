@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bookingInviteMessage,
   bookingPageUrl,
+  bookingRescheduleMessage,
   pickBookingCuratorId,
 } from "../link";
 
@@ -22,6 +23,17 @@ describe("booking link", () => {
     expect(body).toContain("https://example.test/book/abc");
     expect(body).toContain("Ссылку на звонок пришлём в этот чат и на почту, которую укажете в форме.");
     expect(body).not.toContain("личный кабинет");
+  });
+
+  it("offers a reschedule link when a consultation is already booked", () => {
+    const body = bookingRescheduleMessage(
+      "https://example.test/book/abc",
+      "пн, 5 окт., 11:00",
+      "Europe/Rome",
+    );
+    expect(body).toContain("Консультация сейчас: пн, 5 окт., 11:00 (Europe/Rome)");
+    expect(body).toContain("Чтобы поменять время");
+    expect(body).toContain("https://example.test/book/abc");
   });
 
   it("keeps an already assigned curator and never invents one", () => {

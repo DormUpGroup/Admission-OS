@@ -251,7 +251,7 @@ export function hermesRunInstructions(
     "The escalate_to_human reason must name the problem and the one action the curator should take, in the client's language. Example: Клиент просит выбрать конкретный вуз. Проверьте программу и ответьте в этот чат.",
     "Call propose_reply once with the full reply. The server sends that text when the turn ends. Do not also call send_client_message for the same text.",
     "Do not offer days or times in the chat, and do not invent a website link. The price catalog may include https://immigrome.ru/. send_booking_link sends the booking link and its text.",
-    "If send_booking_link returns already_booked or already_sent, do not send another message.",
+    "If send_booking_link returns already_booked or already_sent, do not send another message. already_booked already includes the current time and a link to change it.",
     "If send_booking_link returns booking_unavailable, call escalate_to_human and do not invent a link.",
     "Do not put timelines in the text you send. A price is allowed only when it is copied from the price catalog.",
     "Write in the client's language, usually Russian.",

@@ -129,10 +129,23 @@ export default async function BookInvitePage({
     }
   }
 
+  const upcoming = invite.leadId
+    ? await prisma.appointment.findFirst({
+        where: {
+          leadId: invite.leadId,
+          status: { in: ["AWAITING_CLIENT", "PENDING", "CONFIRMED"] },
+          endsAt: { gt: new Date() },
+        },
+        orderBy: { startsAt: "asc" },
+        select: { id: true },
+      })
+    : null;
+
   const slots = await listOpenSlots({
     curatorId: invite.curatorId,
     from: new Date(),
     to: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+    excludeAppointmentId: upcoming?.id,
   });
 
   return (
@@ -141,10 +154,12 @@ export default async function BookInvitePage({
         IMMIGROME
       </p>
       <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
-        Запись на консультацию
+        {upcoming ? "Изменить время консультации" : "Запись на консультацию"}
       </h1>
       <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
-        Аккаунт не нужен. Сначала выберите день в календаре, затем удобный час.
+        {upcoming
+          ? "Выберите новый день и час. Прежняя запись отменится."
+          : "Аккаунт не нужен. Сначала выберите день в календаре, затем удобный час."}
       </p>
       <BookingCalendar
         slots={slots.map((slot) => ({ startsAt: slot.startsAt.toISOString() }))}

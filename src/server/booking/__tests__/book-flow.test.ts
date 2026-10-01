@@ -182,6 +182,48 @@ describeDb("client books a consultation from the site", () => {
 
     const consumed = await prisma.bookingInvite.findUnique({ where: { id: invite!.id } });
     expect(consumed?.appointmentId).toBe(appointment.id);
+
+    const reschedule = await sendBookingLinkForConversation({
+      conversationId,
+      env: { AUTH_URL: "https://admission-os-production.up.railway.app" },
+    });
+    expect(reschedule.startsWith("already_booked:")).toBe(true);
+
+    const rescheduleInvite = await prisma.bookingInvite.findFirst({
+      where: { conversationId, appointmentId: null },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(rescheduleInvite?.token).toBeTruthy();
+    expect(rescheduleInvite?.id).not.toBe(invite!.id);
+
+    const rescheduleMessage = await prisma.conversationMessage.findFirst({
+      where: { conversationId, body: { contains: "Чтобы поменять время" } },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(rescheduleMessage?.body).toContain(`/book/${rescheduleInvite?.token}`);
+    expect(rescheduleMessage?.body).toContain("Консультация сейчас:");
+
+    const laterSlots = await listOpenSlots({
+      curatorId,
+      from: new Date(),
+      to: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+      excludeAppointmentId: appointment.id,
+    });
+    expect(laterSlots.length).toBeGreaterThan(1);
+    const newSlot = laterSlots.find((slot) => slot.startsAt.getTime() !== appointment.startsAt.getTime());
+    expect(newSlot).toBeTruthy();
+
+    const moved = await appointmentBookByGuest({
+      token: rescheduleInvite!.token,
+      guestName: "Аня Тест",
+      guestEmail: email,
+      startsAt: newSlot!.startsAt,
+    });
+    expect(moved.id).not.toBe(appointment.id);
+    expect(moved.status).toBe("PENDING");
+
+    const old = await prisma.appointment.findUnique({ where: { id: appointment.id } });
+    expect(old?.status).toBe("CANCELLED");
   }, 30000);
 
   it("sends the booking link without a curator and does not pause the chat", async () => {

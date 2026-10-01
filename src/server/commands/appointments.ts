@@ -995,10 +995,29 @@ export async function appointmentBookByGuest(input: {
   const endsAt = endsAtFromStart(input.startsAt);
   assertValidInterval(input.startsAt, endsAt);
 
+  const currentBooking = invite.leadId
+    ? await prisma.appointment.findFirst({
+        where: {
+          leadId: invite.leadId,
+          status: {
+            in: [
+              APPOINTMENT_STATUS.AWAITING_CLIENT,
+              APPOINTMENT_STATUS.PENDING,
+              APPOINTMENT_STATUS.CONFIRMED,
+            ],
+          },
+          endsAt: { gt: new Date() },
+        },
+        select: { id: true },
+        orderBy: { startsAt: "asc" },
+      })
+    : null;
+
   const open = await listOpenSlots({
     curatorId,
     from: new Date(),
-    to: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+    to: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+    excludeAppointmentId: currentBooking?.id,
   });
   const slot = open.find((item) => item.startsAt.getTime() === input.startsAt.getTime());
   if (!slot) throw new Error("The selected slot is no longer available");
@@ -1026,9 +1045,32 @@ export async function appointmentBookByGuest(input: {
         },
         endsAt: { gt: new Date() },
       },
-      select: { id: true },
     });
-    if (existing) throw new Error("Appointment already booked");
+    if (existing) {
+      const cancelled = await tx.appointment.update({
+        where: { id: existing.id },
+        data: {
+          status: APPOINTMENT_STATUS.CANCELLED,
+          pendingStartsAt: null,
+          pendingEndsAt: null,
+          confirmationToken: null,
+          clientChangeUnseen: false,
+          version: { increment: 1 },
+        },
+      });
+      if (cancelled.googleEventId || existing.googleEventId) {
+        await enqueueOutbox(tx, {
+          aggregateType: "Appointment",
+          aggregateId: cancelled.id,
+          eventType: "calendar.delete",
+          payload: {
+            appointmentId: cancelled.id,
+            googleEventId: cancelled.googleEventId ?? existing.googleEventId,
+          },
+          idempotencyKey: `calendar.delete:${cancelled.id}:v${cancelled.version}`,
+        });
+      }
+    }
 
     await assertNoCuratorConflict(tx, {
       curatorId,

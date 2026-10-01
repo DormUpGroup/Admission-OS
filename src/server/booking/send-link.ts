@@ -11,6 +11,7 @@ import {
   BOOKING_INVITE_TTL_MS,
   bookingInviteMessage,
   bookingPageUrl,
+  bookingRescheduleMessage,
   pickBookingCuratorId,
 } from "./link";
 
@@ -71,12 +72,14 @@ async function ensureOpenInvite(input: {
   conversation: ConversationForBooking;
   curatorId: string | null;
   now: Date;
+  /** Always mint a fresh token so a repeat ask is not treated as a duplicate send. */
+  refresh?: boolean;
 }) {
   const open = await prisma.bookingInvite.findFirst({
     where: { conversationId: input.conversation.id, appointmentId: null },
     orderBy: { createdAt: "desc" },
   });
-  if (open && open.expiresAt > input.now) return open;
+  if (open && open.expiresAt > input.now && !input.refresh) return open;
   if (open) {
     return prisma.bookingInvite.update({
       where: { id: open.id },
@@ -108,7 +111,7 @@ async function ensureOpenInvite(input: {
       orderBy: { createdAt: "desc" },
     });
     if (!raced) throw error;
-    if (raced.expiresAt > input.now) return raced;
+    if (raced.expiresAt > input.now && !input.refresh) return raced;
     return prisma.bookingInvite.update({
       where: { id: raced.id },
       data: {
@@ -124,6 +127,9 @@ async function ensureOpenInvite(input: {
  * Hermes calls this instead of offering times in chat. The message text and
  * URL are built here so the model cannot invent a link. A curator is not
  * required: the shared Google Calendar owns the slot.
+ *
+ * If a consultation is already booked, this still sends a fresh link so the
+ * client can change the time. The next successful booking replaces the old one.
  */
 export async function sendBookingLinkForConversation(input: {
   agentRunId?: string | null;
@@ -141,17 +147,34 @@ export async function sendBookingLinkForConversation(input: {
   });
   if (!conversation) return "booking_unavailable:conversation_not_found";
 
+  const curatorId = pickBookingCuratorId([
+    conversation.assignedCuratorId,
+    conversation.lead?.assignedCuratorId,
+    conversation.student?.curatorId,
+  ]);
+
   const booked = await upcomingAppointment(conversation, now);
   if (booked) {
     const when = formatSlotLabel(
       booked.pendingStartsAt ?? booked.startsAt,
       booked.timezone || APPOINTMENT_TIMEZONE,
     );
+    const timezone = booked.timezone || APPOINTMENT_TIMEZONE;
+    let invite: Awaited<ReturnType<typeof ensureOpenInvite>>;
+    let url: string;
+    try {
+      invite = await ensureOpenInvite({ conversation, curatorId, now, refresh: true });
+      url = bookingPageUrl(invite.token, input.env);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "invite_failed";
+      return `booking_unavailable:${reason}`;
+    }
+
     const sent = await sendAgentClientMessage({
       agentRunId: input.agentRunId,
       conversationId: conversation.id,
-      body: `Консультация уже назначена.\n${when} (${booked.timezone || APPOINTMENT_TIMEZONE})`,
-      clientRequestId: `booking-already:${booked.id}`,
+      body: bookingRescheduleMessage(url, when, timezone),
+      clientRequestId: `booking-reschedule:${invite.id}:${invite.expiresAt.toISOString()}`,
     });
     if (sent.status === "ALLOWED" && sent.result.duplicate) return "already_sent";
     if (sent.status !== "ALLOWED") {
@@ -159,12 +182,6 @@ export async function sendBookingLinkForConversation(input: {
     }
     return `already_booked:${when}`;
   }
-
-  const curatorId = pickBookingCuratorId([
-    conversation.assignedCuratorId,
-    conversation.lead?.assignedCuratorId,
-    conversation.student?.curatorId,
-  ]);
 
   let invite: Awaited<ReturnType<typeof ensureOpenInvite>>;
   let url: string;
