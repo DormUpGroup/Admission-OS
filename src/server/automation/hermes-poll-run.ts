@@ -6,6 +6,7 @@ import { commitBookedConsultation, commitSchedulingRunCalendar } from "./commit-
 import { sendUnsentRunDraft } from "./deliver-draft";
 import {
   getHermesRun,
+  HERMES_RUN_TIMEOUT_MS,
   HermesRetryableError,
   HermesRunPendingError,
 } from "./hermes-client";
@@ -70,6 +71,17 @@ export async function dispatchHermesPollRun(
   }
   if (!run.hermesRunId) {
     throw new HermesRetryableError(`AgentRun ${agentRunId} has no hermesRunId`);
+  }
+
+  const runningSince = run.startedAt?.getTime() ?? null;
+  if (runningSince != null && now.getTime() - runningSince > HERMES_RUN_TIMEOUT_MS) {
+    await finishRun(db, run.id, run.outputJson, {
+      status: "FAILED",
+      errorCode: "hermes_timeout",
+      errorMessage: `Hermes run exceeded ${HERMES_RUN_TIMEOUT_MS / 1000}s`,
+      now,
+    });
+    return { status: "failed", errorCode: "hermes_timeout" };
   }
 
   const triggerMessageId = messageIdFromRunInput(run.inputJson);

@@ -88,8 +88,13 @@ mcp_servers:
 Use `profile=scheduling` or `profile=onboarding` on that profile's MCP entry. Each profile has its own `API_SERVER_KEY`.
 
 Use the web private address, not a public domain. Do not put `TELEGRAM_BOT_TOKEN`
-or `DATABASE_URL` on Hermes. Disable Hermes toolsets that can send Telegram or
-arbitrary HTTP (`terminal`, messaging); otherwise the agent can leave this MCP route.
+or `DATABASE_URL` on Hermes. Disable Hermes toolsets that can send Telegram,
+run local code, or arbitrary HTTP (`terminal`, `execute_code`, messaging);
+otherwise the agent can leave this MCP route or loop after a bad `grant_id`.
+
+A poll that stays `RUNNING` longer than three minutes is marked `FAILED`
+(`hermes_timeout`) and the grant is revoked, so a stuck Hermes tool loop does
+not block the chat forever.
 
 `message.received` enqueues `hermes.create_run`. The worker also sweeps `QUEUED`
 intake runs that have no `hermesRunId`. A successful call sets

@@ -246,8 +246,11 @@ describe("hermes.create_run dispatch", () => {
         session_id: string;
         instructions: string;
       };
-      expect(sent.input).toBe("Хочу поступить");
+      expect(sent.input).toMatch(/^grant_id=.+\n\nХочу поступить$/);
       expect(sent.session_id).toBe("run-1");
+      expect(sent.instructions).toMatch(/^grant_id=.+/);
+      expect(sent.instructions).toContain("Copy it character for character");
+      expect(sent.instructions).toContain("Do not use execute_code");
       expect(sent.instructions).toContain("Хочу поступить");
       expect(sent.instructions).toContain("Бакалавриат");
       expect(sent.instructions).toContain("Какой уровень вас интересует?");
@@ -352,7 +355,7 @@ describe("hermes.create_run dispatch", () => {
       fetchImpl,
     });
     await dispatchHermesCreateRun(box.db as never, "run-1", { env, fetchImpl, now });
-    expect(sentInput).toBe("Магистратура\nПраво\nТурин");
+    expect(sentInput).toMatch(/^grant_id=.+\n\nМагистратура\nПраво\nТурин$/);
   });
 
   it("does not start Hermes when a newer client message is already stored", async () => {

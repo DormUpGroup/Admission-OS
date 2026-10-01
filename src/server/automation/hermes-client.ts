@@ -53,6 +53,9 @@ export class HermesRunPendingError extends Error {
 /** How soon to ask Hermes again while the run is still writing. */
 export const HERMES_POLL_DEFER_MS = 1_000;
 
+/** Fail a Hermes run that stays active too long (stuck tool loop, bad grant_id, etc.). */
+export const HERMES_RUN_TIMEOUT_MS = 3 * 60 * 1000;
+
 /** Body accepted by Nous hermes-agent POST /v1/runs. */
 export type HermesCreateRunBody = {
   input: string;

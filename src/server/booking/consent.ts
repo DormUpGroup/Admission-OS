@@ -139,7 +139,10 @@ export function questionnaireOfferMessage(): string {
 }
 
 function mentionsQuestionnaire(text: string | null | undefined): boolean {
-  return /начн[её]м\?/iu.test(text ?? "");
+  const body = text ?? "";
+  // Welcome also ends with «Начнем?» — only the questionnaire offer counts.
+  if (!/начн[её]м\?/iu.test(body)) return false;
+  return /несколько вопросов|вопросы нужны/iu.test(body);
 }
 
 export function agreedToQuestionnaire(turn: BookingConsentTurn): boolean {

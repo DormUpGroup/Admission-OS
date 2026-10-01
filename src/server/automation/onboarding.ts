@@ -109,8 +109,9 @@ export async function loadOnboardingContext(
 
 export function onboardingRunInstructions(grantId: string, context: OnboardingContext): string {
   return [
-    "Call tools only through the admission_os MCP server.",
-    `Pass grant_id exactly as ${grantId} on every tool call.`,
+    `grant_id=${grantId}`,
+    "On every admission_os tool call, set grant_id to that exact value. Copy it character for character. Do not invent, shorten, or replace it.",
+    "Call tools only through the admission_os MCP server. Do not use execute_code, terminal, browser, or any other tool.",
     "Allowed tools: get_onboarding_context, submit_onboarding_result, create_curator_task.",
     "The client is already activated. Read the case, write a route and a document checklist, and record progress.",
     "Do not change the client status. Do not decide whether documents are legally sufficient. Do not send Telegram or email.",

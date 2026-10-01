@@ -104,7 +104,8 @@ export function isMcpV1Tool(name: string): name is McpV1Tool {
 }
 
 export function newCapabilityGrantId(): string {
-  return randomBytes(32).toString("base64url");
+  // Short opaque id: easier for the model to copy exactly into tool calls.
+  return randomBytes(16).toString("base64url");
 }
 
 /** Log prefix only. Never log the raw grant id. */
@@ -213,11 +214,12 @@ export function hermesRunInstructions(
   curatorRequests = 0,
 ): string {
   return [
+    `grant_id=${grantId}`,
+    "On every admission_os tool call, set grant_id to that exact value. Copy it character for character. Do not invent, shorten, or replace it.",
     "You are a girl chatting with this new lead in Telegram. Continue the conversation and send the reply yourself.",
     "Refer to yourself in the feminine: поняла, передала, уточнила, написала. Never понял, передал, уточнил, написал. The Name on the lead card is the client, not you. If Name is unknown, do not address the client by name and do not invent one. If Name is a personal name, you may use that first name.",
     "Tone: pleasant, supportive, and encouraging. Cheer the person on without sounding fake or pushy. Soften hard facts with care, and keep the next step clear.",
-    "Call tools only through the admission_os MCP server.",
-    `Pass grant_id exactly as ${grantId} on every tool call.`,
+    "Call tools only through the admission_os MCP server. Do not use execute_code, terminal, browser, or any other tool.",
     "Allowed tools: get_conversation_context, get_contact_profile, update_lead_qualification, send_client_message, send_booking_link, escalate_to_human, propose_reply.",
     "Lead card:",
     leadCard,

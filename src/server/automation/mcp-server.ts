@@ -435,12 +435,24 @@ async function callTool(
     run.conversationId === grant.conversationId &&
     allowedTools(grant.allowedToolsJson).includes(toolName);
 
-  if (!grant || !run || grant.revokedAt || grant.expiresAt.getTime() <= now.getTime()) {
-    logLine("grant_rejected");
+  if (!grant) {
+    logLine("grant_not_found");
+    return { status: 200, body: toolResult(id, "grant_rejected", true) };
+  }
+  if (!run) {
+    logLine("grant_run_missing");
+    return { status: 200, body: toolResult(id, "grant_rejected", true) };
+  }
+  if (grant.revokedAt) {
+    logLine("grant_revoked");
+    return { status: 200, body: toolResult(id, "grant_rejected", true) };
+  }
+  if (grant.expiresAt.getTime() <= now.getTime()) {
+    logLine("grant_expired");
     return { status: 200, body: toolResult(id, "grant_rejected", true) };
   }
   if (run.conversationId !== grant.conversationId || run.id !== grant.agentRunId) {
-    logLine("grant_rejected");
+    logLine("grant_run_mismatch");
     return { status: 200, body: toolResult(id, "grant_rejected", true) };
   }
   if (!grantOk) {

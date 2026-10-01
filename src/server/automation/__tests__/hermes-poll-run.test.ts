@@ -30,7 +30,7 @@ function harness(
     status,
     hermesRunId: "hermes-9",
     conversationId: "conv-1",
-    startedAt: new Date("2026-09-27T11:00:00.000Z"),
+    startedAt: new Date(now.getTime() - 30_000),
     outputJson: { drafts: [{ body: "Черновик" }] },
     inputJson: options?.messageId ? { messageId: options.messageId } : null,
     errorCode: null,
@@ -57,7 +57,7 @@ function harness(
         if (!options?.laterInbound) return null;
         if (args?.where?.createdAt) return { id: "message-later" };
         if (typeof args?.where?.id === "string") {
-          return { createdAt: new Date("2026-09-27T11:00:00.000Z") };
+          return { createdAt: new Date(now.getTime() - 60_000) };
         }
         return null;
       },
@@ -95,6 +95,27 @@ describe("hermes.poll_run", () => {
     ).rejects.toBeInstanceOf(HermesRunPendingError);
     expect(box.state.status).toBe("RUNNING");
     expect(box.grant.revokedAt).toBeNull();
+    expect(sent.calls).toEqual([]);
+  });
+
+  it("fails a Hermes run that stayed active too long", async () => {
+    const box = harness();
+    box.state.startedAt = new Date(now.getTime() - 4 * 60 * 1000);
+    const sent = spy();
+    const fetchImpl = (async () => {
+      throw new Error("should not poll Hermes after timeout");
+    }) as typeof fetch;
+    await expect(
+      dispatchHermesPollRun(box.db as never, "run-1", {
+        env,
+        fetchImpl,
+        now,
+        deliverDraft: sent.deliverDraft,
+      }),
+    ).resolves.toEqual({ status: "failed", errorCode: "hermes_timeout" });
+    expect(box.state.status).toBe("FAILED");
+    expect(box.state.errorCode).toBe("hermes_timeout");
+    expect(box.grant.revokedAt).toEqual(now);
     expect(sent.calls).toEqual([]);
   });
 
@@ -174,7 +195,7 @@ describe("hermes.poll_run", () => {
       status: "RUNNING",
       hermesRunId: "hermes-9",
       conversationId: "conv-1",
-      startedAt: new Date("2026-09-27T11:00:00.000Z"),
+      startedAt: new Date(now.getTime() - 30_000),
       outputJson: {} as Record<string, unknown>,
       inputJson: { appointmentId: "appt-1" },
       errorCode: null as string | null,
@@ -235,7 +256,7 @@ describe("hermes.poll_run", () => {
       status: "RUNNING",
       hermesRunId: "hermes-9",
       conversationId: "conv-1",
-      startedAt: new Date("2026-09-27T11:00:00.000Z"),
+      startedAt: new Date(now.getTime() - 30_000),
       outputJson: {} as Record<string, unknown>,
       inputJson: { appointmentId: "appt-1" },
       errorCode: null as string | null,

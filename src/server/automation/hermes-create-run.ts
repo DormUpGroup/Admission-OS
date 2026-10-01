@@ -129,8 +129,9 @@ type QueuedProfileRun = {
 
 function schedulingRunInstructions(grantId: string, facts: string): string {
   return [
-    "Call tools only through the admission_os MCP server.",
-    `Pass grant_id exactly as ${grantId} on every tool call.`,
+    `grant_id=${grantId}`,
+    "On every admission_os tool call, set grant_id to that exact value. Copy it character for character. Do not invent, shorten, or replace it.",
+    "Call tools only through the admission_os MCP server. Do not use execute_code, terminal, browser, or any other tool.",
     "Allowed tools: commit_booked_consultation.",
     "The client already chose this slot on the booking page. Do not change the date or time.",
     "Call commit_booked_consultation once. It writes the curator's calendar, creates Google Meet, and emails the client and the curator.",
@@ -455,7 +456,7 @@ export async function dispatchHermesCreateRun(
     now,
   });
   const body: HermesCreateRunBody = {
-    input: thought,
+    input: `grant_id=${grant.id}\n\n${thought}`,
     session_id: sessionId,
     instructions: hermesRunInstructions(
       grant.id,
