@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { labelOf } from "@/lib/labels";
 import { updateIntakeSeatLimitAction } from "@/server/actions";
+import { changeOwnPasswordAction } from "@/server/staff-account-actions";
 import {
   formatIntakeLabel,
   occupiedSeatsForIntake,
@@ -23,7 +24,7 @@ import { AccompanimentStatus } from "@/lib/enums";
 export default async function AdminSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
   const session = await requireStaff();
   const query = await searchParams;
@@ -147,6 +148,57 @@ export default async function AdminSettingsPage({
         </CardContent>
       </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Пароль</CardTitle>
+          <CardDescription>
+            Меняется только пароль аккаунта, под которым вы вошли.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {query.saved === "password" ? (
+            <p className="mb-4 text-sm text-foreground">Пароль обновлён.</p>
+          ) : null}
+          <form action={changeOwnPasswordAction} className="grid max-w-md gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Текущий пароль</Label>
+              <Input
+                id="current-password"
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="next-password">Новый пароль</Label>
+              <Input
+                id="next-password"
+                name="nextPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Повтор нового пароля</Label>
+              <Input
+                id="confirm-password"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+            <div>
+              <Button type="submit">Сохранить пароль</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

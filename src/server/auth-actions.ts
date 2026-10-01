@@ -34,7 +34,7 @@ function authErrorMessage(error: unknown): string | null {
 }
 
 export async function loginAction(formData: FormData) {
-  const email = String(formData.get("email") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
   if (!process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {

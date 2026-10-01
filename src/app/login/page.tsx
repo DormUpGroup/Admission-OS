@@ -41,7 +41,7 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
-              defaultValue="anna@immigrome.local"
+              autoComplete="email"
               required
             />
           </div>
@@ -51,7 +51,7 @@ export default function LoginPage() {
               id="password"
               name="password"
               type="password"
-              defaultValue="password123"
+              autoComplete="current-password"
               required
             />
           </div>
@@ -60,12 +60,6 @@ export default function LoginPage() {
             {loading ? "Вход…" : "Войти"}
           </Button>
         </form>
-        <div className="mt-6 rounded-2xl bg-muted p-4 text-[13px] text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">Демо-аккаунты</p>
-          <p>anna@immigrome.local / password123 (куратор)</p>
-          <p>admin@immigrome.local / password123</p>
-          <p>alina.sokolova@student.local / password123 (портал)</p>
-        </div>
       </div>
     </div>
   );
