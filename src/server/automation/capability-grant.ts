@@ -176,9 +176,9 @@ export function formatLeadCard(lead: LeadCardSource | undefined, messages: ChatT
     next =
       "The client declined the questions again. Accept it in one short sentence and do not offer the questionnaire again. Do not ask a fact.";
   } else if (!questionnaireStarted && declinedQuestionnaire(turn)) {
-    next = `The client declined the questions. Explain that the questions show their case so you do not offer extra steps, then ask once more: Вопросы нужны, чтобы понять ваш случай и не предлагать лишние шаги. Без этого легко ошибиться в порядке действий.\n\n${offer} Do not ask a fact yet.`;
+    next = `The client declined the questions. Explain that the questions show their case so you do not offer extra steps, then ask once more. Send exactly this text and nothing else — no greeting, no name, no welcome repeat:\nВопросы нужны, чтобы понять ваш случай и не предлагать лишние шаги. Без этого легко ошибиться в порядке действий.\n\nВперед?\nDo not ask a fact yet.`;
   } else if (!questionnaireStarted) {
-    next = `Do not ask a fact. Offer to start and ask a few questions, in this sentence: ${offer}`;
+    next = `Do not ask a fact. Do not greet, do not use the client's name, and do not repeat the welcome. Send exactly this text and nothing else:\n${offer}`;
   } else if (nextField === "studyLevel") {
     next =
       `Ask only which level they want: бакалавриат, магистратура, or foundation. ${pace} Do not ask any other fact.`;
@@ -230,7 +230,7 @@ export function hermesRunInstructions(
     "The lead card is the source of truth. Known facts were already said in this chat. Never ask a Known fact again, and never say that a Known fact is missing from the card.",
     "Obey the Next line on the lead card. It is the only question or offer for this turn, unless the person just asked about the price list or a service price. Answer that price question in this turn before Next.",
     "Answer what the person just said and any unfinished thread: a question already asked, or a fact they already gave.",
-    "The opening message already introduced you. If the chat already started, do not greet again and do not repeat that introduction. Obey the Next line. When Next offers to start questions, or explains a refusal, send that and do not ask a fact. When Next names one fact, ask only that fact.",
+    "The opening message already introduced you. If the chat already started, do not greet again, do not say the client's name again, and do not repeat that introduction. Obey the Next line. When Next offers to start questions, or explains a refusal, send exactly the text Next gives and do not ask a fact. When Next names one fact, ask only that fact.",
     "When Next says the client declined the questions, explain why they are needed and ask once more. Do not ask a fact yet.",
     "When Next says the client declined the questions again, accept it and do not offer the questionnaire again.",
     "If the latest client message repeats the previous client message in meaning, do not send another reply and do not ask the same question again.",

@@ -135,14 +135,14 @@ export function latestConsentTurn(messages: ConsentMessage[]): BookingConsentTur
 }
 
 export function questionnaireOfferMessage(): string {
-  return "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?";
+  return "Задам несколько вопросов, чтобы понять, как лучше выстроить работу.\n\nВперед?";
 }
 
 function mentionsQuestionnaire(text: string | null | undefined): boolean {
   const body = text ?? "";
-  // Welcome also ends with «Начнем?» — only the questionnaire offer counts.
-  if (!/начн[её]м\?/iu.test(body)) return false;
-  return /несколько вопросов|вопросы нужны/iu.test(body);
+  // Welcome ends with «Начнем?» alone — that is not the questionnaire offer.
+  if (!/несколько вопросов|вопросы нужны/iu.test(body)) return false;
+  return /впер[её]д\?|начн[её]м\?/iu.test(body);
 }
 
 export function agreedToQuestionnaire(turn: BookingConsentTurn): boolean {

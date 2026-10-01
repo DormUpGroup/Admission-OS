@@ -277,7 +277,7 @@ describe("hermes.create_run dispatch", () => {
       expect(sent.instructions).toContain("The server sends that text when the turn ends");
       expect(sent.instructions).toContain("You are a girl");
       expect(sent.instructions).toContain("поняла, передала");
-      expect(sent.instructions).toContain("do not greet again");
+      expect(sent.instructions).toContain("do not say the client's name again");
       expect(sent.instructions).toContain("one thought");
       expect(sent.instructions).toContain("repeats the previous client message");
       expect(sent.instructions).toContain("answer immediately");
@@ -739,7 +739,8 @@ describe("formatLeadCard", () => {
 
   it("offers to start questions before asking a fact", () => {
     const card = formatLeadCard(null, [{ direction: "INBOUND", body: "Привет" }]);
-    expect(card).toContain("Начнём?");
+    expect(card).toContain("Вперед?");
+    expect(card).toContain("Send exactly this text and nothing else");
     expect(card).toContain("Do not ask a fact");
     expect(card).not.toContain("Ask only");
   });
@@ -752,7 +753,8 @@ describe("formatLeadCard", () => {
       },
       { direction: "INBOUND", body: "Да" },
     ]);
-    expect(card).toContain("Начнём?");
+    expect(card).toContain("Вперед?");
+    expect(card).toContain("do not use the client's name");
     expect(card).toContain("Do not ask a fact");
     expect(card).not.toContain("бакалавриат, магистратура, or foundation");
   });
@@ -761,7 +763,7 @@ describe("formatLeadCard", () => {
     const card = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
-        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+        body: "Задам несколько вопросов, чтобы понять, как лучше выстроить работу.\n\nВперед?",
       },
       { direction: "INBOUND", body: "Да" },
     ]);
@@ -775,23 +777,24 @@ describe("formatLeadCard", () => {
     const once = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
-        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+        body: "Задам несколько вопросов, чтобы понять, как лучше выстроить работу.\n\nВперед?",
       },
       { direction: "INBOUND", body: "Нет" },
     ]);
     expect(once).toContain("declined the questions");
     expect(once).toContain("не предлагать лишние шаги");
+    expect(once).toContain("Вперед?");
     expect(once).not.toContain("Ask only");
 
     const twice = formatLeadCard(null, [
       {
         direction: "OUTBOUND",
-        body: "Если хотите, начнём: я задам несколько вопросов, чтобы понять, как лучше выстроить работу. Начнём?",
+        body: "Задам несколько вопросов, чтобы понять, как лучше выстроить работу.\n\nВперед?",
       },
       { direction: "INBOUND", body: "Нет" },
       {
         direction: "OUTBOUND",
-        body: "Вопросы нужны, чтобы понять ваш случай и не предлагать лишние шаги.\n\nНачнём?",
+        body: "Вопросы нужны, чтобы понять ваш случай и не предлагать лишние шаги.\n\nВперед?",
       },
       { direction: "INBOUND", body: "Нет" },
     ]);
@@ -824,6 +827,6 @@ describe("formatLeadCard", () => {
     expect(card).toContain("studyLevel: Магистратура");
     expect(card).toContain("Ask only this fact: educationLevel");
     expect(card).toContain("More questions remain after this one");
-    expect(card).not.toContain("Начнём?");
+    expect(card).not.toContain("Вперед?");
   });
 });
