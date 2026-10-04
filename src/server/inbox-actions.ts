@@ -16,6 +16,7 @@ import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { promotionStudentEmail, resolveConsultationEmail } from "@/server/registration/contact";
 import { enqueueOutbox } from "@/server/commands/outbox";
+import { attachLeadAppointmentsToStudent } from "@/server/commands/appointments";
 import { sendRegistrationInviteOnce } from "@/server/registration/invite";
 
 export type SendTelegramInboxReplyResult = {
@@ -250,15 +251,29 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
     return { error: "Диалог не найден" };
   }
   if (conversation.studentId) {
+    const convertedLead = await prisma.lead.findFirst({
+      where: { convertedStudentId: conversation.studentId },
+      select: { id: true },
+    });
+    if (convertedLead) {
+      await attachLeadAppointmentsToStudent(
+        prisma,
+        convertedLead.id,
+        conversation.studentId,
+      );
+    }
     return finalizePromotion(conversation.studentId);
   }
 
   const lead = conversation.lead;
   if (!lead) return { error: "У этого диалога нет лида" };
   if (lead.convertedStudentId) {
-    await prisma.conversation.updateMany({
-      where: { leadId: lead.id },
-      data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
+    await prisma.$transaction(async (tx) => {
+      await tx.conversation.updateMany({
+        where: { leadId: lead.id },
+        data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
+      });
+      await attachLeadAppointmentsToStudent(tx, lead.id, lead.convertedStudentId!);
     });
     return finalizePromotion(lead.convertedStudentId);
   }
@@ -319,6 +334,7 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
       where: { leadId: lead.id },
       data: { studentId: created.id, leadId: null, inboxFolder: null },
     });
+    await attachLeadAppointmentsToStudent(tx, lead.id, created.id);
     return created;
   });
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { bookConsultationAction, bookGuestConsultationAction } from "@/server/booking-actions";
+import { bookGuestConsultationAction } from "@/server/booking-actions";
 import { Button } from "@/components/ui/button";
 import { SLOT_DAY_END_HOUR, SLOT_DAY_START_HOUR } from "@/lib/appointment-slots";
 
@@ -97,11 +97,11 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
 
 export function BookingCalendar({
   slots,
-  action = bookConsultationAction,
+  action,
   children,
 }: {
   slots: OpenSlotDto[];
-  action?: typeof bookGuestConsultationAction;
+  action: typeof bookGuestConsultationAction;
   children?: React.ReactNode;
 }) {
   const [startsAt, setStartsAt] = useState("");

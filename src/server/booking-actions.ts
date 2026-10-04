@@ -7,7 +7,7 @@ import {
   bookingAccountView,
   registerBookingAccount,
 } from "@/server/booking/account";
-import { appointmentBookByClient, appointmentBookByGuest } from "@/server/commands/appointments";
+import { appointmentBookByGuest } from "@/server/commands/appointments";
 
 function isNextRedirect(error: unknown) {
   return (
@@ -60,31 +60,15 @@ export async function loginFromBookingAction(formData: FormData) {
 
 export async function bookConsultationAction(
   _prev: { error: string } | null,
-  formData: FormData,
+  _formData: FormData,
 ) {
-  const { student } = await getCurrentStudent();
-  const raw = String(formData.get("startsAt") || "");
-  const startsAt = new Date(raw);
-  if (!raw || Number.isNaN(startsAt.getTime())) {
-    return { error: "Выберите свободное время." };
-  }
-
-  try {
-    await appointmentBookByClient({ studentId: student.id, startsAt });
-  } catch (error) {
-    if (isNextRedirect(error)) throw error;
-    const message = error instanceof Error ? error.message : "";
-    if (message === "Appointment already booked") redirect("/portal/book");
-    if (message === "The selected slot is no longer available") {
-      return { error: "Это время уже занято. Выберите другое." };
-    }
-    if (message === "No curator") {
-      return { error: "Куратор ещё не назначен. Напишите в Telegram." };
-    }
-    return { error: "Не удалось записать консультацию." };
-  }
-
-  redirect("/portal/book");
+  void _prev;
+  void _formData;
+  await getCurrentStudent();
+  // Cabinet is view-only: consultations are booked by curator or via Telegram link.
+  return {
+    error: "Запись на консультацию в кабинете недоступна. Куратор назначит время сам.",
+  };
 }
 
 export async function bookGuestConsultationAction(

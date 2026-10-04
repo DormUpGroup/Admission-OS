@@ -24,6 +24,44 @@ export const APPOINTMENT_STATUS = {
   CANCELLED: "CANCELLED",
 } as const;
 
+const ACTIVE_APPOINTMENT_STATUSES = [
+  APPOINTMENT_STATUS.AWAITING_CLIENT,
+  APPOINTMENT_STATUS.PENDING,
+  APPOINTMENT_STATUS.CONFIRMED,
+] as const;
+
+/** Move lead-linked consultations onto the student after promote. */
+export async function attachLeadAppointmentsToStudent(
+  db: DbClient,
+  leadId: string,
+  studentId: string,
+) {
+  await db.appointment.updateMany({
+    where: { leadId },
+    data: { studentId, leadId: null },
+  });
+}
+
+/** Upcoming consultation for the cabinet (heals leftover lead links). */
+export async function findStudentUpcomingAppointment(studentId: string) {
+  const lead = await prisma.lead.findFirst({
+    where: { convertedStudentId: studentId },
+    select: { id: true },
+  });
+  if (lead) {
+    await attachLeadAppointmentsToStudent(prisma, lead.id, studentId);
+  }
+
+  return prisma.appointment.findFirst({
+    where: {
+      studentId,
+      status: { in: [...ACTIVE_APPOINTMENT_STATUSES] },
+      endsAt: { gt: new Date() },
+    },
+    orderBy: { startsAt: "asc" },
+  });
+}
+
 export type AppointmentCreateInput = {
   clientRequestId: string;
   leadId?: string | null;
