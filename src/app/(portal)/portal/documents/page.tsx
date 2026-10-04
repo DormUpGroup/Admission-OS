@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { portalUploadAction } from "@/server/actions";
+import { ensurePersonalDossierDocuments } from "@/server/services/personal-dossier";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -11,18 +12,27 @@ const UPLOADABLE = new Set(["REQUESTED", "NEEDS_CHANGES", "MISSING"]);
 
 export default async function PortalDocumentsPage() {
   const { student } = await getCurrentStudent();
+  await ensurePersonalDossierDocuments(student.id, student.curatorId);
 
   const documents = await prisma.document.findMany({
     where: { studentId: student.id },
     orderBy: [{ status: "asc" }, { name: "asc" }],
   });
 
+  const pendingUpload = documents.filter((doc) => UPLOADABLE.has(doc.status)).length;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Документы</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">
+          Документы
+        </h1>
         <p className="mt-1 text-[15px] text-muted-foreground">
-          Загрузите файлы, которые запросил куратор
+          Личное дело: прикрепите файлы из списка. После проверки куратора статус
+          обновится.
+          {pendingUpload > 0
+            ? ` Осталось загрузить: ${pendingUpload}.`
+            : ""}
         </p>
       </div>
 
@@ -36,10 +46,7 @@ export default async function PortalDocumentsPage() {
           {documents.map((doc) => {
             const canUpload = UPLOADABLE.has(doc.status);
             return (
-              <li
-                key={doc.id}
-                className="surface-card p-4"
-              >
+              <li key={doc.id} className="surface-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium text-foreground">{doc.name}</p>
@@ -48,6 +55,7 @@ export default async function PortalDocumentsPage() {
                       {doc.uploadedAt
                         ? ` · загружено ${formatDate(doc.uploadedAt)}`
                         : ""}
+                      {doc.version > 1 ? ` · версия ${doc.version}` : ""}
                     </p>
                   </div>
                   <DocumentStatusBadge status={doc.status} />
@@ -62,14 +70,14 @@ export default async function PortalDocumentsPage() {
                   </div>
                 ) : null}
 
-                {doc.fileUrl && !canUpload ? (
+                {doc.fileUrl ? (
                   <a
                     href={doc.fileUrl}
                     className="mt-2 inline-block text-[13px] text-[var(--brand)] hover:underline"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Открыть загруженный файл
+                    {canUpload ? "Открыть текущий файл" : "Открыть загруженный файл"}
                   </a>
                 ) : null}
 
@@ -83,10 +91,11 @@ export default async function PortalDocumentsPage() {
                       type="file"
                       name="file"
                       required
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                       className="h-9 file:mr-2"
                     />
                     <Button type="submit" size="sm" className="shrink-0">
-                      Загрузить
+                      {doc.fileUrl ? "Загрузить новую версию" : "Прикрепить файл"}
                     </Button>
                   </form>
                 ) : null}

@@ -9,11 +9,13 @@ import { recalculateStudent } from "@/server/services/recalculate";
 import { assignStudentCurator } from "@/server/services/assign-curator";
 import { requestStudentQuestionnaire } from "@/server/registration/request-questionnaire";
 import {
+  createAndRequestDocument,
   requestDocument,
   approveDocument,
   needsChangesDocument,
   markDocumentUploaded,
 } from "@/server/services/documents";
+import { ensurePersonalDossierDocuments } from "@/server/services/personal-dossier";
 import {
   applyTemplateToApplication,
   markApplicationSubmitted,
@@ -67,6 +69,8 @@ export async function createStudentAction(formData: FormData) {
     studentId: student.id,
     userId: session.user.id,
   });
+
+  await ensurePersonalDossierDocuments(student.id, session.user.id);
 
   redirect(`/admin/students/${student.id}`);
 }
@@ -253,17 +257,21 @@ export async function needsChangesAction(formData: FormData) {
 }
 
 export async function createDocumentAction(formData: FormData) {
-  await requireStaff();
+  const session = await requireStaff();
   const studentId = String(formData.get("studentId") || "");
   await assertStudentAccess(studentId);
   const name = String(formData.get("name") || "");
   const category = String(formData.get("category") || "OTHER");
 
-  await prisma.document.create({
-    data: { studentId, name, category, status: "MISSING" },
+  await createAndRequestDocument({
+    studentId,
+    name,
+    category,
+    userId: session.user.id,
   });
-  await recalculateStudent(studentId);
   revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath("/admin/documents");
+  revalidatePath("/portal/documents");
 }
 
 export async function submitApplicationAction(formData: FormData) {

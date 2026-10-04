@@ -130,10 +130,6 @@ function hasConfirmedRequirements(
   );
 }
 
-function documentsStarted(documents: StudentJourneyDocumentInput[]) {
-  return documents.length > 0;
-}
-
 function documentsComplete(documents: StudentJourneyDocumentInput[]) {
   return (
     documents.length > 0 &&
@@ -147,7 +143,6 @@ function determineCurrentStage(input: StudentJourneyInput): {
 } {
   const selected = hasSelectedPrograms(input.programs);
   const confirmed = hasConfirmedRequirements(input.programs, input.applications);
-  const docsStarted = documentsStarted(input.documents);
   const docsDone = documentsComplete(input.documents);
   const submitted = input.applications.some((a) =>
     SUBMITTED_STATUSES.has(a.status)
@@ -160,27 +155,27 @@ function determineCurrentStage(input: StudentJourneyInput): {
     return { stage: "SUBMISSION", waitingCurator: !submitted && !submissionPrep };
   }
 
-  if (docsStarted) {
-    const studentMustAct = input.documents.some(needsStudentUpload);
-    const onlyWaitingReview =
-      !studentMustAct &&
-      input.documents.some((d) => REVIEW_STATUSES.has(d.status));
+  if (!selected) {
     return {
-      stage: "DOCUMENTS",
-      waitingCurator: onlyWaitingReview || !studentMustAct,
+      stage: "PROGRAMS",
+      waitingCurator: input.hasMatchingProfile,
     };
   }
 
-  if (selected) {
-    if (confirmed) {
-      return { stage: "DOCUMENTS", waitingCurator: true };
-    }
+  if (!confirmed) {
     return { stage: "REQUIREMENTS", waitingCurator: true };
   }
 
+  // Mandatory personal-file stage after requirements are confirmed.
+  const studentMustAct =
+    input.documents.length === 0 ||
+    input.documents.some(needsStudentUpload);
+  const onlyWaitingReview =
+    !studentMustAct &&
+    input.documents.some((d) => REVIEW_STATUSES.has(d.status));
   return {
-    stage: "PROGRAMS",
-    waitingCurator: input.hasMatchingProfile,
+    stage: "DOCUMENTS",
+    waitingCurator: onlyWaitingReview || !studentMustAct,
   };
 }
 
@@ -239,7 +234,7 @@ function buildHeadline(input: StudentJourneyInput, current: JourneyStageId) {
       return "Куратор проверяет загруженные документы";
     }
     if (input.documents.length === 0) {
-      return "Куратор готовит список документов";
+      return "Загрузите документы в личное дело";
     }
     return "Документы в работе";
   }
@@ -482,8 +477,15 @@ function buildProgramsBlock(input: StudentJourneyInput) {
 }
 
 function buildDocumentsBlock(input: StudentJourneyInput, current: JourneyStageId) {
-  if (input.documents.length === 0) return null;
   if (current !== "DOCUMENTS" && current !== "SUBMISSION") return null;
+  if (input.documents.length === 0) {
+    return {
+      approvedCount: 0,
+      totalCount: 0,
+      awaitingReviewCount: 0,
+      href: "/portal/documents",
+    };
+  }
 
   return {
     approvedCount: input.documents.filter((d) => APPROVED_STATUSES.has(d.status))

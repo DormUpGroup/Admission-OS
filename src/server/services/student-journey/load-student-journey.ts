@@ -3,6 +3,7 @@ import {
   hasMatchingProfile,
   hasQuestionnaire,
 } from "@/server/services/program-match-legacy-helpers";
+import { ensurePersonalDossierDocuments } from "@/server/services/personal-dossier";
 import { buildStudentJourneyView } from "./build-journey-view";
 import type {
   StudentJourneyProgramInput,
@@ -32,6 +33,8 @@ export async function loadStudentJourney(
   if (!student) {
     throw new Error("Student not found");
   }
+
+  await ensurePersonalDossierDocuments(studentId, student.curatorId);
 
   const [matches, shortlist, applications, documents, tasks, deadlines] =
     await Promise.all([

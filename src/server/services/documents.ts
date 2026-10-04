@@ -2,6 +2,27 @@ import { prisma } from "@/lib/db";
 import { logActivity } from "./activity";
 import { recalculateStudent } from "./recalculate";
 
+export async function createAndRequestDocument(input: {
+  studentId: string;
+  name: string;
+  category: string;
+  userId: string;
+}) {
+  const name = input.name.trim();
+  if (!name) throw new Error("Укажите название документа");
+
+  const created = await prisma.document.create({
+    data: {
+      studentId: input.studentId,
+      name,
+      category: input.category || "OTHER",
+      status: "MISSING",
+    },
+  });
+
+  return requestDocument({ documentId: created.id, userId: input.userId });
+}
+
 export async function requestDocument(input: {
   documentId: string;
   userId: string;
@@ -23,9 +44,18 @@ export async function requestDocument(input: {
     metadata: { name: doc.name, documentId: doc.id },
   });
 
+  await prisma.task.updateMany({
+    where: {
+      documentId: doc.id,
+      isStudentFacing: true,
+      status: { not: "DONE" },
+    },
+    data: { status: "DONE", completedAt: new Date() },
+  });
+
   await prisma.task.create({
     data: {
-      title: `Upload ${doc.name}`,
+      title: `Загрузить: ${doc.name}`,
       studentId: doc.studentId,
       documentId: doc.id,
       assigneeId: input.userId,
@@ -69,9 +99,18 @@ export async function markDocumentUploaded(input: {
     select: { curatorId: true },
   });
 
+  await prisma.task.updateMany({
+    where: {
+      documentId: doc.id,
+      isStudentFacing: true,
+      status: { not: "DONE" },
+    },
+    data: { status: "DONE", completedAt: new Date() },
+  });
+
   await prisma.task.create({
     data: {
-      title: `Review ${doc.name}`,
+      title: `Проверить: ${doc.name}`,
       studentId: doc.studentId,
       documentId: doc.id,
       assigneeId: curator?.curatorId ?? undefined,
@@ -158,9 +197,18 @@ export async function needsChangesDocument(input: {
     metadata: { name: doc.name, documentId: doc.id, reason: input.reason },
   });
 
+  await prisma.task.updateMany({
+    where: {
+      documentId: doc.id,
+      isStudentFacing: true,
+      status: { not: "DONE" },
+    },
+    data: { status: "DONE", completedAt: new Date() },
+  });
+
   await prisma.task.create({
     data: {
-      title: `Fix ${doc.name}`,
+      title: `Исправить: ${doc.name}`,
       description: input.reason,
       studentId: doc.studentId,
       documentId: doc.id,

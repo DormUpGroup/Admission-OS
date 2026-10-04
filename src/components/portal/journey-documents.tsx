@@ -14,7 +14,9 @@ export function JourneyDocuments({
       </h2>
       <div className="surface-card px-5 py-4">
         <p className="text-[15px] text-foreground">
-          Готово {documents.approvedCount} из {documents.totalCount} документов
+          {documents.totalCount > 0
+            ? `Готово ${documents.approvedCount} из ${documents.totalCount} документов`
+            : "Нужно собрать личное дело: загрузите документы из списка"}
         </p>
         {documents.awaitingReviewCount > 0 ? (
           <p className="mt-1 text-[15px] text-[var(--warning-fg)]">
@@ -25,7 +27,9 @@ export function JourneyDocuments({
         ) : null}
         <div className="mt-3">
           <Button asChild variant="outline" size="lg">
-            <Link href={documents.href}>Открыть документы</Link>
+            <Link href={documents.href}>
+              {documents.totalCount > 0 ? "Открыть документы" : "Загрузить документы"}
+            </Link>
           </Button>
         </div>
       </div>

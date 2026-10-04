@@ -344,6 +344,62 @@ describe("buildStudentJourneyView", () => {
     expect(view.nowTasks[0]?.title).toBe("Прислать скан паспорта");
   });
 
+  it("личное дело не перескакивает этап программ", () => {
+    const view = buildStudentJourneyView(
+      base({
+        documents: [
+          {
+            id: "d1",
+            name: "Загранпаспорт",
+            status: "REQUESTED",
+            requestedAt: new Date("2026-08-01"),
+            studentFeedback: null,
+          },
+        ],
+      })
+    );
+
+    expect(view.currentStage).toBe("PROGRAMS");
+    expect(stageMap(view).DOCUMENTS).toBe("UNAVAILABLE");
+    expect(view.documents).toBeNull();
+  });
+
+  it("после требований показывает блок документов даже без строк", () => {
+    const view = buildStudentJourneyView(
+      base({
+        programs: [
+          program({
+            programId: "p1",
+            source: "shortlist",
+            hasApplication: true,
+            verifiedAt: new Date("2026-06-01"),
+          }),
+        ],
+        applications: [
+          {
+            id: "app-1",
+            programId: "p1",
+            status: "PREPARING",
+            hardDeadline: null,
+            submittedAt: null,
+            requirementCount: 2,
+          },
+        ],
+        documents: [],
+      })
+    );
+
+    expect(view.currentStage).toBe("DOCUMENTS");
+    expect(stageMap(view).DOCUMENTS).toBe("CURRENT");
+    expect(view.headline).toBe("Загрузите документы в личное дело");
+    expect(view.documents).toEqual({
+      approvedCount: 0,
+      totalCount: 0,
+      awaitingReviewCount: 0,
+      href: "/portal/documents",
+    });
+  });
+
   it("ставит просроченный подтверждённый дедлайн первым и помечает риск", () => {
     const view = buildStudentJourneyView(
       base({

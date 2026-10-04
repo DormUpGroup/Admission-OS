@@ -17,6 +17,7 @@ import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 import { promotionStudentEmail, resolveConsultationEmail } from "@/server/registration/contact";
 import { enqueueOutbox } from "@/server/commands/outbox";
 import { attachLeadAppointmentsToStudent } from "@/server/commands/appointments";
+import { ensurePersonalDossierDocuments } from "@/server/services/personal-dossier";
 import { sendRegistrationInviteOnce } from "@/server/registration/invite";
 
 export type SendTelegramInboxReplyResult = {
@@ -350,6 +351,7 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
 
 async function finalizePromotion(studentId: string): Promise<PromoteLeadResult> {
   try {
+    await ensurePersonalDossierDocuments(studentId);
     const delivery = await sendRegistrationInviteOnce(studentId);
     if (delivery.emailError) {
       return {

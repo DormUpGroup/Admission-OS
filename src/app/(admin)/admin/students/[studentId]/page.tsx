@@ -38,6 +38,7 @@ import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
 import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { ShowAllMatches } from "@/components/admin/show-all-matches";
 import { missingQuestionnaire } from "@/server/registration/cabinet";
+import { ensurePersonalDossierDocuments } from "@/server/services/personal-dossier";
 import { buildWorkQueue } from "@/server/services/work-queue/build-work-queue";
 import { inferUnknownReason } from "@/server/services/work-queue/field-reasons";
 import { curatorStageForStudent } from "@/server/services/work-queue/stage";
@@ -116,6 +117,7 @@ export default async function StudentProfilePage({
   const focusPayId = sp.focus ?? "";
 
   await assertStudentAccess(studentId);
+  await ensurePersonalDossierDocuments(studentId, session.user.id);
 
   const student = await prisma.student.findUnique({
     where: { id: studentId },
@@ -1270,7 +1272,7 @@ export default async function StudentProfilePage({
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Добавить документ</CardTitle>
+              <CardTitle>Запросить новый документ</CardTitle>
             </CardHeader>
             <CardContent>
               <form
@@ -1280,7 +1282,12 @@ export default async function StudentProfilePage({
                 <input type="hidden" name="studentId" value={studentId} />
                 <div className="min-w-[180px] flex-1 space-y-1.5">
                   <Label htmlFor="docName">Название</Label>
-                  <Input id="docName" name="name" required />
+                  <Input
+                    id="docName"
+                    name="name"
+                    required
+                    placeholder="Например, IELTS"
+                  />
                 </div>
                 <div className="w-[140px] space-y-1.5">
                   <Label htmlFor="category">Категория</Label>
@@ -1298,7 +1305,7 @@ export default async function StudentProfilePage({
                   </select>
                 </div>
                 <Button type="submit" size="sm">
-                  Добавить
+                  Запросить у студента
                 </Button>
               </form>
             </CardContent>
@@ -1316,65 +1323,90 @@ export default async function StudentProfilePage({
                   <CardTitle>{labelOf(category)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {docs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium">{doc.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          v{doc.version}
-                          {doc.uploadedAt
-                            ? ` · загружен ${formatDate(doc.uploadedAt)}`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <DocumentStatusBadge status={doc.status} />
-                        {doc.status === "MISSING" ||
-                        doc.status === "NEEDS_CHANGES" ? (
-                          <form
-                            action={requestDocumentAction.bind(null, doc.id)}
-                          >
-                            <Button type="submit" size="sm" variant="outline">
-                              Запросить
-                            </Button>
-                          </form>
-                        ) : null}
-                        {doc.status === "UPLOADED" ||
-                        doc.status === "UNDER_REVIEW" ? (
-                          <>
-                            <form
-                              action={approveDocumentAction.bind(null, doc.id)}
+                  {docs.map((doc) => {
+                    const canRequestAgain =
+                      doc.status === "MISSING" ||
+                      doc.status === "NEEDS_CHANGES" ||
+                      doc.status === "REQUESTED" ||
+                      doc.status === "APPROVED" ||
+                      doc.status === "UPLOADED" ||
+                      doc.status === "UNDER_REVIEW";
+                    const requestLabel =
+                      doc.status === "REQUESTED"
+                        ? "Напомнить"
+                        : doc.status === "MISSING" || doc.status === "NEEDS_CHANGES"
+                          ? "Запросить"
+                          : "Запросить заново";
+                    return (
+                      <div
+                        key={doc.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium">{doc.name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            v{doc.version}
+                            {doc.uploadedAt
+                              ? ` · загружен ${formatDate(doc.uploadedAt)}`
+                              : ""}
+                          </p>
+                          {doc.fileUrl ? (
+                            <a
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-1 inline-block text-[12px] text-[var(--brand)] hover:underline"
                             >
-                              <Button type="submit" size="sm">
-                                Одобрить
-                              </Button>
-                            </form>
+                              Открыть / скачать
+                            </a>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <DocumentStatusBadge status={doc.status} />
+                          {canRequestAgain ? (
                             <form
-                              action={needsChangesAction}
-                              className="flex items-center gap-1"
+                              action={requestDocumentAction.bind(null, doc.id)}
                             >
-                              <input
-                                type="hidden"
-                                name="documentId"
-                                value={doc.id}
-                              />
-                              <Input
-                                name="reason"
-                                placeholder="Причина"
-                                className="h-7 w-28"
-                              />
                               <Button type="submit" size="sm" variant="outline">
-                                Правки
+                                {requestLabel}
                               </Button>
                             </form>
-                          </>
-                        ) : null}
+                          ) : null}
+                          {doc.status === "UPLOADED" ||
+                          doc.status === "UNDER_REVIEW" ? (
+                            <>
+                              <form
+                                action={approveDocumentAction.bind(null, doc.id)}
+                              >
+                                <Button type="submit" size="sm">
+                                  Одобрить
+                                </Button>
+                              </form>
+                              <form
+                                action={needsChangesAction}
+                                className="flex items-center gap-1"
+                              >
+                                <input
+                                  type="hidden"
+                                  name="documentId"
+                                  value={doc.id}
+                                />
+                                <Input
+                                  name="reason"
+                                  placeholder="Причина"
+                                  className="h-7 w-28"
+                                  required
+                                />
+                                <Button type="submit" size="sm" variant="outline">
+                                  Правки
+                                </Button>
+                              </form>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             ))
