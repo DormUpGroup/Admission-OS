@@ -72,6 +72,7 @@ import {
 } from "@/lib/questionnaire-programs";
 
 const TABS = [
+  { id: "summary", label: "Сводка" },
   { id: "overview", label: "Обзор" },
   { id: "programs", label: "Программы" },
   { id: "documents", label: "Документы" },
@@ -113,7 +114,7 @@ export default async function StudentProfilePage({
         : sp.tab === "tasks"
           ? "overview"
           : sp.tab;
-  const tab = TABS.some((t) => t.id === requestedTab) ? requestedTab! : "overview";
+  const tab = TABS.some((t) => t.id === requestedTab) ? requestedTab! : "summary";
   const focusPayId = sp.focus ?? "";
 
   await assertStudentAccess(studentId);
@@ -414,29 +415,6 @@ export default async function StudentProfilePage({
         </div>
       </div>
 
-      <StudentAdminSummary
-        studentId={studentId}
-        stage={curatorStageForStudent(queueStudent)}
-        nextStep={
-          studentQueue.items[0]?.action ??
-          next?.title ??
-          "Нет следующего шага"
-        }
-        curatorName={student.curator?.name ?? null}
-        curatorAssigned={Boolean(student.curatorId)}
-        canAssignToMe={!student.curatorId}
-        canAssignCurator={session.user.role === "ADMIN"}
-        curators={curators}
-        currentCuratorId={student.curatorId}
-        programsCount={shortlist.length}
-        documentsApproved={docsApproved}
-        documentsTotal={student.documents.length}
-        applicationsCount={student.applications.length}
-        nearestDeadline={nearestDeadline}
-        openTasks={studentQueue.items}
-        missingQuestionnaire={missingQ}
-      />
-
       <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
         {TABS.map((t) => (
           <Link
@@ -453,6 +431,31 @@ export default async function StudentProfilePage({
           </Link>
         ))}
       </div>
+
+      {tab === "summary" ? (
+        <StudentAdminSummary
+          studentId={studentId}
+          stage={curatorStageForStudent(queueStudent)}
+          nextStep={
+            studentQueue.items[0]?.action ??
+            next?.title ??
+            "Нет следующего шага"
+          }
+          curatorName={student.curator?.name ?? null}
+          curatorAssigned={Boolean(student.curatorId)}
+          canAssignToMe={!student.curatorId}
+          canAssignCurator={session.user.role === "ADMIN"}
+          curators={curators}
+          currentCuratorId={student.curatorId}
+          programsCount={shortlist.length}
+          documentsApproved={docsApproved}
+          documentsTotal={student.documents.length}
+          applicationsCount={student.applications.length}
+          nearestDeadline={nearestDeadline}
+          openTasks={studentQueue.items}
+          missingQuestionnaire={missingQ}
+        />
+      ) : null}
 
       {tab === "overview" ? (
         <div className="space-y-4">
