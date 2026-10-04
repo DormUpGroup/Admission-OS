@@ -415,13 +415,13 @@ export default async function StudentProfilePage({
         </div>
       </div>
 
-      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:gap-0 md:overflow-visible md:px-0">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={`/admin/students/${studentId}?tab=${t.id}`}
             className={cn(
-              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-5 py-3 text-sm font-medium transition-colors md:min-w-0 md:flex-1 md:px-4 md:text-center",
               tab === t.id
                 ? "border-neutral-900 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
