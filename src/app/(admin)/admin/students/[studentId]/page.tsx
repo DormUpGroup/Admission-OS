@@ -35,7 +35,9 @@ import { ResetProgramMatchesButton } from "@/components/reset-program-matches-bu
 import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
 import { CuratorProgramLevelsCard } from "@/components/admin/curator-program-levels";
 import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
+import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { ShowAllMatches } from "@/components/admin/show-all-matches";
+import { missingQuestionnaire } from "@/server/registration/cabinet";
 import { buildWorkQueue } from "@/server/services/work-queue/build-work-queue";
 import { inferUnknownReason } from "@/server/services/work-queue/field-reasons";
 import { curatorStageForStudent } from "@/server/services/work-queue/stage";
@@ -182,6 +184,7 @@ export default async function StudentProfilePage({
   const preferredCities = parsePreferredCities(student.preferredCities);
   const questionnaireDone = hasQuestionnaire(student);
   const matchingReady = hasMatchingProfile(student);
+  const missingQ = missingQuestionnaire(student);
   const personalAnswers = parsePersonalAnswers(student.questionnairePersonalJson);
   const programsAnswers = parseProgramsAnswers(student.questionnaireProgramsJson);
 
@@ -429,6 +432,7 @@ export default async function StudentProfilePage({
         applicationsCount={student.applications.length}
         nearestDeadline={nearestDeadline}
         openTasks={studentQueue.items}
+        missingQuestionnaire={missingQ}
       />
 
       <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
@@ -590,10 +594,15 @@ export default async function StudentProfilePage({
               }
             />
           </div>
-          {!matchingReady ? (
-            <p className="text-xs text-muted-foreground">
-              Заполните анкету №2, чтобы запускать подбор.
-            </p>
+          {missingQ ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+              <p className="text-[13px] text-muted-foreground">
+                {missingQ === "personal"
+                  ? "Анкета №1 не заполнена на платформе. Попросите ученика заполнить её в кабинете."
+                  : "Анкета №2 не заполнена на платформе. Попросите ученика заполнить её в кабинете."}
+              </p>
+              <RequestQuestionnaireButton studentId={studentId} />
+            </div>
           ) : null}
           <div className="space-y-6">
             <section className="space-y-3">
@@ -890,10 +899,15 @@ export default async function StudentProfilePage({
                   return null;
                 }
               })()}
-              {!matchingReady ? (
-                <p className="text-xs text-muted-foreground">
-                  Заполните анкету №2, чтобы запускать подбор.
-                </p>
+              {missingQ ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+                  <p className="text-[13px] text-muted-foreground">
+                    {missingQ === "personal"
+                      ? "Анкета №1 не заполнена на платформе."
+                      : "Анкета №2 не заполнена на платформе."}
+                  </p>
+                  <RequestQuestionnaireButton studentId={studentId} />
+                </div>
               ) : null}
             </CardContent>
           </Card>

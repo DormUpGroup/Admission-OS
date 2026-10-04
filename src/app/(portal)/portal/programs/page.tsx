@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentStudent } from "@/server/auth/guards";
 import { requestApplicationAction } from "@/server/actions";
-import { hasMatchingProfile } from "@/server/services/program-match";
+import { hasMatchingProfile, hasQuestionnaire } from "@/server/services/program-match";
 import { matchProgramsFromShortlist } from "@/server/services/program-match";
 import { EmptyState } from "@/components/empty-state";
 import { PortalUniversityCard } from "@/components/portal-university-card";
@@ -11,23 +11,37 @@ import { Button } from "@/components/ui/button";
 
 export default async function PortalProgramsPage() {
   const { student } = await getCurrentStudent();
+  const personalDone = hasQuestionnaire(student);
+  const programsDone = hasMatchingProfile(student);
 
-  if (!hasMatchingProfile(student)) {
+  if (!programsDone) {
+    const missingFirst = !personalDone;
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Программы</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">
-            Рекомендации появятся после анкеты по подбору программ
+            Рекомендации появятся после обязательных анкет
           </p>
         </div>
         <EmptyState
-          title="Сначала заполните анкету №2"
-          description="Анкета по подбору программ нужна, чтобы мы могли подготовить список вузов."
+          title={missingFirst ? "Сначала заполните анкету №1" : "Сначала заполните анкету №2"}
+          description={
+            missingFirst
+              ? "Личная анкета нужна, чтобы открыть анкету по подбору программ."
+              : "Анкета по подбору программ нужна, чтобы мы могли подготовить список вузов."
+          }
         />
-        <Button asChild size="lg">
-          <Link href="/portal/questionnaire-2">Открыть анкету №2</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="lg">
+            <Link href={missingFirst ? "/portal/questionnaire" : "/portal/questionnaire-2"}>
+              {missingFirst ? "Открыть анкету №1" : "Открыть анкету №2"}
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/portal/questionnaires">Все анкеты</Link>
+          </Button>
+        </div>
       </div>
     );
   }

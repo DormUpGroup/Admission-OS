@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assignStudentToMeAction } from "@/server/actions";
 import { ChangeCuratorForm } from "@/components/admin/change-curator-form";
+import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { taskTitleAfterCuratorAssigned } from "@/server/services/assign-curator";
+import type { MissingQuestionnaire } from "@/server/registration/cabinet";
 import type { WorkQueueItem } from "@/server/services/work-queue";
 import type { JourneyStageId } from "@/server/services/student-journey/types";
 import { WORK_QUEUE_STAGE_LABELS } from "@/server/services/work-queue/types";
@@ -30,6 +32,7 @@ export function StudentAdminSummary({
   applicationsCount,
   nearestDeadline,
   openTasks,
+  missingQuestionnaire: missingQ = null,
 }: {
   studentId: string;
   stage: JourneyStageId;
@@ -46,6 +49,7 @@ export function StudentAdminSummary({
   applicationsCount: number;
   nearestDeadline: string | null;
   openTasks: WorkQueueItem[];
+  missingQuestionnaire?: MissingQuestionnaire | null;
 }) {
   const step = facingTitle(nextStep, curatorAssigned) ?? "Нет следующего шага";
   const tasks = openTasks.flatMap((task) => {
@@ -94,6 +98,25 @@ export function StudentAdminSummary({
           </p>
           <p className="mt-1 text-[15px] font-medium leading-snug text-foreground">{step}</p>
         </section>
+
+        {missingQ ? (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Анкеты на платформе
+              </p>
+              <p className="mt-1 text-[14px] font-medium">
+                {missingQ === "personal"
+                  ? "Не заполнена анкета №1"
+                  : "Не заполнена анкета №2"}
+              </p>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                Отправим ученику ссылку в кабинет или на создание кабинета.
+              </p>
+            </div>
+            <RequestQuestionnaireButton studentId={studentId} />
+          </section>
+        ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {metrics.map((metric) => (

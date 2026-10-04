@@ -7,8 +7,10 @@ import type { PersonalQuestionnaireAnswers } from "@/lib/questionnaire-personal"
 
 export function PortalPersonalQuestionnaireClient({
   initialAnswers,
+  nextHref = "/portal/questionnaires",
 }: {
   initialAnswers: PersonalQuestionnaireAnswers;
+  nextHref?: string;
 }) {
   const router = useRouter();
 
@@ -17,7 +19,7 @@ export function PortalPersonalQuestionnaireClient({
       initialAnswers={initialAnswers}
       onSubmit={async (answers) => {
         await savePersonalQuestionnaireAction(answers);
-        router.push("/portal");
+        router.push(nextHref);
         router.refresh();
       }}
     />

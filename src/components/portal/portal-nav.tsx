@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/portal", label: "Мой путь" },
+  { href: "/portal/questionnaires", label: "Анкеты" },
   { href: "/portal/book", label: "Консультация" },
   { href: "/portal/programs", label: "Программы" },
   { href: "/portal/documents", label: "Документы" },
@@ -14,6 +15,9 @@ const ITEMS = [
 
 function isActive(pathname: string, href: string) {
   if (href === "/portal") return pathname === "/portal";
+  if (href === "/portal/questionnaires") {
+    return pathname === href || pathname.startsWith("/portal/questionnaire");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

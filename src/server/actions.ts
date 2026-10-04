@@ -7,6 +7,7 @@ import { requireStaff, requireRole, assertStudentAccess, getCurrentStudent } fro
 import { logActivity } from "@/server/services/activity";
 import { recalculateStudent } from "@/server/services/recalculate";
 import { assignStudentCurator } from "@/server/services/assign-curator";
+import { requestStudentQuestionnaire } from "@/server/registration/request-questionnaire";
 import {
   requestDocument,
   approveDocument,
@@ -336,6 +337,31 @@ export async function changeCuratorAction(
   revalidatePath("/admin");
   revalidatePath("/admin/students");
   revalidatePath(`/admin/students/${studentId}`);
+}
+
+export async function requestStudentQuestionnaireAction(
+  formData: FormData,
+): Promise<{ error?: string; ok?: true } | void> {
+  const session = await requireStaff();
+  const studentId = String(formData.get("studentId") || "").trim();
+  if (!studentId) return { error: "Студент не найден" };
+  await assertStudentAccess(studentId);
+
+  try {
+    const result = await requestStudentQuestionnaire({
+      studentId,
+      actorUserId: session.user.id,
+    });
+    if (!result.ok) return { error: result.error };
+  } catch (error) {
+    console.error(error);
+    return {
+      error: error instanceof Error ? error.message : "Не удалось отправить просьбу.",
+    };
+  }
+
+  revalidatePath(`/admin/students/${studentId}`);
+  return { ok: true };
 }
 
 export async function portalUploadAction(formData: FormData) {
