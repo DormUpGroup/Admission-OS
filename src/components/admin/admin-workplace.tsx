@@ -308,7 +308,12 @@ function TodayActionsBlock({
                           ) : null}
                         </p>
                       </div>
-                      <Button asChild size="lg" className="w-full shrink-0 sm:w-auto">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="w-full shrink-0 rounded-lg text-muted-foreground sm:w-auto"
+                      >
                         <Link href={item.href}>Открыть</Link>
                       </Button>
                     </li>
