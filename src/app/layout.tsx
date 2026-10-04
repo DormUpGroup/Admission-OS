@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "AOS — Система поступлений",
+  title: "AOS",
   description: "Операционная система поступлений IMMIGROME",
   applicationName: "AOS",
 };
