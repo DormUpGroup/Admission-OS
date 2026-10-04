@@ -48,7 +48,7 @@ export function ChangeCuratorForm({
         value={curatorId}
         onChange={(event) => setCuratorId(event.target.value)}
         aria-label="Куратор"
-        className="flex h-8 min-w-[12rem] rounded-xl border border-input bg-card px-2.5 text-[13px]"
+        className="flex h-8 min-w-[12rem] rounded-lg border border-input bg-card px-2.5 text-[13px]"
       >
         {currentCuratorId ? null : (
           <option value="" disabled>
@@ -61,7 +61,13 @@ export function ChangeCuratorForm({
           </option>
         ))}
       </select>
-      <Button type="submit" size="sm" variant="outline" disabled={pending || !curatorId}>
+      <Button
+        type="submit"
+        size="sm"
+        variant="outline"
+        className="rounded-lg"
+        disabled={pending || !curatorId}
+      >
         {pending ? "…" : curatorAssigned ? "Переназначить" : "Назначить"}
       </Button>
       {error ? (

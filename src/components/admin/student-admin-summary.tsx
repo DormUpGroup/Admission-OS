@@ -71,7 +71,7 @@ export function StudentAdminSummary({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Сводка</CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="rounded-lg">
               <Link href={`/admin/messages/site?studentId=${studentId}`}>
                 Написать студенту
               </Link>
@@ -79,7 +79,7 @@ export function StudentAdminSummary({
             {canAssignToMe ? (
               <form action={assignStudentToMeAction}>
                 <input type="hidden" name="studentId" value={studentId} />
-                <Button type="submit" size="sm" variant="outline">
+                <Button type="submit" size="sm" variant="outline" className="rounded-lg">
                   Назначить себе
                 </Button>
               </form>
@@ -88,7 +88,7 @@ export function StudentAdminSummary({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <section className="rounded-2xl border border-border bg-muted/40 px-4 py-3">
+        <section className="rounded-lg border border-border bg-muted/40 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Следующий шаг
           </p>
@@ -99,7 +99,7 @@ export function StudentAdminSummary({
           {metrics.map((metric) => (
             <div
               key={metric.label}
-              className="rounded-2xl border border-border px-3 py-2.5"
+              className="rounded-lg border border-border px-3 py-2.5"
             >
               <p className="text-[11px] text-muted-foreground">{metric.label}</p>
               <p className="mt-0.5 text-[14px] font-medium">{metric.value}</p>
@@ -107,7 +107,7 @@ export function StudentAdminSummary({
           ))}
         </section>
 
-        <section className="rounded-2xl border border-border px-4 py-3">
+        <section className="rounded-lg border border-border px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -134,11 +134,11 @@ export function StudentAdminSummary({
             Открытые задачи
           </p>
           {tasks.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+            <p className="rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
               Нет открытых задач
             </p>
           ) : (
-            <ul className="divide-y divide-border rounded-2xl border border-border">
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {tasks.slice(0, 6).map((task) => (
                 <li
                   key={task.id}
@@ -150,7 +150,7 @@ export function StudentAdminSummary({
                       <p className="mt-0.5 text-[12px] text-muted-foreground">{task.reason}</p>
                     ) : null}
                   </div>
-                  <Button asChild size="sm" variant="outline" className="shrink-0">
+                  <Button asChild size="sm" variant="outline" className="shrink-0 rounded-lg">
                     <Link href={task.href}>Открыть</Link>
                   </Button>
                 </li>
