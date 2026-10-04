@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assignStudentToMeAction } from "@/server/actions";
 import { ChangeCuratorForm } from "@/components/admin/change-curator-form";
+import { RemindStudentDocumentsBlock } from "@/components/admin/remind-student-documents-block";
 import {
-  RemindStudentDocumentsBlock,
   documentIdFromWaitingTaskId,
   remindLabelFromReason,
-} from "@/components/admin/remind-student-documents-block";
+} from "@/components/admin/remind-student-documents";
 import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { taskTitleAfterCuratorAssigned } from "@/server/services/assign-curator";
 import type { MissingQuestionnaire } from "@/server/registration/cabinet";
