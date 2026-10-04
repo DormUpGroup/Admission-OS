@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { normalizeGuestEmail, splitGuestName } from "@/server/booking/guest";
 import { sendTransactionalEmail } from "@/server/delivery/email";
-import { consultationContactEmail } from "@/server/registration/contact";
+import { consultationContactEmail, promotionStudentEmail } from "@/server/registration/contact";
 import { registrationInviteMessage, registrationPageUrl } from "@/server/registration/invite";
 
 describe("consultation contact", () => {
@@ -12,6 +12,33 @@ describe("consultation contact", () => {
         leadEmail: "old@example.com",
       }),
     ).toBe("call@example.com");
+  });
+
+  it("keeps a free consultation email", () => {
+    expect(
+      promotionStudentEmail({
+        consultationEmail: "Anya@Example.com",
+        emailTaken: false,
+      }),
+    ).toEqual({ email: "anya@example.com" });
+  });
+
+  it("refuses a cabinet when the consultation form left no email", () => {
+    expect(
+      promotionStudentEmail({
+        consultationEmail: null,
+        emailTaken: false,
+      }),
+    ).toEqual({ error: "На заявке нет почты. Сначала запишите консультацию." });
+  });
+
+  it("refuses a consultation email that already belongs to a student", () => {
+    expect(
+      promotionStudentEmail({
+        consultationEmail: "anya@example.com",
+        emailTaken: true,
+      }),
+    ).toEqual({ error: "Эта почта уже есть у другого ученика." });
   });
 
   it("falls back to the lead email when no call was booked", () => {

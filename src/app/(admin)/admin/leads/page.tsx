@@ -84,6 +84,12 @@ export default async function AdminLeadsPage({
         orderBy: { updatedAt: "desc" },
         take: 1,
       },
+      appointments: {
+        where: { guestEmail: { not: null } },
+        select: { guestEmail: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: { updatedAt: "desc" },
     take: 200,
@@ -103,7 +109,11 @@ export default async function AdminLeadsPage({
           username: identity?.username ?? null,
         }),
         channel: CHANNEL_LABELS[channel] ?? channel,
-        contact: lead.email || lead.phone || (identity?.username ? `@${identity.username.replace(/^@/, "")}` : "—"),
+        contact:
+          lead.email ||
+          lead.appointments[0]?.guestEmail ||
+          lead.phone ||
+          (identity?.username ? `@${identity.username.replace(/^@/, "")}` : "—"),
         curator: lead.assignedCurator?.name ?? "Не назначен",
         activity: latestAt([
           conversation?.lastInboundAt,

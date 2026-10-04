@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { UserRole } from "@/lib/enums";
 import { sendTransactionalEmail } from "@/server/delivery/email";
+import { isDeliverableStudentEmail } from "@/server/registration/contact";
 
 export const REGISTRATION_INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -77,9 +78,7 @@ export async function sendRegistrationInviteOnce(studentId: string): Promise<voi
   });
   if (!student || student.userId) return;
   const email = student.email.trim().toLowerCase();
-  if (!email || email.endsWith("@leads.immigrome.invalid")) {
-    throw new Error("На заявке нет почты для кабинета.");
-  }
+  if (!email || !isDeliverableStudentEmail(email)) return;
 
   const invite = await openRegistrationInvite({ studentId: student.id, email });
   if (invite.sentAt) return;

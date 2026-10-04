@@ -49,7 +49,7 @@ export default async function LeadProfilePage({
         orderBy: { updatedAt: "desc" },
       },
       appointments: {
-        select: { id: true, title: true, startsAt: true, status: true },
+        select: { id: true, title: true, startsAt: true, status: true, guestEmail: true },
         orderBy: { startsAt: "desc" },
         take: 8,
       },
@@ -69,6 +69,20 @@ export default async function LeadProfilePage({
   });
   if (!lead) notFound();
   if (lead.convertedStudentId) redirect(`/admin/students/${lead.convertedStudentId}`);
+
+  const bookedEmail =
+    lead.appointments
+      .filter((appointment) => appointment.status !== "CANCELLED")
+      .map((appointment) => appointment.guestEmail?.trim().toLowerCase() || null)
+      .find((value): value is string => Boolean(value)) ??
+    lead.appointments
+      .map((appointment) => appointment.guestEmail?.trim().toLowerCase() || null)
+      .find((value): value is string => Boolean(value)) ??
+    null;
+  const email = lead.email?.trim().toLowerCase() || bookedEmail;
+  if (email && email !== lead.email?.trim().toLowerCase()) {
+    await prisma.lead.update({ where: { id: lead.id }, data: { email } });
+  }
 
   const identity = lead.channelIdentities[0] ?? null;
   const name =
@@ -131,7 +145,7 @@ export default async function LeadProfilePage({
           <h2 className="mb-2 text-[13px] font-medium">Контакты</h2>
           <dl className="space-y-2 text-[14px]">
             <Fact label="Telegram" value={username ? `@${username}` : "—"} />
-            {lead.email ? <Fact label="Почта" value={lead.email} /> : null}
+            {email ? <Fact label="Почта" value={email} /> : null}
             {lead.phone ? <Fact label="Телефон" value={lead.phone} /> : null}
             {lead.locale?.trim() ? <Fact label="Локаль" value={lead.locale.trim()} /> : null}
             <Fact label="Согласие" value={CONSENT_LABELS[lead.consentStatus] ?? lead.consentStatus} />

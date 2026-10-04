@@ -180,7 +180,7 @@ export default async function BookInvitePage({
             autoComplete="email"
           />
           <p className="text-[13px] text-muted-foreground">
-            На эту почту придёт ссылка с приглашением в звонок.
+            На эту почту придёт приглашение в звонок. Она сохранится в карточке, и по ней откроется кабинет.
           </p>
         </div>
       </BookingCalendar>

@@ -14,7 +14,7 @@ import {
 } from "@/server/telegram-inbox-query";
 import { requestTelegramSend } from "@/server/commands/telegram-outbound";
 import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
-import { resolveConsultationEmail } from "@/server/registration/contact";
+import { promotionStudentEmail, resolveConsultationEmail } from "@/server/registration/contact";
 import { enqueueOutbox } from "@/server/commands/outbox";
 import { sendRegistrationInviteOnce } from "@/server/registration/invite";
 
@@ -196,16 +196,39 @@ function studyLevelFromChat(value: string | null): StudyLevelValue {
   return StudyLevel.OTHER;
 }
 
+function isNextRedirect(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest: unknown }).digest === "string" &&
+    String((error as { digest: string }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
+export type PromoteLeadResult = { studentId: string } | { error: string };
+
 /**
  * Curator or admin only (requireStaff). Turns the lead on this chat into a student
- * and moves the thread into the students list.
+ * and moves the thread into the students list. The cabinet is the email the lead
+ * left when booking the consultation.
  */
 export async function promoteLeadToStudentAction(
   conversationId: string,
-): Promise<{ studentId: string }> {
+): Promise<PromoteLeadResult> {
+  try {
+    return await promoteLead(conversationId);
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    console.error(error);
+    return { error: "Не удалось сделать учеником. Попробуйте ещё раз." };
+  }
+}
+
+async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
   const session = await requireStaff();
   const id = conversationId.trim();
-  if (!id) throw new Error("Диалог не найден");
+  if (!id) return { error: "Диалог не найден" };
 
   const conversation = await prisma.conversation.findUnique({
     where: { id },
@@ -222,21 +245,23 @@ export async function promoteLeadToStudentAction(
     },
   });
   if (!conversation || conversation.channel !== "TELEGRAM") {
-    throw new Error("Диалог не найден");
+    return { error: "Диалог не найден" };
   }
   if (conversation.studentId) {
-    await sendRegistrationInviteOnce(conversation.studentId);
+    const inviteError = await sendCabinetInvite(conversation.studentId);
+    if (inviteError) return { error: inviteError };
     return { studentId: conversation.studentId };
   }
 
   const lead = conversation.lead;
-  if (!lead) throw new Error("У этого диалога нет лида");
+  if (!lead) return { error: "У этого диалога нет лида" };
   if (lead.convertedStudentId) {
     await prisma.conversation.updateMany({
       where: { leadId: lead.id },
       data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
     });
-    await sendRegistrationInviteOnce(lead.convertedStudentId);
+    const inviteError = await sendCabinetInvite(lead.convertedStudentId);
+    if (inviteError) return { error: inviteError };
     return { studentId: lead.convertedStudentId };
   }
 
@@ -246,13 +271,19 @@ export async function promoteLeadToStudentAction(
   const lastName =
     lead.lastName?.trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "—");
   const intake = factText(lead.qualificationJson, "desiredIntake") ?? "не указан";
-  const email = await resolveConsultationEmail(lead.id);
-  if (!email) throw new Error("На заявке нет почты. Сначала запишите консультацию.");
-  const emailTaken = await prisma.student.findUnique({
-    where: { email },
-    select: { id: true },
+  const consultationEmail = await resolveConsultationEmail(lead.id);
+  const emailTaken = consultationEmail
+    ? await prisma.student.findUnique({
+        where: { email: consultationEmail },
+        select: { id: true },
+      })
+    : null;
+  const chosen = promotionStudentEmail({
+    consultationEmail,
+    emailTaken: Boolean(emailTaken),
   });
-  if (emailTaken) throw new Error("Эта почта уже есть у другого ученика.");
+  if ("error" in chosen) return chosen;
+  const email = chosen.email;
 
   const student = await prisma.$transaction(async (tx) => {
     const created = await tx.student.create({
@@ -276,6 +307,7 @@ export async function promoteLeadToStudentAction(
       data: {
         firstName: lead.firstName ?? firstName,
         lastName: lead.lastName ?? (lastName === "—" ? null : lastName),
+        email,
         convertedStudentId: created.id,
         convertedAt: new Date(),
         status: "CONVERTED",
@@ -299,6 +331,18 @@ export async function promoteLeadToStudentAction(
     payload: { studentId: student.id, conversationId: id, reason: "curator_promoted" },
     idempotencyKey: `client.activated:${student.id}`,
   });
-  await sendRegistrationInviteOnce(student.id);
+  const inviteError = await sendCabinetInvite(student.id);
+  if (inviteError) return { error: inviteError };
   return { studentId: student.id };
+}
+
+/** Returns a message when the cabinet letter could not be sent. */
+async function sendCabinetInvite(studentId: string): Promise<string | null> {
+  try {
+    await sendRegistrationInviteOnce(studentId);
+    return null;
+  } catch (error) {
+    console.error(error);
+    return error instanceof Error ? error.message : "Не удалось отправить письмо на почту записи.";
+  }
 }

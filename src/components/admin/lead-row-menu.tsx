@@ -29,11 +29,15 @@ export function LeadRowMenu({
     setError("");
     void promoteLeadToStudentAction(conversationId)
       .then((result) => {
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
         router.push(`/admin/students/${result.studentId}`);
         router.refresh();
       })
-      .catch((caught: unknown) => {
-        setError(caught instanceof Error ? caught.message : "Не удалось сделать учеником");
+      .catch(() => {
+        setError("Не удалось сделать учеником");
       })
       .finally(() => setPending(false));
   }
