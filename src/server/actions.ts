@@ -230,6 +230,40 @@ export async function requestDocumentAction(documentId: string) {
   revalidatePath("/admin/documents");
 }
 
+export async function remindStudentDocumentsAction(formData: FormData) {
+  const session = await requireStaff();
+  const studentId = String(formData.get("studentId") || "").trim();
+  if (!studentId) return { error: "Не указан студент" };
+  await assertStudentAccess(studentId);
+
+  const rawIds = formData.getAll("documentIds");
+  const documentIds = [
+    ...new Set(
+      rawIds
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (documentIds.length === 0) {
+    return { error: "Выберите хотя бы один документ" };
+  }
+
+  const docs = await prisma.document.findMany({
+    where: { id: { in: documentIds }, studentId },
+    select: { id: true },
+  });
+  if (docs.length === 0) return { error: "Документы не найдены" };
+
+  for (const doc of docs) {
+    await requestDocument({ documentId: doc.id, userId: session.user.id });
+  }
+
+  revalidatePath(`/admin/students/${studentId}`);
+  revalidatePath("/admin/documents");
+  revalidatePath("/admin");
+  return { ok: true as const, count: docs.length };
+}
+
 export async function approveDocumentAction(documentId: string) {
   const session = await requireStaff();
   const doc = await prisma.document.findUnique({ where: { id: documentId } });

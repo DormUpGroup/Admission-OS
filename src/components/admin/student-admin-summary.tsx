@@ -3,6 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assignStudentToMeAction } from "@/server/actions";
 import { ChangeCuratorForm } from "@/components/admin/change-curator-form";
+import {
+  RemindStudentDocumentsBlock,
+  documentIdFromWaitingTaskId,
+  remindLabelFromReason,
+} from "@/components/admin/remind-student-documents-block";
 import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { taskTitleAfterCuratorAssigned } from "@/server/services/assign-curator";
 import type { MissingQuestionnaire } from "@/server/registration/cabinet";
@@ -52,7 +57,19 @@ export function StudentAdminSummary({
   missingQuestionnaire?: MissingQuestionnaire | null;
 }) {
   const step = facingTitle(nextStep, curatorAssigned) ?? "Нет следующего шага";
+  const remindItems = openTasks.flatMap((task) => {
+    if (task.type !== "WAITING_DOCUMENT") return [];
+    const documentId = documentIdFromWaitingTaskId(task.id);
+    if (!documentId) return [];
+    return [
+      {
+        documentId,
+        label: remindLabelFromReason(task.reason),
+      },
+    ];
+  });
   const tasks = openTasks.flatMap((task) => {
+    if (task.type === "WAITING_DOCUMENT") return [];
     const action = facingTitle(task.action, curatorAssigned);
     if (!action) return [];
     return [{ ...task, action }];
@@ -151,6 +168,12 @@ export function StudentAdminSummary({
             ) : null}
           </div>
         </section>
+
+        <RemindStudentDocumentsBlock
+          key={remindItems.map((item) => item.documentId).join(",")}
+          studentId={studentId}
+          items={remindItems}
+        />
 
         <section>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
