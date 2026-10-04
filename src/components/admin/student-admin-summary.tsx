@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { assignStudentToMeAction, changeCuratorAction } from "@/server/actions";
+import { assignStudentToMeAction } from "@/server/actions";
+import { ChangeCuratorForm } from "@/components/admin/change-curator-form";
 import type { WorkQueueItem } from "@/server/services/work-queue";
 import type { JourneyStageId } from "@/server/services/student-journey/types";
 import { WORK_QUEUE_STAGE_LABELS } from "@/server/services/work-queue/types";
@@ -62,30 +63,13 @@ export function StudentAdminSummary({
               {curatorAssigned && curatorName ? curatorName : "Не назначен"}
             </dd>
             {canAssignCurator && curators && curators.length > 0 ? (
-              <form action={changeCuratorAction} className="mt-2 flex flex-wrap items-center gap-2">
-                <input type="hidden" name="studentId" value={studentId} />
-                <select
-                  name="curatorId"
-                  required
-                  defaultValue={currentCuratorId ?? ""}
-                  aria-label="Куратор"
-                  className="flex h-8 min-w-[12rem] rounded-xl border border-input bg-card px-2.5 text-[13px]"
-                >
-                  {currentCuratorId ? null : (
-                    <option value="" disabled>
-                      Выберите куратора
-                    </option>
-                  )}
-                  {curators.map((curator) => (
-                    <option key={curator.id} value={curator.id}>
-                      {curator.name}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" size="sm" variant="outline">
-                  {curatorAssigned ? "Переназначить" : "Назначить"}
-                </Button>
-              </form>
+              <ChangeCuratorForm
+                key={currentCuratorId ?? "none"}
+                studentId={studentId}
+                curators={curators}
+                currentCuratorId={currentCuratorId ?? null}
+                curatorAssigned={curatorAssigned}
+              />
             ) : null}
           </div>
           <div>
