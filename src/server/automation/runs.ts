@@ -128,7 +128,7 @@ export async function queueIntakeRunForMessageReceived(
 async function queueProfileRun(
   db: DbClient,
   input: {
-    agentKey: "scheduling" | "onboarding";
+    agentKey: "scheduling" | "onboarding" | "program";
     conversationId: string;
     subjectType: string;
     subjectId: string;
@@ -225,5 +225,45 @@ export async function queueOnboardingRunForClientActivated(
     idempotencyKey: `agent:onboarding:${studentId}`,
     correlationId: event.idempotencyKey,
     inputJson: { studentId, conversationId, eventType: event.eventType },
+  });
+}
+
+export async function queueProgramRunForMatchRequested(
+  db: DbClient,
+  event: Pick<OutboxEvent, "eventType" | "idempotencyKey" | "payloadJson" | "aggregateId">,
+): Promise<QueueIntakeRunResult> {
+  if (event.eventType !== "programs.match.requested") {
+    return { queued: false, reason: "unsupported_event" };
+  }
+  const payload = asRecord(event.payloadJson);
+  const studentId =
+    (typeof payload?.studentId === "string" ? payload.studentId : null) ||
+    (event.aggregateId?.trim() ? event.aggregateId : null);
+  if (!studentId) return { queued: false, reason: "invalid_payload" };
+
+  let conversationId =
+    typeof payload?.conversationId === "string" ? payload.conversationId : null;
+  if (!conversationId) {
+    const conversation = await db.conversation.findFirst({
+      where: { studentId },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    });
+    conversationId = conversation?.id ?? null;
+  }
+  if (!conversationId) return { queued: false, reason: "no_conversation" };
+
+  return queueProfileRun(db, {
+    agentKey: "program",
+    conversationId,
+    subjectType: "Student",
+    subjectId: studentId,
+    idempotencyKey: `agent:program:${studentId}:${event.idempotencyKey}`,
+    correlationId: event.idempotencyKey,
+    inputJson: {
+      studentId,
+      conversationId,
+      eventType: event.eventType,
+    },
   });
 }

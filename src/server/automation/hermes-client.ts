@@ -8,13 +8,19 @@ export const HERMES_HTTP_TIMEOUT_MS = 20_000;
 const HERMES_CONNECT_TIMEOUT_MS = 5_000;
 
 /** Profiles the worker may call. default is the gateway host and is not one of them. */
-export const HERMES_PROFILE_KEYS = ["intake", "scheduling", "onboarding"] as const;
+export const HERMES_PROFILE_KEYS = [
+  "intake",
+  "scheduling",
+  "onboarding",
+  "program",
+] as const;
 export type HermesProfileKey = (typeof HERMES_PROFILE_KEYS)[number];
 
 const HERMES_PROFILE_KEY_ENV: Record<HermesProfileKey, string> = {
   intake: "HERMES_API_KEY_INTAKE",
   scheduling: "HERMES_API_KEY_SCHEDULING",
   onboarding: "HERMES_API_KEY_ONBOARDING",
+  program: "HERMES_API_KEY_PROGRAM",
 };
 
 export function isHermesProfileKey(value: string): value is HermesProfileKey {

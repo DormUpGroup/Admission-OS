@@ -349,6 +349,7 @@ function parseGlobalEnabledForTest(valueJson: unknown): boolean {
 describe("outbox helpers (unit)", () => {
   it("isEventTypeAllowed respects kill-switch for automation types", () => {
     expect(isEventTypeAllowed("noop", false)).toBe(true);
+    expect(isEventTypeAllowed("programs.match", false)).toBe(true);
     expect(isEventTypeAllowed("telegram.send", false)).toBe(false);
     expect(isEventTypeAllowed("telegram.send", true)).toBe(true);
   });

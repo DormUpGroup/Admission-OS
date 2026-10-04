@@ -2,8 +2,13 @@ import { registerOutboxHandler } from "../dispatch";
 import { handleAppointmentClientNudge } from "./appointment-nudge";
 import { handleCalendarDelete, handleCalendarUpsert } from "./calendar";
 import { handleHermesCreateRun, handleHermesPollRun } from "./hermes";
-import { handleClientActivated, handleSchedulingRequested } from "./profiles";
+import {
+  handleClientActivated,
+  handleProgramsMatchRequested,
+  handleSchedulingRequested,
+} from "./profiles";
 import { handleNoop, handleWorkerLog } from "./noop";
+import { handleProgramsMatch } from "./programs-match";
 import { handleMessageReceived, handleTelegramSend } from "./telegram";
 
 export function registerBuiltinHandlers(): void {
@@ -18,4 +23,6 @@ export function registerBuiltinHandlers(): void {
   registerOutboxHandler("hermes.poll_run", handleHermesPollRun);
   registerOutboxHandler("scheduling.requested", handleSchedulingRequested);
   registerOutboxHandler("client.activated", handleClientActivated);
+  registerOutboxHandler("programs.match", handleProgramsMatch);
+  registerOutboxHandler("programs.match.requested", handleProgramsMatchRequested);
 }

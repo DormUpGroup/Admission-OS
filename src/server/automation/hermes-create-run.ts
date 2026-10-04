@@ -8,6 +8,7 @@ import {
   formatLeadCard,
   hermesRunInstructions,
   LEAD_FACT_FIELDS,
+  programRunInstructions,
   revokeCapabilityGrant,
 } from "./capability-grant";
 import {
@@ -317,6 +318,45 @@ async function startOnboardingRun(
   );
 }
 
+async function startProgramRun(
+  db: DbClient,
+  run: QueuedProfileRun,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+  fetchImpl: typeof fetch | undefined,
+  now: Date,
+): Promise<DispatchHermesCreateRunResult> {
+  const studentId = asRecord(run.inputJson)?.studentId;
+  if (typeof studentId !== "string" || !studentId.trim()) {
+    await markFailed(db, run.id, "missing_student", "Program run has no studentId", now);
+    return { status: "failed", errorCode: "missing_student" };
+  }
+  const student = await db.student.findUnique({
+    where: { id: studentId },
+    select: { id: true },
+  });
+  if (!student) {
+    await markFailed(db, run.id, "missing_student", "Student was not found", now);
+    return { status: "failed", errorCode: "missing_student" };
+  }
+  const grant = await ensureCapabilityGrant(db, {
+    agentRunId: run.id,
+    conversationId: run.conversationId!,
+    now,
+  });
+  return publishHermesRun(
+    db,
+    run,
+    {
+      input: `Start programme matching for student ${studentId}`,
+      session_id: run.id,
+      instructions: programRunInstructions(grant.id, studentId),
+    },
+    env,
+    fetchImpl,
+    now,
+  );
+}
+
 export async function dispatchHermesCreateRun(
   db: DbClient,
   agentRunId: string,
@@ -363,6 +403,9 @@ export async function dispatchHermesCreateRun(
   }
   if (run.agentKey === "onboarding") {
     return startOnboardingRun(db, run, env, options?.fetchImpl, now);
+  }
+  if (run.agentKey === "program") {
+    return startProgramRun(db, run, env, options?.fetchImpl, now);
   }
 
   const input = asRecord(run.inputJson);

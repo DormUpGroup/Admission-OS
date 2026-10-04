@@ -80,12 +80,17 @@ export const ONBOARDING_MCP_TOOLS = [
   "submit_onboarding_result",
   "create_curator_task",
 ] as const;
+export const PROGRAM_MCP_TOOLS = [
+  "program.match_job.start",
+  "program.match_job.status",
+] as const;
 
 export type McpV1Tool = (typeof MCP_V1_TOOLS)[number];
 
 export function toolsForProfile(profile: string | null | undefined): readonly string[] {
   if (profile === "scheduling") return SCHEDULING_MCP_TOOLS;
   if (profile === "onboarding") return ONBOARDING_MCP_TOOLS;
+  if (profile === "program") return PROGRAM_MCP_TOOLS;
   return MCP_V1_TOOLS;
 }
 
@@ -93,8 +98,23 @@ export function isKnownMcpTool(name: string): boolean {
   return (
     (MCP_V1_TOOLS as readonly string[]).includes(name) ||
     (SCHEDULING_MCP_TOOLS as readonly string[]).includes(name) ||
-    (ONBOARDING_MCP_TOOLS as readonly string[]).includes(name)
+    (ONBOARDING_MCP_TOOLS as readonly string[]).includes(name) ||
+    (PROGRAM_MCP_TOOLS as readonly string[]).includes(name)
   );
+}
+
+export function programRunInstructions(grantId: string, studentId: string): string {
+  return [
+    `grant_id=${grantId}`,
+    "On every admission_os tool call, set grant_id to that exact value. Copy it character for character. Do not invent, shorten, or replace it.",
+    "Call tools only through the admission_os MCP server. Do not use execute_code, terminal, browser, or any other tool.",
+    "Allowed tools: program.match_job.start, program.match_job.status.",
+    `student_id: ${studentId}`,
+    "Start the durable programme-matching job for this student with program.match_job.start.",
+    "You may call program.match_job.status once to confirm it is PENDING or RUNNING.",
+    "Do not wait for the job to finish. Matching can take many minutes in the worker.",
+    "Do not invent programme lists, scores, or shortlist results.",
+  ].join("\n");
 }
 
 export const CAPABILITY_GRANT_TTL_MS = 15 * 60 * 1000;

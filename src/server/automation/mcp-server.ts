@@ -36,6 +36,12 @@ import {
   POLICY_DECISIONS,
 } from "./policy";
 import type { AgentKey } from "./registry";
+import {
+  enqueueProgramMatchJob,
+  findActiveProgramMatchJob,
+  findLatestProgramMatchJob,
+  toProgramMatchJobView,
+} from "@/server/services/program-matching/match-job";
 
 const JSON_RPC = "2.0";
 
@@ -262,6 +268,12 @@ function toolSchema(name: string) {
         "One Russian sentence. Example: Назначьте куратора и подберите программы бакалавриата по кулинарии на набор 2027/28.",
     };
     required.push("title");
+  } else if (name === "program.match_job.start") {
+    description =
+      "Start the durable programme-matching job for the student on this run. Returns immediately; the worker finishes matching later.";
+  } else if (name === "program.match_job.status") {
+    description =
+      "Read the latest or active programme-matching job status for the student on this run.";
   }
   return {
     name,
@@ -308,7 +320,13 @@ function patchIsEmpty(patch: QualificationPatch): boolean {
 }
 
 function asAgentKey(value: string): AgentKey | null {
-  if (value === "intake" || value === "scheduling" || value === "onboarding" || value === "qa_safety") {
+  if (
+    value === "intake" ||
+    value === "scheduling" ||
+    value === "onboarding" ||
+    value === "program" ||
+    value === "qa_safety"
+  ) {
     return value;
   }
   return null;
@@ -691,6 +709,46 @@ async function callTool(
     return {
       status: 200,
       body: toolResult(id, created, created === "no_student" || created === "empty_title"),
+    };
+  }
+
+  if (toolName === "program.match_job.start") {
+    const studentId = asRecord(run.inputJson)?.studentId;
+    if (typeof studentId !== "string" || !studentId.trim()) {
+      logLine("missing_student");
+      return { status: 200, body: toolResult(id, "missing_student", true) };
+    }
+    const { job, created } = await enqueueProgramMatchJob(studentId, options.db);
+    logLine(created ? "started" : "already_active");
+    return {
+      status: 200,
+      body: toolResult(
+        id,
+        JSON.stringify({
+          created,
+          job: toProgramMatchJobView(job),
+        }),
+        false,
+      ),
+    };
+  }
+
+  if (toolName === "program.match_job.status") {
+    const studentId = asRecord(run.inputJson)?.studentId;
+    if (typeof studentId !== "string" || !studentId.trim()) {
+      logLine("missing_student");
+      return { status: 200, body: toolResult(id, "missing_student", true) };
+    }
+    const active = await findActiveProgramMatchJob(studentId, options.db);
+    const job = active ?? (await findLatestProgramMatchJob(studentId, options.db));
+    logLine(job ? "ok" : "none");
+    return {
+      status: 200,
+      body: toolResult(
+        id,
+        JSON.stringify({ job: job ? toProgramMatchJobView(job) : null }),
+        false,
+      ),
     };
   }
 

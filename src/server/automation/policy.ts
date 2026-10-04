@@ -81,6 +81,14 @@ export function evaluateActionPolicy(
     return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
   }
 
+  if (
+    input.agentKey === "program" &&
+    (input.toolName === "program.match_job.start" ||
+      input.toolName === "program.match_job.status")
+  ) {
+    return { decision: POLICY_DECISIONS.ALLOW, reasons: [] };
+  }
+
   if (input.conversation.automationPausedAt) {
     reasons.push("automation_paused");
   }

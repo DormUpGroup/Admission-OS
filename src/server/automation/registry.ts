@@ -1,7 +1,12 @@
 import { Prisma } from "@prisma/client";
 import type { DbClient } from "@/server/commands/outbox";
 
-export type AgentKey = "intake" | "scheduling" | "onboarding" | "qa_safety";
+export type AgentKey =
+  | "intake"
+  | "scheduling"
+  | "onboarding"
+  | "program"
+  | "qa_safety";
 
 export type AgentDefinitionSpec = {
   key: AgentKey;
@@ -76,6 +81,22 @@ export const AGENT_DEFINITION_SPECS: readonly AgentDefinitionSpec[] = [
     maxIterations: 6,
     timeoutSeconds: 90,
     maxCostUsd: new Prisma.Decimal("0.20"),
+  },
+  {
+    key: "program",
+    enabledByDefault: false,
+    autonomyLevel: "LOW_RISK_AUTONOMY",
+    allowedTools: ["program.match_job.start", "program.match_job.status"],
+    eventTypes: ["programs.match.requested"],
+    policy: {
+      effect: "async_match_job",
+      forbidden: ["wait_for_match_completion", "change_shortlist_rules"],
+    },
+    promptVersion: "v1",
+    policyVersion: "v1",
+    maxIterations: 4,
+    timeoutSeconds: 90,
+    maxCostUsd: new Prisma.Decimal("0.15"),
   },
   {
     key: "qa_safety",

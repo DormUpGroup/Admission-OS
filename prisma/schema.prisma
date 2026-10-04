@@ -69,7 +69,8 @@ model Student {
   tasks          Task[]
   deadlines      Deadline[]
   activities     Activity[]
-  programMatches ProgramMatch[]
+  programMatches    ProgramMatch[]
+  programMatchJobs  ProgramMatchJob[]
   shortlistItems StudentShortlistItem[]
   notifications     InAppNotification[]
   conversations     Conversation[]
@@ -580,6 +581,34 @@ model ProgramMatch {
 
   @@unique([studentId, programAcademicYearId])
   @@index([monitoringSelected])
+}
+
+/// Durable curator programme-matching job. Progress is written by the worker;
+/// the admin UI polls this row so closing the student page does not cancel work.
+model ProgramMatchJob {
+  id            String    @id @default(cuid())
+  studentId     String
+  status        String    @default("PENDING")
+  stage         String?
+  label         String?
+  percent       Int       @default(0)
+  detail        String?
+  done          Int?
+  total         Int?
+  error         String?
+  matchCount    Int?
+  engine        String?
+  outboxEventId String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@index([studentId, status])
+  @@index([status, createdAt])
 }
 
 model StudentShortlistItem {

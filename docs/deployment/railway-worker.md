@@ -13,15 +13,33 @@ No Redis, Celery, or FastAPI. Web (Admission-OS) and worker share `DATABASE_URL`
    - Start: `npm run worker`
 3. Worker env:
    - `DATABASE_URL` (same as web)
-   - `AUTOMATION_ENABLED=true` to process `message.received`, bot welcome/help, and nudges (noop / `worker.log` / curator `telegram.send` always run)
+   - `AUTOMATION_ENABLED=true` to process `message.received`, bot welcome/help, and nudges (noop / `worker.log` / curator `telegram.send` / `programs.match` always run)
    - Phase 1+: `TELEGRAM_BOT_TOKEN` (outbound send)
-   - Hermes (worker only): `HERMES_API_URL` and one key per profile (`HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING`). See below.
+   - Hermes (worker only): `HERMES_API_URL` and one key per profile (`HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING`, `HERMES_API_KEY_PROGRAM`). See below.
+   - Programme matching on the worker also needs the same OpenAI enrichment env as web (`OPENAI_API_KEY`, `OPENAI_PROGRAM_ENRICHMENT_*`) when AI extract is enabled.
 4. Web env (Phase 1): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`
    - Admin inbox replies deliver **inline** from the web process when
      `TELEGRAM_BOT_TOKEN` is set. They are not blocked by the automation
      kill-switch. The worker remains required for welcome/help, backlog retries,
-     and calendar events.
+     calendar events, and **curator programme matching** (`programs.match`).
 5. Do **not** redeploy old api / beat / Celery workers.
+
+## Programme matching (`programs.match`)
+
+Curator «Подобрать программы» enqueues a `ProgramMatchJob` + outbox event and
+returns immediately. The **worker** runs `persistProgramMatches` and writes
+progress to `ProgramMatchJob`; the admin UI polls that row. Closing the student
+page does not cancel the job.
+
+Locally you need both processes:
+
+```bash
+npm run dev
+npm run worker
+```
+
+If the UI stays on «в очереди» for a long time, the worker service is not
+running or cannot reach `DATABASE_URL`.
 
 ## Telegram webhook
 
@@ -59,7 +77,7 @@ Worker env (the web service does not call Hermes):
 
 - `HERMES_API_URL` — private base URL, for example `http://hermes.railway.internal:8642`. Use `http`. Private networking is already encrypted, and `https` never finishes a TLS handshake, so the worker logs `fetch failed`.
 - On the **Hermes** service (not the worker): `API_SERVER_ENABLED=true`, `API_SERVER_HOST=::`, `API_SERVER_PORT=8642`, and `API_SERVER_KEY`. Hermes defaults to `127.0.0.1`. Private networking then cannot open port 8642 on either the `10.x` or the `fd12::` address, and the worker logs `Connect Timeout Error` for both. After changing the variables, redeploy Hermes and confirm its log says the API server is listening on `::` port `8642`. `API_SERVER_HOST` in this repo's `.env` is not read by the worker.
-- `HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING` — each profile's `API_SERVER_KEY`. Sent as `Authorization: Bearer` on `POST /p/<profile>/v1/runs` and the matching GET. The default gateway key is not used for these calls.
+- `HERMES_API_KEY_INTAKE`, `HERMES_API_KEY_SCHEDULING`, `HERMES_API_KEY_ONBOARDING`, `HERMES_API_KEY_PROGRAM` — each profile's `API_SERVER_KEY`. Sent as `Authorization: Bearer` on `POST /p/<profile>/v1/runs` and the matching GET. The default gateway key is not used for these calls.
 
 The body is `{ "input", "session_id", "instructions" }`. `instructions` carries the
 capability `grant_id` and that profile's tools. Hermes answers `202` with `run_id`.
@@ -85,7 +103,7 @@ mcp_servers:
       x-admission-profile: intake
 ```
 
-Use `profile=scheduling` or `profile=onboarding` on that profile's MCP entry. Each profile has its own `API_SERVER_KEY`.
+Use `profile=scheduling`, `profile=onboarding`, or `profile=program` on that profile's MCP entry. Each profile has its own `API_SERVER_KEY`.
 
 Use the web private address, not a public domain. Do not put `TELEGRAM_BOT_TOKEN`
 or `DATABASE_URL` on Hermes. Disable Hermes toolsets that can send Telegram,
