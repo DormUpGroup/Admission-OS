@@ -20,8 +20,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "IMMIGROME — Система поступлений",
+  title: "AOS — Система поступлений",
   description: "Операционная система поступлений IMMIGROME",
+  applicationName: "AOS",
 };
 
 export default function RootLayout({

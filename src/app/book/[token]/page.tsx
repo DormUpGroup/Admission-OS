@@ -7,6 +7,7 @@ import {
   bookingInviteMatchesStudent,
   loadBookingInvite,
 } from "@/server/booking/account";
+import { BrandLogo } from "@/components/brand-logo";
 import { BookingAccountForm } from "@/components/booking/account-form";
 import { BookingCalendar } from "@/components/portal/booking-calendar";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ function Shell({
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className={`surface-card w-full rounded-[28px] p-8 ${wide ? "max-w-4xl" : "max-w-md"}`}>
+        <BrandLogo size="md" priority className="mb-4" />
         {children}
       </div>
     </div>
@@ -39,10 +41,7 @@ export default async function BookInvitePage({
   if (!invite) {
     return (
       <Shell>
-        <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-          IMMIGROME
-        </p>
-        <h1 className="mt-2 text-[24px] font-semibold tracking-tight">Ссылка недействительна</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight">Ссылка недействительна</h1>
         <p className="mt-2 text-[15px] text-muted-foreground">
           Срок записи истёк. Напишите в Telegram, и мы пришлём новую ссылку.
         </p>
@@ -58,10 +57,7 @@ export default async function BookInvitePage({
       const email = appointment.guestEmail?.trim();
       return (
         <Shell>
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            IMMIGROME
-          </p>
-          <h1 className="mt-2 text-[28px] font-semibold tracking-tight">Заявка отправлена</h1>
+          <h1 className="text-[28px] font-semibold tracking-tight">Заявка отправлена</h1>
           <p className="mt-2 text-[20px] font-semibold tracking-tight">
             {formatSlotLabel(appointment.startsAt, appointment.timezone)}
           </p>
@@ -114,10 +110,7 @@ export default async function BookInvitePage({
     if (view.kind === "login") {
       return (
         <Shell>
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            IMMIGROME
-          </p>
-          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
+          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
             Войдите в кабинет
           </h1>
           <p className="mt-1 mb-6 text-[15px] text-muted-foreground">
@@ -150,10 +143,7 @@ export default async function BookInvitePage({
 
   return (
     <Shell wide>
-      <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-        IMMIGROME
-      </p>
-      <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
+      <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
         {upcoming ? "Изменить время консультации" : "Запись на консультацию"}
       </h1>
       <p className="mt-1 mb-6 text-[15px] text-muted-foreground">

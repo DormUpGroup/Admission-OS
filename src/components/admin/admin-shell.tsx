@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { BrandLogo } from "@/components/brand-logo";
 import { MobileChatScreenProvider } from "@/components/admin/mobile-chat-screen";
 import { logoutAction } from "@/server/auth-actions";
 import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
@@ -85,12 +86,12 @@ export function AdminShell({
             >
               <Menu className="h-5 w-5" />
             </button>
-            <p className="truncate text-[13px] text-muted-foreground">
-              <span className="font-semibold tracking-wide text-foreground">
-                IMMIGROME
-              </span>
-              <span className="hidden sm:inline"> · Система поступлений</span>
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <BrandLogo size="sm" className="md:hidden" />
+              <p className="hidden truncate text-[13px] text-muted-foreground sm:block">
+                Система поступлений
+              </p>
+            </div>
           </div>
           <form action={logoutAction} className="shrink-0">
             <button

@@ -19,6 +19,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/labels";
 import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
@@ -122,10 +123,8 @@ export function AppSidebar({
       )}
     >
       <div className="px-4 py-5">
-        <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-          IMMIGROME
-        </p>
-        <p className="mt-0.5 text-[15px] font-semibold tracking-tight text-foreground">
+        <BrandLogo size="sm" className="mb-2" />
+        <p className="text-[15px] font-semibold tracking-tight text-foreground">
           Сопровождение
         </p>
         {userName && (

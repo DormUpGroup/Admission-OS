@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { loginAction } from "@/server/auth-actions";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,10 +27,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="surface-card w-full max-w-md rounded-[28px] p-8">
         <div className="mb-8">
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            IMMIGROME
-          </p>
-          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-foreground">
+          <BrandLogo size="lg" priority className="mb-4" />
+          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
             Система поступлений
           </h1>
           <p className="mt-1 text-[15px] text-muted-foreground">Войдите, чтобы продолжить</p>

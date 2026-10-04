@@ -23,7 +23,7 @@ export function ChangeCuratorForm({
 
   return (
     <form
-      className="mt-2 flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (!curatorId || pending) return;
