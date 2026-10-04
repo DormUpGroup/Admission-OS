@@ -336,13 +336,15 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
   return { studentId: student.id };
 }
 
-/** Returns a message when the cabinet letter could not be sent. */
+/** Returns a message when the cabinet invite could not be delivered. */
 async function sendCabinetInvite(studentId: string): Promise<string | null> {
   try {
     await sendRegistrationInviteOnce(studentId);
     return null;
   } catch (error) {
     console.error(error);
-    return error instanceof Error ? error.message : "Не удалось отправить письмо на почту записи.";
+    return error instanceof Error
+      ? error.message
+      : "Не удалось отправить ссылку на кабинет в Telegram.";
   }
 }

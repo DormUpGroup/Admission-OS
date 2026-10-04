@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { UserRole } from "@/lib/enums";
 import { sendTransactionalEmail } from "@/server/delivery/email";
 import { isDeliverableStudentEmail } from "@/server/registration/contact";
+import { requestTelegramSend } from "@/server/commands/telegram-outbound";
+import { tryDeliverTelegramSendNow } from "@/server/delivery/telegram-inline";
 
 export const REGISTRATION_INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -17,7 +19,13 @@ export function registrationPageUrl(
 }
 
 export function registrationInviteMessage(url: string): string {
-  return `Куратор берёт вас на сопровождение. Создайте кабинет ученика по ссылке:\n${url}\n\nСсылка действует 14 дней.`;
+  return [
+    "Куратор берёт вас на сопровождение.",
+    "Создайте кабинет ученика по ссылке:",
+    url,
+    "",
+    "Ссылка действует 14 дней. После входа заполните анкеты в разделе «Анкеты».",
+  ].join("\n");
 }
 
 function newToken() {
@@ -70,7 +78,23 @@ export async function openRegistrationInvite(input: {
   }
 }
 
-/** Sends the cabinet link once. A later click reuses the same invite and does not send again. */
+async function studentTelegramConversationId(studentId: string): Promise<string | null> {
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      channel: "TELEGRAM",
+      OR: [{ studentId }, { lead: { convertedStudentId: studentId } }],
+    },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  return conversation?.id ?? null;
+}
+
+/**
+ * Opens a /join link and delivers it in Telegram (primary for chat clients)
+ * and by email when Resend is configured. Telegram uses a stable clientRequestId
+ * so a second promote does not spam the chat.
+ */
 export async function sendRegistrationInviteOnce(studentId: string): Promise<void> {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
@@ -78,20 +102,51 @@ export async function sendRegistrationInviteOnce(studentId: string): Promise<voi
   });
   if (!student || student.userId) return;
   const email = student.email.trim().toLowerCase();
-  if (!email || !isDeliverableStudentEmail(email)) return;
+  if (!email || !isDeliverableStudentEmail(email)) {
+    throw new Error("На заявке нет почты для кабинета.");
+  }
 
   const invite = await openRegistrationInvite({ studentId: student.id, email });
-  if (invite.sentAt) return;
+  const url = registrationPageUrl(invite.token);
+  const body = registrationInviteMessage(url);
 
-  await sendTransactionalEmail({
-    to: email,
-    subject: "Кабинет ученика IMMIGROME",
-    text: registrationInviteMessage(registrationPageUrl(invite.token)),
-  });
-  await prisma.registrationInvite.update({
-    where: { id: invite.id },
-    data: { sentAt: new Date() },
-  });
+  let emailed = Boolean(invite.sentAt);
+  let emailError: Error | null = null;
+  if (!emailed) {
+    try {
+      await sendTransactionalEmail({
+        to: email,
+        subject: "Кабинет ученика IMMIGROME",
+        text: body,
+      });
+      await prisma.registrationInvite.update({
+        where: { id: invite.id },
+        data: { sentAt: new Date() },
+      });
+      emailed = true;
+    } catch (error) {
+      emailError = error instanceof Error ? error : new Error("Не удалось отправить письмо.");
+      console.error(emailError);
+    }
+  }
+
+  const conversationId = await studentTelegramConversationId(student.id);
+  let telegramed = false;
+  if (conversationId) {
+    const { message } = await requestTelegramSend({
+      conversationId,
+      body,
+      clientRequestId: `registration-invite:${student.id}`,
+    });
+    telegramed = true;
+    if (message.deliveryStatus !== "SENT" && message.deliveryStatus !== "DELIVERED") {
+      await tryDeliverTelegramSendNow(message.id);
+    }
+  }
+
+  if (!emailed && !telegramed) {
+    throw emailError ?? new Error("Нет Telegram-чата, чтобы отправить ссылку на кабинет.");
+  }
 }
 
 export async function loadRegistrationInvite(token: string, now = new Date()) {

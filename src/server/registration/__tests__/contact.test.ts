@@ -68,6 +68,7 @@ describe("registration email", () => {
     expect(registrationInviteMessage("https://example.test/join/abc")).toContain(
       "https://example.test/join/abc",
     );
+    expect(registrationInviteMessage("https://example.test/join/abc")).toContain("Анкеты");
   });
 
   it("posts the registration letter through Resend", async () => {
