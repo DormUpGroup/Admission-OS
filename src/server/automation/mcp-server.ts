@@ -254,8 +254,13 @@ function toolSchema(name: string) {
     properties.risks = { type: "array", items: { type: "string" } };
     required.push("route");
   } else if (name === "create_curator_task") {
-    description = "Create one curator task for a gap or a deadline risk. Does not message the client.";
-    properties.title = { type: "string" };
+    description =
+      "Create one task the curator reads on the student card. The title is one short Russian sentence and contains no internal codes.";
+    properties.title = {
+      type: "string",
+      description:
+        "One Russian sentence. Example: Назначьте куратора и подберите программы бакалавриата по кулинарии на набор 2027/28.",
+    };
     required.push("title");
   }
   return {

@@ -25,6 +25,71 @@ export type OnboardingContext = {
   gaps: string[];
 };
 
+const GAP_NAME = "no_program|no_curator|missing_documents|deadline_risk";
+
+function mostlyRussian(text: string): boolean {
+  const cyrillic = text.match(/\p{Script=Cyrillic}/gu)?.length ?? 0;
+  const latin = text.match(/[A-Za-z]/g)?.length ?? 0;
+  return cyrillic > latin;
+}
+
+function russianField(title: string): string | null {
+  const groups = [...title.matchAll(/\(([^)]+)\)/g)].map((match) => match[1].trim());
+  return groups.find((group) => /\p{Script=Cyrillic}/u.test(group)) ?? null;
+}
+
+function studyLevelPhrase(title: string): string | null {
+  if (/bachelor|бакалавр/i.test(title)) return "бакалавриата";
+  if (/master|магистр/i.test(title)) return "магистратуры";
+  if (/\bphd\b|аспирант/i.test(title)) return "аспирантуры";
+  return null;
+}
+
+function programmeSentence(title: string): string {
+  const level = studyLevelPhrase(title);
+  const field = russianField(title);
+  const intake = title.match(/\b(20\d{2}\s*\/\s*\d{2})\b/)?.[1]?.replace(/\s+/g, "");
+  return [
+    "Подберите программы",
+    level,
+    field ? `по направлению «${field}»` : null,
+    intake ? `на набор ${intake}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Curators see a sentence, not gap codes or an English agent note. */
+export function curatorFacingTaskTitle(title: string): string {
+  const trimmed = title.trim().replace(/\s+/g, " ");
+  const gaps = [
+    ...new Set(
+      [...trimmed.matchAll(new RegExp(`\\b(${GAP_NAME})\\b`, "gi"))].map((match) =>
+        match[1].toLowerCase(),
+      ),
+    ),
+  ];
+  if (gaps.length === 0) return trimmed;
+
+  const body = trimmed
+    .replace(
+      new RegExp(`^(?:(?:${GAP_NAME})(?:\\s*\\+\\s*|\\s*,\\s*|\\s+and\\s+)*)+:\\s*`, "i"),
+      "",
+    )
+    .trim();
+  if (body && body !== trimmed && mostlyRussian(body)) return body;
+
+  const parts: string[] = [];
+  if (gaps.includes("no_curator")) parts.push("Назначьте куратора");
+  if (gaps.includes("no_program")) parts.push(programmeSentence(trimmed));
+  if (gaps.includes("missing_documents")) parts.push("Запросите недостающие документы");
+  if (gaps.includes("deadline_risk")) parts.push("Проверьте близкий дедлайн");
+  const sentence = parts
+    .map((part, index) => (index === 0 ? part : part.charAt(0).toLowerCase() + part.slice(1)))
+    .join(" и ");
+  return sentence.endsWith(".") ? sentence : `${sentence}.`;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -115,7 +180,7 @@ export function onboardingRunInstructions(grantId: string, context: OnboardingCo
     "Allowed tools: get_onboarding_context, submit_onboarding_result, create_curator_task.",
     "The client is already activated. Read the case, write a route and a document checklist, and record progress.",
     "Do not change the client status. Do not decide whether documents are legally sufficient. Do not send Telegram or email.",
-    "When gaps include deadline_risk, missing_documents, no_program, or no_curator, call create_curator_task once with the gap and the one action the curator should take.",
+    "When gaps include deadline_risk, missing_documents, no_program, or no_curator, call create_curator_task once. The title is one short Russian sentence the curator will read. Do not put gap codes or English in the title.",
     "Then call submit_onboarding_result with the route, the checklist, and any risks.",
     "Case:",
     JSON.stringify(context),
@@ -155,7 +220,7 @@ export async function createCuratorTask(
   db: DbClient,
   input: { studentId: string; title: string; dueDate?: Date | null },
 ): Promise<"created" | "already_open" | "empty_title" | "no_student"> {
-  const title = input.title.trim().slice(0, 200);
+  const title = curatorFacingTaskTitle(input.title).slice(0, 200);
   if (!title) return "empty_title";
   const student = await db.student.findUnique({
     where: { id: input.studentId },

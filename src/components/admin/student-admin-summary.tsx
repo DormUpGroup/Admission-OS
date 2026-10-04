@@ -125,7 +125,9 @@ export function StudentAdminSummary({
                 >
                   <span>
                     {task.action}
-                    <span className="text-muted-foreground"> · {task.reason}</span>
+                    {task.reason && task.reason !== "открытая задача куратора" ? (
+                      <span className="text-muted-foreground"> · {task.reason}</span>
+                    ) : null}
                   </span>
                   <Button asChild size="sm" variant="outline">
                     <Link href={task.href}>Открыть</Link>
