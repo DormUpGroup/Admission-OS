@@ -210,6 +210,7 @@ export function TelegramMessenger({
   useReportMobileChat(openOnMobile);
   const [moving, setMoving] = useState(false);
   const [promoteError, setPromoteError] = useState("");
+  const [promoteWarning, setPromoteWarning] = useState("");
   const [resuming, setResuming] = useState(false);
   const [list, setList] = useState(conversations);
   const [, startTransition] = useTransition();
@@ -497,12 +498,14 @@ export function TelegramMessenger({
     if (!activeId || moving || !active?.leadId) return;
     setMoving(true);
     setPromoteError("");
+    setPromoteWarning("");
     try {
       const result = await promoteLeadToStudentAction(activeId);
       if ("error" in result) {
         setPromoteError(result.error);
         return;
       }
+      if (result.warning) setPromoteWarning(result.warning);
       router.push(`/admin/messages/telegram?folder=chats&conversationId=${activeId}`);
       router.refresh();
     } catch {
@@ -887,6 +890,11 @@ export function TelegramMessenger({
                   {promoteError ? (
                     <p className="hidden max-w-[14rem] text-right text-[12px] text-[var(--danger-fg)] md:block" role="alert">
                       {promoteError}
+                    </p>
+                  ) : null}
+                  {promoteWarning ? (
+                    <p className="hidden max-w-[14rem] text-right text-[12px] text-amber-700 md:block" role="status">
+                      {promoteWarning}
                     </p>
                   ) : null}
                 </>

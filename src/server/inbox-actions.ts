@@ -206,7 +206,9 @@ function isNextRedirect(error: unknown) {
   );
 }
 
-export type PromoteLeadResult = { studentId: string } | { error: string };
+export type PromoteLeadResult =
+  | { studentId: string; warning?: string }
+  | { error: string };
 
 /**
  * Curator or admin only (requireStaff). Turns the lead on this chat into a student
@@ -248,9 +250,7 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
     return { error: "Диалог не найден" };
   }
   if (conversation.studentId) {
-    const inviteError = await sendCabinetInvite(conversation.studentId);
-    if (inviteError) return { error: inviteError };
-    return { studentId: conversation.studentId };
+    return finalizePromotion(conversation.studentId);
   }
 
   const lead = conversation.lead;
@@ -260,9 +260,7 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
       where: { leadId: lead.id },
       data: { studentId: lead.convertedStudentId, leadId: null, inboxFolder: null },
     });
-    const inviteError = await sendCabinetInvite(lead.convertedStudentId);
-    if (inviteError) return { error: inviteError };
-    return { studentId: lead.convertedStudentId };
+    return finalizePromotion(lead.convertedStudentId);
   }
 
   const displayName = lead.channelIdentities[0]?.displayName?.trim() ?? "";
@@ -331,20 +329,28 @@ async function promoteLead(conversationId: string): Promise<PromoteLeadResult> {
     payload: { studentId: student.id, conversationId: id, reason: "curator_promoted" },
     idempotencyKey: `client.activated:${student.id}`,
   });
-  const inviteError = await sendCabinetInvite(student.id);
-  if (inviteError) return { error: inviteError };
-  return { studentId: student.id };
+  return finalizePromotion(student.id);
 }
 
-/** Returns a message when the cabinet invite could not be delivered. */
-async function sendCabinetInvite(studentId: string): Promise<string | null> {
+async function finalizePromotion(studentId: string): Promise<PromoteLeadResult> {
   try {
-    await sendRegistrationInviteOnce(studentId);
-    return null;
+    const delivery = await sendRegistrationInviteOnce(studentId);
+    if (delivery.emailError) {
+      return {
+        studentId,
+        warning: delivery.telegramed
+          ? `Ссылка ушла в Telegram, но не на почту: ${delivery.emailError}`
+          : delivery.emailError,
+      };
+    }
+    return { studentId };
   } catch (error) {
     console.error(error);
-    return error instanceof Error
-      ? error.message
-      : "Не удалось отправить ссылку на кабинет в Telegram.";
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Не удалось отправить ссылку на кабинет.",
+    };
   }
 }

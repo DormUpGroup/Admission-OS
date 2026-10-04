@@ -15,6 +15,7 @@ export function PromoteLeadButton({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   return (
     <span className="inline-flex flex-col items-end gap-1">
@@ -25,11 +26,15 @@ export function PromoteLeadButton({
         onClick={() => {
           setPending(true);
           setError("");
+          setWarning("");
           void promoteLeadToStudentAction(conversationId)
             .then((result) => {
               if ("error" in result) {
                 setError(result.error);
                 return;
+              }
+              if (result.warning) {
+                setWarning(result.warning);
               }
               router.push(`/admin/students/${result.studentId}`);
               router.refresh();
@@ -45,6 +50,11 @@ export function PromoteLeadButton({
       {error ? (
         <p className="max-w-xs text-right text-[12px] text-[var(--danger-fg)]" role="alert">
           {error}
+        </p>
+      ) : null}
+      {warning ? (
+        <p className="max-w-xs text-right text-[12px] text-amber-700" role="status">
+          {warning}
         </p>
       ) : null}
     </span>

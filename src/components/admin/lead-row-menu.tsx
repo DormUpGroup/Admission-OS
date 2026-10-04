@@ -22,17 +22,20 @@ export function LeadRowMenu({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   function promote() {
     if (!conversationId || pending) return;
     setPending(true);
     setError("");
+    setWarning("");
     void promoteLeadToStudentAction(conversationId)
       .then((result) => {
         if ("error" in result) {
           setError(result.error);
           return;
         }
+        if (result.warning) setWarning(result.warning);
         router.push(`/admin/students/${result.studentId}`);
         router.refresh();
       })
@@ -80,6 +83,11 @@ export function LeadRowMenu({
       {error ? (
         <p className="mt-1 max-w-[12rem] text-right text-[12px] text-[var(--danger-fg)]" role="alert">
           {error}
+        </p>
+      ) : null}
+      {warning ? (
+        <p className="mt-1 max-w-[12rem] text-right text-[12px] text-amber-700" role="status">
+          {warning}
         </p>
       ) : null}
       <DeleteLeadButton

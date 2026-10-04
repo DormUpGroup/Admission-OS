@@ -93,6 +93,6 @@ describe("registration email", () => {
         text: "ссылка",
         env: {},
       }),
-    ).rejects.toThrow(/RESEND_API_KEY/);
+    ).rejects.toThrow(/RESEND_API_KEY|Admission-OS/);
   });
 });

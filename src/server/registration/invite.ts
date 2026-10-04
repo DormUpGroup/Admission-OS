@@ -90,17 +90,27 @@ async function studentTelegramConversationId(studentId: string): Promise<string 
   return conversation?.id ?? null;
 }
 
+export type RegistrationInviteDelivery = {
+  emailed: boolean;
+  telegramed: boolean;
+  /** Set when email was required but failed; Telegram may still have succeeded. */
+  emailError?: string;
+};
+
 /**
- * Opens a /join link and delivers it in Telegram (primary for chat clients)
- * and by email when Resend is configured. Telegram uses a stable clientRequestId
- * so a second promote does not spam the chat.
+ * Opens a /join link and delivers it by email and in Telegram.
+ * Telegram uses a stable clientRequestId so a second promote does not spam the chat.
  */
-export async function sendRegistrationInviteOnce(studentId: string): Promise<void> {
+export async function sendRegistrationInviteOnce(
+  studentId: string,
+): Promise<RegistrationInviteDelivery> {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
     select: { id: true, email: true, userId: true },
   });
-  if (!student || student.userId) return;
+  if (!student || student.userId) {
+    return { emailed: false, telegramed: false };
+  }
   const email = student.email.trim().toLowerCase();
   if (!email || !isDeliverableStudentEmail(email)) {
     throw new Error("На заявке нет почты для кабинета.");
@@ -111,7 +121,7 @@ export async function sendRegistrationInviteOnce(studentId: string): Promise<voi
   const body = registrationInviteMessage(url);
 
   let emailed = Boolean(invite.sentAt);
-  let emailError: Error | null = null;
+  let emailError: string | undefined;
   if (!emailed) {
     try {
       await sendTransactionalEmail({
@@ -125,8 +135,18 @@ export async function sendRegistrationInviteOnce(studentId: string): Promise<voi
       });
       emailed = true;
     } catch (error) {
-      emailError = error instanceof Error ? error : new Error("Не удалось отправить письмо.");
-      console.error(emailError);
+      emailError =
+        error instanceof Error
+          ? error.message
+          : "Не удалось отправить письмо на почту записи.";
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "registration.invite.email_failed",
+          studentId: student.id,
+          error: emailError,
+        }),
+      );
     }
   }
 
@@ -145,8 +165,12 @@ export async function sendRegistrationInviteOnce(studentId: string): Promise<voi
   }
 
   if (!emailed && !telegramed) {
-    throw emailError ?? new Error("Нет Telegram-чата, чтобы отправить ссылку на кабинет.");
+    throw new Error(
+      emailError ?? "Нет Telegram-чата, чтобы отправить ссылку на кабинет.",
+    );
   }
+
+  return { emailed, telegramed, emailError: emailed ? undefined : emailError };
 }
 
 export async function loadRegistrationInvite(token: string, now = new Date()) {
