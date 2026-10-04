@@ -90,15 +90,12 @@ def main() -> None:
     padded_path = PUBLIC_BRAND / "aos-logo-padded.png"
     padded.save(padded_path, optimize=True)
 
-    # Favicon: crop center third (the O with mortarboard), then square
+    # Favicon: only the stylized letter A (left third of the wordmark)
     w, h = logo.size
-    # O sits roughly in the middle third of AOS
-    ox0 = int(w * 0.30)
-    ox1 = int(w * 0.70)
-    mark = logo.crop((ox0, 0, ox1, h))
+    mark = logo.crop((0, 0, int(w * 0.335), h))
     mark_bbox = content_bbox(mark, threshold=250)
     mark = mark.crop(mark_bbox)
-    favicon_src = pad_to_square(mark, padding_ratio=0.18)
+    favicon_src = pad_to_square(mark, padding_ratio=0.14)
 
     for size, name in ((180, "apple-icon.png"), (192, "icon.png")):
         out = favicon_src.resize((size, size), Image.Resampling.LANCZOS)
