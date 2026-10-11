@@ -32,7 +32,10 @@ import { EmptyState } from "@/components/empty-state";
 import { GenerateProgramMatchesButton } from "@/components/generate-program-matches-button";
 import { ResetProgramMatchesButton } from "@/components/reset-program-matches-button";
 import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
-import { CuratorProgramLevelsCard } from "@/components/admin/curator-program-levels";
+import {
+  CuratorMatchesLayout,
+  MatchViewToggle,
+} from "@/components/admin/curator-matches-section";
 import { StudentAdminSummary } from "@/components/admin/student-admin-summary";
 import { RequestQuestionnaireButton } from "@/components/admin/request-questionnaire-button";
 import { ShowAllMatches } from "@/components/admin/show-all-matches";
@@ -100,6 +103,7 @@ export default async function StudentProfilePage({
     tuitionMax?: string;
     callFreshness?: string;
     deadlineBefore?: string;
+    matchView?: string;
   }>;
 }) {
   const session = await requireStaff();
@@ -115,6 +119,30 @@ export default async function StudentProfilePage({
           : sp.tab;
   const tab = TABS.some((t) => t.id === requestedTab) ? requestedTab! : "summary";
   const focusPayId = sp.focus ?? "";
+  const matchView = sp.matchView === "list" ? "list" : "grid";
+
+  function programsQuery(overrides: Record<string, string | undefined> = {}) {
+    const params = new URLSearchParams();
+    params.set("tab", "programs");
+    const source: Record<string, string | undefined> = {
+      focus: sp.focus,
+      eligibility: sp.eligibility,
+      confidence: sp.confidence,
+      curator: sp.curator,
+      city: sp.city,
+      language: sp.language,
+      publicPrivate: sp.publicPrivate,
+      accessMode: sp.accessMode,
+      hasExam: sp.hasExam,
+      callFreshness: sp.callFreshness,
+      matchView: matchView === "list" ? "list" : undefined,
+      ...overrides,
+    };
+    for (const [key, value] of Object.entries(source)) {
+      if (value) params.set(key, value);
+    }
+    return `/admin/students/${studentId}?${params.toString()}`;
+  }
 
   await assertStudentAccess(studentId);
   await ensurePersonalDossierDocuments(studentId, session.user.id);
@@ -664,6 +692,20 @@ export default async function StudentProfilePage({
             </div>
           ) : null}
           <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[13px] text-muted-foreground">
+                Соответствие и проверка данных — независимые показатели
+              </p>
+              <MatchViewToggle
+                view={matchView}
+                viewHref={(next) =>
+                  programsQuery({
+                    matchView: next === "list" ? "list" : undefined,
+                  })
+                }
+              />
+            </div>
+
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Короткий список студента</h3>
               {shortlistViews.length === 0 ? (
@@ -673,15 +715,11 @@ export default async function StudentProfilePage({
                   className="py-6"
                 />
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {shortlistViews.map((m) => (
-                    <CuratorProgramLevelsCard
-                      key={m.matchId}
-                      match={m}
-                      focused={focusPayId === m.programAcademicYearId}
-                    />
-                  ))}
-                </div>
+                <CuratorMatchesLayout
+                  matches={shortlistViews}
+                  focusedId={focusPayId}
+                  view={matchView}
+                />
               )}
             </section>
 
@@ -692,31 +730,158 @@ export default async function StudentProfilePage({
                   Нет программ, ожидающих проверки куратора.
                 </p>
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {reviewViews.map((m) => (
-                    <CuratorProgramLevelsCard
-                      key={m.matchId}
-                      match={m}
-                      focused={focusPayId === m.programAcademicYearId}
-                    />
-                  ))}
-                </div>
+                <CuratorMatchesLayout
+                  matches={reviewViews}
+                  focusedId={focusPayId}
+                  view={matchView}
+                />
               )}
             </section>
 
             {otherMatchViews.length > 0 ? (
               <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Остальные варианты</h3>
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <h3 className="text-sm font-semibold">Остальные варианты</h3>
+                </div>
+                <form
+                  className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius-card)] border border-border bg-card px-3 py-2.5"
+                  method="get"
+                >
+                  <input type="hidden" name="tab" value="programs" />
+                  {matchView === "list" ? (
+                    <input type="hidden" name="matchView" value="list" />
+                  ) : null}
+                  <span className="mr-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Фильтры
+                  </span>
+                  <select
+                    name="eligibility"
+                    defaultValue={sp.eligibility || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Пригодность</option>
+                    <option value="ELIGIBLE">Подходит</option>
+                    <option value="LIKELY_ELIGIBLE">Вероятно подходит</option>
+                    <option value="NEEDS_REVIEW">Нужна проверка</option>
+                    <option value="NOT_ELIGIBLE">Не подходит</option>
+                  </select>
+                  <select
+                    name="confidence"
+                    defaultValue={sp.confidence || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Уверенность данных</option>
+                    <option value="HIGH">Высокая</option>
+                    <option value="MEDIUM">Средняя</option>
+                    <option value="LOW">Низкая</option>
+                  </select>
+                  <select
+                    name="accessMode"
+                    defaultValue={sp.accessMode || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Поступление</option>
+                    <option value="OPEN">Свободный доступ</option>
+                    <option value="CLOSED">Конкурс</option>
+                    <option value="UNKNOWN">Неизвестно</option>
+                  </select>
+                  <select
+                    name="hasExam"
+                    defaultValue={sp.hasExam || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Экзамен</option>
+                    <option value="ANY">Есть экзамен</option>
+                    <option value="NONE">Без экзамена</option>
+                    <option value="TOLC">TOLC</option>
+                    <option value="SAT">SAT</option>
+                    <option value="IELTS">IELTS</option>
+                  </select>
+                  <select
+                    name="language"
+                    defaultValue={sp.language || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Язык</option>
+                    <option value="English">English</option>
+                    <option value="Italian">Italian</option>
+                  </select>
+                  <select
+                    name="callFreshness"
+                    defaultValue={sp.callFreshness || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Актуальность набора</option>
+                    <option value="current">Текущий год</option>
+                    <option value="indicative">Ориентир</option>
+                    <option value="unknown">Неизвестно</option>
+                  </select>
+                  <select
+                    name="curator"
+                    defaultValue={sp.curator || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Статус куратора</option>
+                    <option value="AUTO_MATCHED">Автоподбор</option>
+                    <option value="NEEDS_REVIEW">На проверке</option>
+                    <option value="APPROVED">Одобрена</option>
+                    <option value="REJECTED">Отклонена</option>
+                    <option value="SHORTLISTED">Короткий список</option>
+                  </select>
+                  <Input
+                    name="city"
+                    placeholder="Город"
+                    defaultValue={sp.city || ""}
+                    className="h-8 w-[110px]"
+                  />
+                  <select
+                    name="publicPrivate"
+                    defaultValue={sp.publicPrivate || ""}
+                    className="h-8 rounded-[var(--radius-control)] border border-input bg-card px-2 text-[12px]"
+                  >
+                    <option value="">Тип вуза</option>
+                    <option value="PUBLIC">Гос.</option>
+                    <option value="PRIVATE">Частный</option>
+                    <option value="UNKNOWN">Неизвестно</option>
+                  </select>
+                  <Button type="submit" size="sm" variant="secondary">
+                    Применить
+                  </Button>
+                  {sp.eligibility ||
+                  sp.confidence ||
+                  sp.curator ||
+                  sp.city ||
+                  sp.language ||
+                  sp.publicPrivate ||
+                  sp.accessMode ||
+                  sp.hasExam ||
+                  sp.callFreshness ? (
+                    <Button asChild size="sm" variant="ghost">
+                      <Link
+                        href={programsQuery({
+                          eligibility: undefined,
+                          confidence: undefined,
+                          curator: undefined,
+                          city: undefined,
+                          language: undefined,
+                          publicPrivate: undefined,
+                          accessMode: undefined,
+                          hasExam: undefined,
+                          callFreshness: undefined,
+                          matchView: matchView === "list" ? "list" : undefined,
+                        })}
+                      >
+                        Сбросить
+                      </Link>
+                    </Button>
+                  ) : null}
+                </form>
                 <ShowAllMatches count={otherMatchViews.length}>
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {otherMatchViews.map((m) => (
-                      <CuratorProgramLevelsCard
-                        key={m.matchId}
-                        match={m}
-                        focused={focusPayId === m.programAcademicYearId}
-                      />
-                    ))}
-                  </div>
+                  <CuratorMatchesLayout
+                    matches={otherMatchViews}
+                    focusedId={focusPayId}
+                    view={matchView}
+                  />
                 </ShowAllMatches>
               </section>
             ) : null}
@@ -968,114 +1133,6 @@ export default async function StudentProfilePage({
                   <RequestQuestionnaireButton studentId={studentId} />
                 </div>
               ) : null}
-            </CardContent>
-          </Card>
-            </div>
-          </details>
-
-          <details className="rounded-2xl border border-border bg-card px-4 py-3">
-            <summary className="cursor-pointer text-sm font-medium">
-              Фильтры
-            </summary>
-            <div className="mt-3">
-          <Card>
-            <CardContent>
-              <form className="flex flex-wrap gap-2 text-sm" method="get">
-                <input type="hidden" name="tab" value="programs" />
-                <select
-                  name="eligibility"
-                  defaultValue={sp.eligibility || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Eligibility</option>
-                  <option value="ELIGIBLE">ELIGIBLE</option>
-                  <option value="LIKELY_ELIGIBLE">LIKELY_ELIGIBLE</option>
-                  <option value="NEEDS_REVIEW">NEEDS_REVIEW</option>
-                  <option value="NOT_ELIGIBLE">NOT_ELIGIBLE</option>
-                </select>
-                <select
-                  name="confidence"
-                  defaultValue={sp.confidence || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Data confidence</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="LOW">LOW</option>
-                </select>
-                <select
-                  name="curator"
-                  defaultValue={sp.curator || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Curator status</option>
-                  <option value="AUTO_MATCHED">AUTO_MATCHED</option>
-                  <option value="NEEDS_REVIEW">NEEDS_REVIEW</option>
-                  <option value="APPROVED">APPROVED</option>
-                  <option value="REJECTED">REJECTED</option>
-                  <option value="SHORTLISTED">SHORTLISTED</option>
-                </select>
-                <Input
-                  name="city"
-                  placeholder="City"
-                  defaultValue={sp.city || ""}
-                  className="h-8 w-[120px]"
-                />
-                <select
-                  name="language"
-                  defaultValue={sp.language || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Language</option>
-                  <option value="English">English</option>
-                  <option value="Italian">Italian</option>
-                </select>
-                <select
-                  name="publicPrivate"
-                  defaultValue={sp.publicPrivate || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Public / Private</option>
-                  <option value="PUBLIC">Public</option>
-                  <option value="PRIVATE">Private</option>
-                  <option value="UNKNOWN">Unknown</option>
-                </select>
-                <select
-                  name="accessMode"
-                  defaultValue={sp.accessMode || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Access</option>
-                  <option value="OPEN">Open</option>
-                  <option value="CLOSED">Closed</option>
-                  <option value="UNKNOWN">Unknown</option>
-                </select>
-                <select
-                  name="hasExam"
-                  defaultValue={sp.hasExam || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Exams</option>
-                  <option value="ANY">Any exam</option>
-                  <option value="NONE">No exam listed</option>
-                  <option value="TOLC">TOLC</option>
-                  <option value="SAT">SAT</option>
-                  <option value="IELTS">IELTS</option>
-                </select>
-                <select
-                  name="callFreshness"
-                  defaultValue={sp.callFreshness || ""}
-                  className="h-8 rounded-xl border border-input bg-card px-2 text-[13px]"
-                >
-                  <option value="">Call freshness</option>
-                  <option value="current">Current year</option>
-                  <option value="indicative">Indicative</option>
-                  <option value="unknown">Unknown</option>
-                </select>
-                <Button type="submit" size="sm" variant="outline">
-                  Apply
-                </Button>
-              </form>
             </CardContent>
           </Card>
             </div>
