@@ -444,10 +444,10 @@ export function CuratorProgramLevelsCard({
           <div className="flex min-w-0 items-start gap-3">
             <UniversityMonogram name={match.universityName} size="sm" />
             <div className="min-w-0">
-              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
+              <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
                 {match.universityName}
               </h3>
-              <p className="text-[13px] font-medium">{match.programName}</p>
+              <p className="text-[13px] font-medium text-foreground">{match.programName}</p>
               <p className="mt-1 flex flex-wrap gap-x-2 text-[13px] text-muted-foreground">
                 {match.city ? (
                   <span className="inline-flex items-center gap-1">
@@ -462,8 +462,8 @@ export function CuratorProgramLevelsCard({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="surface-chip rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--brand)]">
-              Совпадение {match.fitScore}/100
+            <span className="rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-semibold tabular-nums text-[var(--brand-fg)]">
+              {match.fitScore}/100
             </span>
             <Badge variant={match.onShortlist ? "success" : "muted"}>
               {shortlistLabel}

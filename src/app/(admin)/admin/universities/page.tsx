@@ -73,7 +73,7 @@ export default async function AdminUniversitiesPage() {
                           href={u.website}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-sky-700 hover:underline text-xs"
+                          className="text-[var(--brand-fg)] hover:underline text-xs"
                         >
                           Ссылка
                         </a>

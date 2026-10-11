@@ -98,10 +98,10 @@ export function AppointmentDetailPanel({
     appointment.status === "AWAITING_CLIENT";
 
   return (
-    <div className="rounded-lg border border-black/5 bg-white p-4">
+    <div className="surface-card p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">{appointment.title}</h3>
+          <h3 className="text-[15px] font-semibold">{appointment.title}</h3>
           <p className="text-sm text-muted-foreground">
             {appointment.subjectLabel}
           </p>
@@ -123,7 +123,7 @@ export function AppointmentDetailPanel({
         {appointment.pendingStartsAt ? (
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">Предложено</dt>
-            <dd className="text-amber-800">
+            <dd className="font-medium text-[var(--warning-fg)]">
               {formatWhen(appointment.pendingStartsAt)}
             </dd>
           </div>
@@ -175,10 +175,10 @@ export function AppointmentDetailPanel({
                   setStartsAt("");
                   setConfirmOpen(false);
                 }}
-                className={`rounded-full px-3 py-1.5 text-[13px] ${
+                className={`rounded-[var(--radius-badge)] px-3 py-1.5 text-[13px] font-medium ${
                   selectedDay === d.key
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-[var(--brand-soft)] text-[var(--brand-fg)] ring-1 ring-[var(--brand-muted)]"
+                    : "bg-muted text-[var(--text-secondary)]"
                 }`}
               >
                 {d.label}
@@ -196,10 +196,10 @@ export function AppointmentDetailPanel({
                   setStartsAt(slot.startsAt);
                   setConfirmOpen(false);
                 }}
-                className={`rounded-md border px-3 py-1.5 text-[13px] ${
+                className={`rounded-[var(--radius-control)] border px-3 py-1.5 text-[13px] ${
                   startsAt === slot.startsAt
-                    ? "border-primary bg-primary/10"
-                    : "border-black/10"
+                    ? "border-[var(--brand-muted)] bg-[var(--brand-soft)] text-[var(--brand-fg)]"
+                    : "border-border bg-card"
                 }`}
               >
                 {new Date(slot.startsAt).toLocaleTimeString("ru-RU", {
@@ -212,7 +212,7 @@ export function AppointmentDetailPanel({
           </div>
 
           {confirmOpen && startsAt ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            <div className="panel-attention p-3 text-sm">
               <p className="font-medium">Подтвердите перенос</p>
               <p className="mt-1">
                 {appointment.subjectLabel}: {formatWhen(currentIso)} →{" "}

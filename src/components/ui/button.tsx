@@ -4,22 +4,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--radius-control)] text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-[var(--brand-hover)]",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-[#ebebf0]",
-        outline: "border border-border bg-card text-foreground hover:bg-muted",
-        ghost: "text-foreground hover:bg-muted",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        link: "text-[var(--brand)] underline-offset-4 hover:underline",
+        default:
+          "bg-primary text-primary-foreground hover:bg-[var(--brand-hover)] shadow-sm",
+        secondary:
+          "border border-border bg-secondary text-secondary-foreground hover:bg-muted",
+        outline:
+          "border border-border bg-card text-foreground hover:bg-muted",
+        ghost: "text-[var(--text-secondary)] hover:bg-muted hover:text-foreground",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:opacity-90",
+        link: "text-[var(--brand-fg)] underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 rounded-full px-3 text-[13px]",
-        lg: "h-11 rounded-full px-5",
-        icon: "h-10 w-10",
+        default: "h-9 px-3.5 py-2",
+        sm: "h-8 rounded-[var(--radius-control)] px-2.5 text-[13px]",
+        lg: "h-10 rounded-[var(--radius)] px-4 text-[15px]",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {

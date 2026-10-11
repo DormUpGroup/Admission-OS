@@ -62,7 +62,7 @@ export function AdminShell({
             onClick={() => setMenuOpen(false)}
           />
           <AppSidebar
-            className="relative z-10 h-full w-[min(86vw,280px)] rounded-none shadow-2xl"
+            className="relative z-10 h-full w-[min(86vw,280px)] shadow-lg"
             onNavigate={() => setMenuOpen(false)}
             {...sidebarProps}
           />
@@ -72,14 +72,14 @@ export function AdminShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            "surface-glass z-20 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-black/5 px-3 pt-[env(safe-area-inset-top)] md:px-6",
+            "z-20 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-[var(--divider)] bg-card/90 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md md:px-6",
             mobileChat && "max-md:hidden",
           )}
         >
           <div className="flex min-w-0 items-center gap-1">
             <button
               type="button"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground md:hidden"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-foreground hover:bg-muted md:hidden"
               aria-label="Открыть меню"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen(true)}
@@ -96,7 +96,7 @@ export function AdminShell({
           <form action={logoutAction} className="shrink-0">
             <button
               type="submit"
-              className="min-h-11 px-2 text-[13px] text-muted-foreground hover:text-[var(--brand)]"
+              className="min-h-10 rounded-[var(--radius-control)] px-2.5 text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-muted hover:text-foreground"
             >
               Выйти
               {userName ? (

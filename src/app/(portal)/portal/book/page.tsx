@@ -18,7 +18,7 @@ export default async function PortalBookPage() {
       </div>
 
       {upcoming ? (
-        <div className="surface-card rounded-2xl p-5">
+        <div className="surface-card p-5">
           <p className="text-[13px] text-muted-foreground">{upcoming.title}</p>
           <p className="mt-1 text-[20px] font-semibold tracking-tight">
             {formatSlotLabel(upcoming.startsAt, upcoming.timezone)}

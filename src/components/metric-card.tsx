@@ -19,6 +19,13 @@ const valueTone = {
   ok: "text-[var(--ok-fg)]",
 };
 
+const surfaceTone = {
+  neutral: "",
+  danger: "border-[color-mix(in_srgb,var(--danger)_22%,var(--border))]",
+  warning: "border-[color-mix(in_srgb,var(--warning)_22%,var(--border))]",
+  ok: "border-[color-mix(in_srgb,var(--ok)_22%,var(--border))]",
+};
+
 export function MetricCard({
   label,
   value,
@@ -31,7 +38,7 @@ export function MetricCard({
   const content = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
+        <p className="text-[12px] font-medium text-[var(--text-secondary)]">
           {label}
         </p>
         {href ? (
@@ -40,20 +47,21 @@ export function MetricCard({
       </div>
       <p
         className={cn(
-          "mt-2 text-[28px] font-semibold tracking-tight tabular-nums",
+          "mt-1.5 text-[26px] font-semibold tracking-tight tabular-nums leading-none",
           valueTone[tone]
         )}
       >
         {value}
       </p>
       {hint ? (
-        <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+        <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
       ) : null}
     </>
   );
 
   const classes = cn(
-    "group block surface-card p-4 transition-shadow",
+    "group block rounded-[var(--radius-card)] border border-border bg-card p-4 transition-[box-shadow,border-color]",
+    surfaceTone[tone],
     (href || onClick) && "surface-card-hover cursor-pointer",
     className
   );

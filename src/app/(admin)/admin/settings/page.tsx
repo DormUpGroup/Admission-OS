@@ -54,9 +54,9 @@ export default async function AdminSettingsPage({
       />
 
       {query.error ? (
-        <p className="rounded-2xl border border-[var(--danger)] bg-[var(--danger-bg)]/40 px-4 py-2 text-sm text-[var(--danger-fg)]">
+        <div className="panel-danger px-4 py-2 text-sm" role="alert">
           {query.error}
-        </p>
+        </div>
       ) : null}
 
       <div className="flex items-start gap-3">

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { FilterPills } from "@/components/filter-pills";
 import { StatusBadge } from "@/components/status-badge";
 import { RiskBadge } from "@/components/risk-badge";
 import { ProgressBar } from "@/components/progress-bar";
@@ -16,7 +17,7 @@ import {
   DataTableHeader,
   DataTableRow,
 } from "@/components/data-table";
-import { cn, formatDate, fullName } from "@/lib/utils";
+import { formatDate, fullName } from "@/lib/utils";
 import { RISK_ORDER } from "@/server/services/readiness";
 import type { Prisma } from "@prisma/client";
 import type { RiskLevel } from "@/lib/enums";
@@ -230,24 +231,16 @@ export default async function AdminApplicationsPage({
         description={`${applications.length} в текущем виде`}
       />
 
-      <div className="flex flex-wrap gap-1.5">
-        {VIEWS.map((v) => (
-          <Link
-            key={v.id}
-            href={hrefForView(v.id)}
-            className={cn(
-              "rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors",
-              view === v.id
-                ? "border-[var(--brand-muted)] bg-[var(--brand-soft)] text-[var(--brand)]"
-                : "border-border bg-card text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </div>
+      <FilterPills
+        activeId={view}
+        items={VIEWS.map((v) => ({
+          id: v.id,
+          label: v.label,
+          href: hrefForView(v.id),
+        }))}
+      />
 
-      <form className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
+      <form className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-3">
         <input type="hidden" name="view" value={view} />
         <div className="space-y-1 sm:col-span-2 lg:col-span-1">
           <label className="text-[11px] text-muted-foreground">Поиск</label>

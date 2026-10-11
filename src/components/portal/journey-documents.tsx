@@ -9,7 +9,7 @@ export function JourneyDocuments({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
+      <h2 className="text-[18px] font-semibold tracking-tight text-foreground">
         Документы
       </h2>
       <div className="surface-card px-5 py-4">

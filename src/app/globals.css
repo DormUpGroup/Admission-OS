@@ -1,60 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  /* Light airy — muted slate-blue accent, no heavy fills */
-  --brand: #4a6b8a;
-  --brand-hover: #3e5a75;
-  --brand-soft: #f4f6f8;
-  --brand-muted: #e6ebf0;
-  --brand-rose: #f2f2f7;
+  /* Soft Enterprise SaaS — calm, semantic, operational */
+  --brand: #4f6d91;
+  --brand-hover: #3f5a7a;
+  --brand-soft: #edf4fc;
+  --brand-muted: #d7e4f2;
+  --brand-fg: #315d8d;
+  --brand-rose: #f1eefa;
 
-  --background: #fbfbfd;
-  --foreground: #1d1d1f;
+  --background: #f6f8fb;
+  --foreground: #1f2937;
   --card: #ffffff;
-  --card-foreground: #1d1d1f;
+  --card-foreground: #1f2937;
   --popover: #ffffff;
-  --popover-foreground: #1d1d1f;
-  --primary: #4a6b8a;
+  --popover-foreground: #1f2937;
+  --primary: #4f6d91;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f7;
-  --secondary-foreground: #1d1d1f;
-  --muted: #f5f5f7;
-  --muted-foreground: #86868b;
-  --accent: #f5f5f7;
-  --accent-foreground: #1d1d1f;
-  --destructive: #ff3b30;
+  --secondary: #f8fafc;
+  --secondary-foreground: #1f2937;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --accent: #edf4fc;
+  --accent-foreground: #315d8d;
+  --destructive: #a43848;
   --destructive-foreground: #ffffff;
-  --border: #e8e8ed;
-  --input: #d2d2d7;
-  --ring: #4a6b8a;
-  --radius: 1.25rem;
-  --radius-card: 1.5rem;
-  --radius-control: 0.875rem;
+  --border: #e2e8f0;
+  --divider: #edf1f5;
+  --input: #e2e8f0;
+  --ring: #4f6d91;
+  --text-secondary: #526173;
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.02), 0 4px 16px rgba(0, 0, 0, 0.03);
-  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.03), 0 10px 28px rgba(0, 0, 0, 0.05);
+  /* Geometry — 4px scale, restrained radii */
+  --radius: 0.625rem; /* 10px */
+  --radius-card: 0.75rem; /* 12px */
+  --radius-control: 0.5rem; /* 8px */
+  --radius-badge: 0.375rem; /* 6px */
 
-  --danger: #ff3b30;
-  --danger-bg: #fff5f4;
-  --danger-fg: #d70015;
-  --warning: #ff9f0a;
-  --warning-bg: #fff9ef;
-  --warning-fg: #9a6700;
-  --ok: #34c759;
-  --ok-bg: #f0faf3;
-  --ok-fg: #1f8a3b;
-  --info: #86868b;
-  --info-bg: #f5f5f7;
-  --info-fg: #6e6e73;
+  --shadow-card: 0 1px 2px rgba(31, 41, 55, 0.04);
+  --shadow-card-hover: 0 2px 8px rgba(31, 41, 55, 0.06);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
 
+  /* Semantic status */
+  --danger: #a43848;
+  --danger-bg: #fceced;
+  --danger-fg: #a43848;
+  --warning: #926000;
+  --warning-bg: #fff3dd;
+  --warning-fg: #926000;
+  --ok: #23764b;
+  --ok-bg: #eaf6ef;
+  --ok-fg: #23764b;
+  --info: #4f6d91;
+  --info-bg: #edf4fc;
+  --info-fg: #315d8d;
+  --purple: #6852a0;
+  --purple-bg: #f1eefa;
+  --purple-fg: #6852a0;
+
+  /* Sidebar */
   --sidebar: #ffffff;
-  --sidebar-foreground: #1d1d1f;
-  --sidebar-muted: #fbfbfd;
-  --sidebar-border: #ececf0;
-  --sidebar-accent: #f5f5f7;
-  --sidebar-accent-foreground: #1d1d1f;
-  --sidebar-active: #f5f5f7;
-  --sidebar-active-foreground: #1d1d1f;
+  --sidebar-foreground: #1f2937;
+  --sidebar-muted: #f8fafc;
+  --sidebar-border: #e2e8f0;
+  --sidebar-accent: #f8fafc;
+  --sidebar-accent-foreground: #1f2937;
+  --sidebar-active: #edf4fc;
+  --sidebar-active-foreground: #315d8d;
+  --sidebar-active-indicator: #4f6d91;
+
+  /* Spacing scale (reference) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
 }
 
 @theme inline {
@@ -75,12 +96,15 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-divider: var(--divider);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-soft: var(--brand-soft);
   --color-brand-muted: var(--brand-muted);
+  --color-brand-fg: var(--brand-fg);
+  --color-text-secondary: var(--text-secondary);
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
   --color-danger-fg: var(--danger-fg);
@@ -93,6 +117,9 @@
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
   --color-info-fg: var(--info-fg);
+  --color-purple: var(--purple);
+  --color-purple-bg: var(--purple-bg);
+  --color-purple-fg: var(--purple-fg);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
@@ -101,12 +128,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-active-foreground: var(--sidebar-active-foreground);
-  --radius-sm: var(--radius-control);
-  --radius-md: var(--radius);
-  --radius-lg: var(--radius-card);
-  --radius-xl: calc(var(--radius-card) + 0.25rem);
-  --radius-2xl: calc(var(--radius-card) + 0.5rem);
-  --radius-3xl: 1.75rem;
+  --radius-sm: var(--radius-badge);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: calc(var(--radius-card) + 0.125rem);
+  --radius-3xl: calc(var(--radius-card) + 0.25rem);
   --shadow-card: var(--shadow-card);
   --shadow-card-hover: var(--shadow-card-hover);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -133,8 +160,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.47;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -153,16 +180,36 @@ h1,
 h2,
 h3,
 h4 {
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   font-weight: 600;
-}
-
-::selection {
-  background: color-mix(in srgb, var(--brand) 16%, white);
   color: var(--foreground);
 }
 
-/* Flat surface utilities — names kept for compatibility */
+h1 {
+  font-size: 1.625rem; /* 26px */
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.35;
+}
+
+h3 {
+  font-size: 0.9375rem; /* 15px */
+  line-height: 1.4;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand) 18%, white);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: none;
+}
+
+/* ——— Surfaces ——— */
 .surface-card {
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
@@ -171,40 +218,42 @@ h4 {
   overflow: hidden;
 }
 
-/* A confirmed open-admission programme is easier to scan in a shortlist. */
 .surface-card--open-admission {
-  border-color: #86d9a2;
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
 }
 
 .surface-card-hover {
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .surface-card-hover:hover {
-  transform: translateY(-1px);
   box-shadow: var(--shadow-card-hover);
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--border));
 }
 
 .surface-well {
   background: var(--muted);
+  border-radius: var(--radius);
   box-shadow: none;
 }
 
 .surface-glass {
-  background: rgba(251, 251, 253, 0.78);
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
   box-shadow: none;
 }
 
 .surface-icon {
-  background: var(--muted);
+  background: var(--brand-soft);
+  color: var(--brand-fg);
   box-shadow: none;
 }
 
 .surface-chip {
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-fg);
+  border-radius: var(--radius-badge);
   box-shadow: none;
 }
 
@@ -218,9 +267,44 @@ h4 {
   box-shadow: none;
 }
 
+.surface-section {
+  border-top: 1px solid var(--divider);
+}
+
+/* ——— Attention / alert panels ——— */
+.panel-attention {
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--border));
+  background: var(--warning-bg);
+  border-radius: var(--radius);
+  color: var(--warning-fg);
+}
+
+.panel-danger {
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  background: var(--danger-bg);
+  border-radius: var(--radius);
+  color: var(--danger-fg);
+}
+
+.panel-ok {
+  border: 1px solid color-mix(in srgb, var(--ok) 28%, var(--border));
+  background: var(--ok-bg);
+  border-radius: var(--radius);
+  color: var(--ok-fg);
+}
+
+.panel-info {
+  border: 1px solid color-mix(in srgb, var(--info) 28%, var(--border));
+  background: var(--info-bg);
+  border-radius: var(--radius);
+  color: var(--info-fg);
+}
+
+/* Legacy enamel aliases — map to current tokens */
 .btn-enamel {
   background: var(--brand);
   color: #fff;
+  border-radius: var(--radius-control);
   text-shadow: none;
   box-shadow: none;
 }
@@ -238,12 +322,14 @@ h4 {
 .btn-enamel-secondary {
   background: var(--secondary);
   color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   text-shadow: none;
   box-shadow: none;
 }
 
 .btn-enamel-secondary:hover {
-  background: #ebebf0;
+  background: var(--muted);
 }
 
 .btn-enamel-secondary:active {
@@ -255,6 +341,7 @@ h4 {
   background: var(--card);
   border: 1px solid var(--border);
   color: var(--foreground);
+  border-radius: var(--radius-control);
   text-shadow: none;
   box-shadow: none;
 }
@@ -271,6 +358,7 @@ h4 {
 .btn-enamel-danger {
   background: var(--destructive);
   color: #fff;
+  border-radius: var(--radius-control);
   text-shadow: none;
   box-shadow: none;
 }
@@ -278,8 +366,8 @@ h4 {
 .nav-enamel-active,
 [data-state="active"].enamel-when-active,
 [data-state="checked"].enamel-when-checked {
-  background: var(--muted);
-  color: var(--foreground);
+  background: var(--sidebar-active);
+  color: var(--sidebar-active-foreground);
   text-shadow: none;
   box-shadow: none;
 }
@@ -305,4 +393,76 @@ h4 {
 
 .match-step-spin {
   animation: match-step-spin 0.8s linear infinite;
+}
+
+/* Tabular numbers utility for metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ——— Messenger (Soft Enterprise) ——— */
+.messenger-shell {
+  background: var(--background);
+}
+
+.messenger-sidebar {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.messenger-thread {
+  background: color-mix(in srgb, var(--background) 88%, var(--brand-soft));
+}
+
+.messenger-composer {
+  border-color: var(--divider);
+  background: var(--card);
+}
+
+.messenger-search {
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.messenger-search:focus {
+  background: var(--card);
+  border-color: var(--brand-muted);
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.messenger-list-item {
+  border-color: var(--divider);
+}
+
+.messenger-list-item[data-selected="true"] {
+  background: var(--brand-soft);
+}
+
+.messenger-list-item:not([data-selected="true"]):hover {
+  background: var(--muted);
+}
+
+.messenger-bubble-in {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: var(--radius-badge);
+  box-shadow: none;
+}
+
+.messenger-bubble-out {
+  background: var(--brand-soft);
+  color: var(--foreground);
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border));
+  border-bottom-right-radius: var(--radius-badge);
+  box-shadow: none;
+}
+
+.messenger-system {
+  background: var(--muted);
+  color: var(--text-secondary);
+  border-radius: 999px;
 }

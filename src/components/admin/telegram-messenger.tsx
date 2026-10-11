@@ -21,6 +21,7 @@ import {
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
 import { cn, formatDate } from "@/lib/utils";
+import { plainTelegramPreview } from "@/lib/telegram-html";
 import {
   pauseTelegramAutomationAction,
   promoteLeadToStudentAction,
@@ -158,12 +159,7 @@ function formatListTime(iso: string | null) {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
-      size="sm"
-      disabled={pending}
-      className="h-9 shrink-0 rounded-full px-4"
-    >
+    <Button type="submit" size="sm" disabled={pending} className="h-9 shrink-0 px-4">
       {pending ? "…" : "Отправить"}
     </Button>
   );
@@ -308,7 +304,7 @@ export function TelegramMessenger({
         item.id === id
           ? {
               ...item,
-              preview: last.body || "—",
+              preview: plainTelegramPreview(last.body),
               previewAt: last.createdAt,
               undelivered:
                 outbound &&
@@ -551,7 +547,7 @@ export function TelegramMessenger({
           c.id === activeId
             ? {
                 ...c,
-                preview: body,
+                preview: plainTelegramPreview(body),
                 previewAt: optimistic.createdAt,
                 undelivered: true,
                 deliveryStatus: "PENDING",
@@ -658,15 +654,15 @@ export function TelegramMessenger({
   }
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-[#eef2f5]">
+    <div className="messenger-shell flex h-full min-h-0 overflow-hidden">
       <aside
         className={cn(
-          "flex w-full shrink-0 flex-col border-r border-black/10 bg-white md:max-w-[360px]",
+          "messenger-sidebar flex w-full shrink-0 flex-col border-r md:max-w-[340px]",
           openOnMobile && "max-md:hidden",
         )}
       >
-        <div className="space-y-2 border-b border-black/5 p-3">
-          <div className="flex gap-1 rounded-lg bg-muted/70 p-0.5">
+        <div className="space-y-2 border-b border-[var(--divider)] p-3">
+          <div className="flex gap-1 rounded-[var(--radius-control)] bg-muted p-0.5">
             {(
               [
                 ["technical", "Лиды", technicalCount],
@@ -678,14 +674,14 @@ export function TelegramMessenger({
                 key={id}
                 href={folderHref(id)}
                 className={cn(
-                  "min-w-0 flex-1 rounded-md px-1 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:text-[12px]",
+                  "min-w-0 flex-1 rounded-[var(--radius-badge)] px-1 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:text-[12px]",
                   folder === id
-                    ? "bg-white text-foreground shadow-sm"
+                    ? "bg-card text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {label}
-                <span className="ml-1 text-[11px] text-muted-foreground">
+                <span className="ml-1 tabular-nums text-[11px] text-muted-foreground">
                   {count}
                 </span>
               </Link>
@@ -696,7 +692,7 @@ export function TelegramMessenger({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"
-            className="w-full rounded-full border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none ring-0 placeholder:text-muted-foreground focus:bg-muted"
+            className="messenger-search w-full px-3 py-2 text-[13px] outline-none placeholder:text-muted-foreground"
           />
         </div>
 
@@ -719,10 +715,8 @@ export function TelegramMessenger({
                   key={c.id}
                   type="button"
                   onClick={() => selectConversation(c.id)}
-                  className={cn(
-                    "flex w-full gap-3 border-b border-black/5 px-3 py-2.5 text-left transition-colors",
-                    selected ? "bg-[var(--brand-soft)]" : "hover:bg-muted/50",
-                  )}
+                  data-selected={selected ? "true" : "false"}
+                  className="messenger-list-item flex w-full gap-3 border-b px-3 py-2.5 text-left transition-colors"
                 >
                   <StudentAvatar name={c.title} size="lg" className="mt-0.5" />
                   <div className="min-w-0 flex-1">
@@ -730,7 +724,7 @@ export function TelegramMessenger({
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span
                           className={cn(
-                            "truncate text-[15px] text-foreground",
+                            "truncate text-[14px] text-foreground",
                             c.unread ? "font-semibold" : "font-medium",
                           )}
                         >
@@ -739,7 +733,9 @@ export function TelegramMessenger({
                         <span
                           className={cn(
                             "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-white",
-                            c.automationPaused ? "bg-neutral-300" : "bg-emerald-500",
+                            c.automationPaused
+                              ? "bg-[var(--muted-foreground)]"
+                              : "bg-[var(--ok)]",
                           )}
                           title={c.automationPaused ? "Бот выключен" : "Бот включён"}
                           aria-label={c.automationPaused ? "Бот выключен" : "Бот включён"}
@@ -749,9 +745,9 @@ export function TelegramMessenger({
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 text-[12px]",
+                          "shrink-0 text-[11px] tabular-nums",
                           c.unread
-                            ? "font-medium text-[var(--brand)]"
+                            ? "font-medium text-[var(--brand-fg)]"
                             : "text-muted-foreground",
                         )}
                       >
@@ -762,7 +758,14 @@ export function TelegramMessenger({
                       <span className="shrink-0 text-[11px] text-muted-foreground">
                         {platformPresenceLabel(c.onPlatform)}
                       </span>
-                      <p className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+                      <p
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-[12px]",
+                          c.unread
+                            ? "font-medium text-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
                         {c.preview || "—"}
                       </p>
                       <UnreadBadge count={c.unread ? 1 : 0} />
@@ -789,7 +792,7 @@ export function TelegramMessenger({
 
       <section
         className={cn(
-          "min-w-0 flex-1 flex-col bg-[#e6ebee]",
+          "messenger-thread min-w-0 flex-1 flex-col",
           openOnMobile ? "flex" : "hidden md:flex",
         )}
       >
@@ -803,10 +806,10 @@ export function TelegramMessenger({
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2">
+            <header className="flex items-center gap-2 border-b border-[var(--divider)] bg-card px-3 py-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2.5">
               <button
                 type="button"
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-lg hover:bg-muted md:hidden"
                 aria-label="К списку диалогов"
                 onClick={() => {
                   setOpenOnMobile(false);
@@ -842,7 +845,9 @@ export function TelegramMessenger({
                     type="button"
                     className={cn(
                       "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white disabled:opacity-60",
-                      active.automationPaused ? "bg-neutral-300" : "bg-emerald-500",
+                      active.automationPaused
+                        ? "bg-[var(--muted-foreground)]"
+                        : "bg-[var(--ok)]",
                     )}
                     disabled={resuming}
                     aria-label={active.automationPaused ? "Включить Бота" : "Выключить Бота"}
@@ -865,7 +870,7 @@ export function TelegramMessenger({
               {active.studentId ? (
                 <Link
                   href={`/admin/students/${active.studentId}`}
-                  className="hidden shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px] md:inline-flex"
+                  className="hidden shrink-0 rounded-[var(--radius-control)] border border-border px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
                 >
                   Профиль
                 </Link>
@@ -873,7 +878,7 @@ export function TelegramMessenger({
                 <>
                   <Link
                     href={`/admin/leads/${active.leadId}`}
-                    className="hidden shrink-0 rounded-full border border-border px-3 py-1.5 text-[12px] md:inline-flex"
+                    className="hidden shrink-0 rounded-[var(--radius-control)] border border-border px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-muted hover:text-foreground md:inline-flex"
                   >
                     Профиль
                   </Link>
@@ -893,7 +898,7 @@ export function TelegramMessenger({
                     </p>
                   ) : null}
                   {promoteWarning ? (
-                    <p className="hidden max-w-[14rem] text-right text-[12px] text-amber-700 md:block" role="status">
+                    <p className="hidden max-w-[14rem] text-right text-[12px] text-[var(--warning-fg)] md:block" role="status">
                       {promoteWarning}
                     </p>
                   ) : null}
@@ -915,7 +920,7 @@ export function TelegramMessenger({
 
             <div
               ref={scrollRef}
-              className="flex-1 space-y-0.5 overflow-y-auto px-4 py-3"
+              className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3 sm:px-4"
             >
               {threadLoading && active.messages.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
@@ -929,7 +934,7 @@ export function TelegramMessenger({
                 if (command && !outbound) {
                   return (
                     <div key={m.id} className="flex justify-center py-1">
-                      <span className="rounded-full bg-black/5 px-3 py-1 text-[12px] text-muted-foreground">
+                      <span className="messenger-system px-3 py-1 text-[11px]">
                         {m.body}
                       </span>
                     </div>
@@ -980,24 +985,24 @@ export function TelegramMessenger({
                     className={cn(
                       "flex items-end gap-1.5",
                       outbound ? "justify-end" : "justify-start",
-                      startCluster && i > 0 ? "mt-2" : null,
+                      startCluster && i > 0 ? "mt-2.5" : null,
                     )}
                   >
                     {!outbound ? avatar : null}
                     <div
                       className={cn(
-                        "max-w-[min(85%,420px)] rounded-xl px-3 py-2 text-[14px] leading-relaxed shadow-sm",
+                        "max-w-[min(85%,440px)] rounded-[var(--radius)] px-3 py-2 text-[13px] leading-relaxed",
                         outbound
-                          ? "rounded-br-sm bg-[var(--brand-soft)] text-foreground"
-                          : "rounded-bl-sm bg-white text-foreground",
+                          ? "messenger-bubble-out"
+                          : "messenger-bubble-in",
                       )}
                     >
                       <MessageParagraphs body={m.body} />
                       <div
                         className={cn(
-                          "mt-0.5 flex items-center justify-end gap-1.5 text-[11px]",
+                          "mt-1 flex items-center justify-end gap-1.5 text-[10px] tabular-nums",
                           outbound
-                            ? "text-foreground/55"
+                            ? "text-[var(--brand-fg)]/70"
                             : "text-muted-foreground",
                         )}
                       >
@@ -1007,7 +1012,7 @@ export function TelegramMessenger({
                         ) : null}
                       </div>
                       {m.attemptError ? (
-                        <p className="mt-0.5 text-[11px] text-red-700">
+                        <p className="mt-1 text-[11px] text-[var(--danger-fg)]">
                           {m.attemptError}
                         </p>
                       ) : null}
@@ -1018,15 +1023,15 @@ export function TelegramMessenger({
               })}
             </div>
 
-            <div className="border-t border-black/10 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="messenger-composer border-t px-3 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
               {active.replyDraft ? (
-                <div className="mb-1 flex items-center justify-between gap-2 px-1">
-                  <p className="text-[11px] text-muted-foreground">
+                <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+                  <p className="text-[11px] text-[var(--warning-fg)]">
                     Черновик — измените текст или удалите
                   </p>
                   <button
                     type="button"
-                    className="shrink-0 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                    className="shrink-0 text-[11px] font-medium text-[var(--text-secondary)] underline-offset-2 hover:underline"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => void deleteDraft()}
                   >
@@ -1046,7 +1051,7 @@ export function TelegramMessenger({
                   required
                   value={composer}
                   placeholder="Напишите клиенту…"
-                  className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-base outline-none placeholder:text-muted-foreground focus:bg-muted md:min-h-9 md:text-sm"
+                  className="max-h-32 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-[var(--radius-control)] border border-transparent bg-muted px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus:border-[var(--brand-muted)] focus:bg-card focus:shadow-[var(--shadow-focus)] md:min-h-9 md:text-[13px]"
                   ref={composerRef}
                   onChange={(e) => {
                     draftLock.current = "editing";

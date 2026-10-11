@@ -25,13 +25,15 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="surface-card w-full max-w-md rounded-[28px] p-8">
+      <div className="w-full max-w-md rounded-[var(--radius-card)] border border-border bg-card p-8 shadow-[var(--shadow-card)]">
         <div className="mb-8">
           <BrandLogo size="lg" priority className="mb-4" />
-          <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground">
             Система поступлений
           </h1>
-          <p className="mt-1 text-[15px] text-muted-foreground">Войдите, чтобы продолжить</p>
+          <p className="mt-1 text-[14px] text-[var(--text-secondary)]">
+            Войдите, чтобы продолжить
+          </p>
         </div>
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-2">

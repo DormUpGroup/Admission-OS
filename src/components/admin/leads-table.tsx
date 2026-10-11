@@ -115,7 +115,7 @@ export function LeadsTable({ rows, query }: { rows: LeadListRow[]; query: string
       {error ? (
         <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
           <div
-            className="surface-card flex w-full max-w-md items-center justify-between gap-3 rounded-full px-4 py-3 shadow-lg"
+            className="surface-card flex w-full max-w-md items-center justify-between gap-3 px-4 py-3 shadow-lg"
             role="alert"
           >
             <p className="text-[14px] text-[var(--danger-fg)]">{error}</p>

@@ -9,12 +9,7 @@ import { Button } from "@/components/ui/button";
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
-      size="sm"
-      disabled={pending}
-      className="h-9 shrink-0 rounded-full px-4"
-    >
+    <Button type="submit" size="sm" disabled={pending} className="h-9 shrink-0 px-4">
       {pending ? "…" : "Отправить"}
     </Button>
   );
@@ -41,7 +36,7 @@ export function SiteInboxReplyForm({ studentId }: { studentId: string }) {
         required
         maxLength={2000}
         placeholder="Написать студенту…"
-        className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border-0 bg-muted/80 px-3.5 py-2 text-base outline-none placeholder:text-muted-foreground focus:bg-muted md:min-h-9 md:text-sm"
+        className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-[var(--radius-control)] border border-transparent bg-muted px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus:border-[var(--brand-muted)] focus:bg-card focus:shadow-[var(--shadow-focus)] md:min-h-9 md:text-[13px]"
         onInput={(e) => {
           const el = e.currentTarget;
           el.style.height = "auto";

@@ -17,7 +17,6 @@ import {
   needsChangesAction,
   addManualProgramMatchAction,
 } from "@/server/actions";
-import { PageHeader } from "@/components/page-header";
 import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { PlatformPresenceBadge } from "@/components/platform-presence-badge";
@@ -383,48 +382,103 @@ export default async function StudentProfilePage({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 sm:gap-4">
         <StudentAvatar
           firstName={student.firstName}
           lastName={student.lastName}
           size="lg"
         />
-        <div className="min-w-0 flex-1">
-          <PageHeader
-            title={fullName(student.firstName, student.lastName)}
-            description={`${student.email}${
-              student.country ? ` · ${student.country}` : ""
-            }${student.curator ? ` · Куратор: ${student.curator.name}` : ""} · ${
-              labelOf(student.studyLevel)
-            } · Набор ${student.intake}${
-              student.targetField ? ` · ${student.targetField}` : ""
-            } · Анкета: ${questionnaireDone ? "заполнена" : "не заполнена"}`}
-            actions={
-              <>
-                <PlatformPresenceBadge hasAccount={hasPlatformAccount(student.userId)} />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-[24px] font-semibold tracking-tight text-foreground sm:text-[26px]">
+                  {fullName(student.firstName, student.lastName)}
+                </h1>
                 <StatusBadge status={student.status} kind="student" />
                 <RiskBadge level={student.riskLevel} />
-                <Button asChild size="sm" variant="outline">
-                  <Link href={`/admin/students/${studentId}?tab=applications`}>
-                    Подачи
-                  </Link>
-                </Button>
-              </>
-            }
-          />
+                <PlatformPresenceBadge
+                  hasAccount={hasPlatformAccount(student.userId)}
+                />
+              </div>
+              <dl className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-[var(--text-secondary)]">
+                <div>
+                  <dt className="sr-only">Email</dt>
+                  <dd>{student.email}</dd>
+                </div>
+                {student.curator ? (
+                  <div>
+                    <dt className="inline text-muted-foreground">Куратор: </dt>
+                    <dd className="inline font-medium text-foreground">
+                      {student.curator.name}
+                    </dd>
+                  </div>
+                ) : (
+                  <div>
+                    <dt className="inline text-muted-foreground">Куратор: </dt>
+                    <dd className="inline">не назначен</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="inline text-muted-foreground">Уровень: </dt>
+                  <dd className="inline">{labelOf(student.studyLevel)}</dd>
+                </div>
+                <div>
+                  <dt className="inline text-muted-foreground">Набор: </dt>
+                  <dd className="inline">{student.intake}</dd>
+                </div>
+                {student.targetField ? (
+                  <div>
+                    <dt className="inline text-muted-foreground">Направление: </dt>
+                    <dd className="inline">{student.targetField}</dd>
+                  </div>
+                ) : null}
+                {student.country ? (
+                  <div>
+                    <dt className="inline text-muted-foreground">Страна: </dt>
+                    <dd className="inline">{student.country}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="inline text-muted-foreground">Анкета: </dt>
+                  <dd
+                    className={
+                      questionnaireDone
+                        ? "inline font-medium text-[var(--ok-fg)]"
+                        : "inline font-medium text-[var(--warning-fg)]"
+                    }
+                  >
+                    {questionnaireDone ? "заполнена" : "не заполнена"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button asChild size="sm">
+                <Link href={`/admin/messages/site?studentId=${studentId}`}>
+                  Написать
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/admin/students/${studentId}?tab=applications`}>
+                  Подачи
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 pb-px md:mx-0 md:gap-0 md:overflow-visible md:px-0">
+      <div className="-mx-4 flex gap-0 overflow-x-auto border-b border-[var(--divider)] px-4 md:mx-0 md:px-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={`/admin/students/${studentId}?tab=${t.id}`}
             className={cn(
-              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-5 py-3 text-sm font-medium transition-colors md:min-w-0 md:flex-1 md:px-4 md:text-center",
+              "relative shrink-0 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors md:min-w-0 md:flex-1 md:text-center",
               tab === t.id
-                ? "border-neutral-900 text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--brand)]"
+                : "text-[var(--text-secondary)] hover:text-foreground"
             )}
           >
             {t.label}

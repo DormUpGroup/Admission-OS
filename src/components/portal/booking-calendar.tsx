@@ -189,7 +189,7 @@ export function BookingCalendar({
             <button
               type="button"
               aria-label="Предыдущий месяц"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-[15px] disabled:opacity-35"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-border text-[15px] disabled:opacity-35"
               disabled={!canGoPrev}
               onClick={() => setView((current) => shiftMonth(current.year, current.month, -1))}
             >
@@ -198,7 +198,7 @@ export function BookingCalendar({
             <button
               type="button"
               aria-label="Следующий месяц"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-[15px] disabled:opacity-35"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-border text-[15px] disabled:opacity-35"
               disabled={!canGoNext}
               onClick={() => setView((current) => shiftMonth(current.year, current.month, 1))}
             >
@@ -207,17 +207,17 @@ export function BookingCalendar({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-black/10 bg-white">
-          <div className="grid grid-cols-7 border-b border-black/5 bg-muted/30 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        <div className="surface-card overflow-hidden">
+          <div className="grid grid-cols-7 border-b border-divider bg-muted/30 text-center text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="px-1 py-2.5">
                 {label}
               </div>
             ))}
           </div>
-          <div className="divide-y divide-black/5">
+          <div className="divide-y divide-divider">
             {Array.from({ length: grid.length / 7 }, (_, weekIndex) => (
-              <div key={weekIndex} className="grid grid-cols-7 divide-x divide-black/5">
+              <div key={weekIndex} className="grid grid-cols-7 divide-x divide-divider">
                 {grid.slice(weekIndex * 7, weekIndex * 7 + 7).map((ymd) => {
                   const inMonth = ymd.startsWith(monthPrefix);
                   const hasSlots = freeByDay.has(ymd);
@@ -233,8 +233,8 @@ export function BookingCalendar({
                       className={[
                         "relative flex min-h-[3.25rem] flex-col items-center justify-center gap-1 px-1 py-2 transition sm:min-h-[4.5rem]",
                         inMonth ? "bg-white" : "bg-muted/25 text-muted-foreground",
-                        hasSlots ? "hover:bg-primary/5" : "cursor-default opacity-45",
-                        selected ? "bg-primary/10 ring-1 ring-inset ring-primary/35" : "",
+                        hasSlots ? "hover:bg-[var(--brand-soft)]" : "cursor-default opacity-45",
+                        selected ? "bg-[var(--brand-soft)] ring-1 ring-inset ring-[var(--brand-muted)]" : "",
                         isToday && !selected ? "bg-muted/60" : "",
                       ].join(" ")}
                     >
@@ -251,7 +251,7 @@ export function BookingCalendar({
                         {dayNumber}
                       </span>
                       {hasSlots ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--ok)]" aria-hidden />
                       ) : (
                         <span className="h-1.5 w-1.5" aria-hidden />
                       )}
@@ -265,7 +265,7 @@ export function BookingCalendar({
       </div>
 
       {selectedYmd ? (
-        <div className="space-y-3 rounded-2xl border border-black/10 bg-white p-4">
+        <div className="surface-card space-y-3 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[13px] text-muted-foreground">Свободное время</p>

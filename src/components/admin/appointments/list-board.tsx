@@ -51,10 +51,10 @@ export function AppointmentsListBoard({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Имя или ник"
-        className="w-full max-w-sm rounded-full border-0 bg-white px-3.5 py-2 text-sm outline-none ring-1 ring-black/10 placeholder:text-muted-foreground focus:ring-black/20"
+        className="w-full max-w-sm rounded-[var(--radius-control)] border border-input bg-card px-3.5 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
       />
       {sorted.length === 0 ? (
-        <div className="rounded-lg border border-black/5 bg-white px-4 py-10 text-center text-sm text-muted-foreground">
+        <div className="surface-card px-4 py-10 text-center text-sm text-muted-foreground">
           {query.trim() ? "Ничего не найдено" : "Нет консультаций"}
         </div>
       ) : (
@@ -68,8 +68,8 @@ export function AppointmentsListBoard({
             <button
               type="button"
               onClick={() => onSelect(a.id)}
-              className={`w-full rounded-lg border border-black/5 px-3 py-3 text-left ${
-                active ? "bg-primary/10" : "bg-white"
+              className={`w-full rounded-[var(--radius-control)] border border-border px-3 py-3 text-left ${
+                active ? "bg-[var(--brand-soft)]" : "bg-card"
               }`}
             >
               <p className="text-[13px] text-muted-foreground">{formatWhen(whenIso)}</p>
@@ -90,9 +90,9 @@ export function AppointmentsListBoard({
         );
       })}
     </ul>
-    <div className="hidden overflow-x-auto rounded-lg border border-black/5 bg-white md:block">
+    <div className="surface-card hidden overflow-x-auto md:block">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-black/5 text-[12px] text-muted-foreground">
+        <thead className="border-b border-divider text-[12px] text-muted-foreground">
           <tr>
             <th className="px-3 py-2.5 font-medium">Когда (Rome)</th>
             <th className="px-3 py-2.5 font-medium">Клиент</th>
@@ -107,8 +107,8 @@ export function AppointmentsListBoard({
             return (
               <tr
                 key={a.id}
-                className={`cursor-pointer border-b border-black/5 last:border-0 ${
-                  active ? "bg-primary/10" : appointmentChipClass(a, false)
+                className={`cursor-pointer border-b border-divider last:border-0 ${
+                  active ? "bg-[var(--brand-soft)]" : appointmentChipClass(a, false)
                 }`}
                 onClick={() => onSelect(a.id)}
               >

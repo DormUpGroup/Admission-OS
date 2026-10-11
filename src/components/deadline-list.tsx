@@ -21,9 +21,9 @@ export interface DeadlineListProps {
 function urgencyClass(due: Date | string) {
   const d = typeof due === "string" ? new Date(due) : due;
   const days = daysUntil(d);
-  if (days < 0) return "text-red-600";
-  if (days <= 3) return "text-orange-600";
-  if (days <= 7) return "text-amber-600";
+  if (days < 0) return "text-[var(--danger-fg)]";
+  if (days <= 3) return "text-[var(--warning-fg)]";
+  if (days <= 7) return "text-[var(--warning-fg)]/90";
   return "text-muted-foreground";
 }
 
@@ -50,7 +50,7 @@ export function DeadlineList({
         const days = daysUntil(due);
         const row = (
           <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[28%] bg-muted text-muted-foreground">
+            <div className="surface-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
               <CalendarClock className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0 flex-1">

@@ -29,7 +29,7 @@ export function ProgressBar({
       ) : null}
       <div
         className={cn(
-          "w-full overflow-hidden rounded-full bg-muted",
+          "surface-track w-full overflow-hidden rounded-[var(--radius-badge)]",
           size === "sm" ? "h-1.5" : "h-2"
         )}
       >

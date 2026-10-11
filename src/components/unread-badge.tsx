@@ -3,7 +3,7 @@ export function UnreadBadge({ count }: { count: number }) {
   const label = count > 99 ? "99+" : String(count);
   return (
     <span
-      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] px-1.5 text-[10px] font-semibold leading-none text-white"
+      className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[var(--radius-badge)] bg-[var(--brand)] px-1.5 text-[10px] font-semibold leading-none text-white tabular-nums"
       aria-label={`${count} непрочитанных`}
     >
       {label}

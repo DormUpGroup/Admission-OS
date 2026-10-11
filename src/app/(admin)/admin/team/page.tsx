@@ -49,7 +49,9 @@ export default async function AdminTeamPage({
       />
 
       {query.error ? (
-        <p className="text-sm text-[var(--danger-fg)]">{query.error}</p>
+        <div className="panel-danger px-4 py-2 text-sm" role="alert">
+          {query.error}
+        </div>
       ) : null}
       {query.created === "1" ? (
         <p className="text-sm text-foreground">Куратор создан. Пароль знает только он.</p>

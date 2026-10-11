@@ -12,7 +12,7 @@ export function JourneyNow({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
+      <h2 className="text-[18px] font-semibold tracking-tight text-foreground">
         Сейчас важно
       </h2>
       {tasks.length === 0 ? (

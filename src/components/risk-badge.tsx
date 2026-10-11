@@ -1,28 +1,18 @@
 import { cn } from "@/lib/utils";
 import { RISK_LABELS } from "@/lib/labels";
+import {
+  statusDotClasses,
+  statusToneClasses,
+  type StatusTone,
+} from "@/lib/status-tones";
 import type { RiskLevel } from "@/lib/enums";
 
-const riskConfig: Record<RiskLevel, { className: string; dot: string }> = {
-  NONE: {
-    className: "bg-neutral-100 text-neutral-500",
-    dot: "bg-neutral-400",
-  },
-  LOW: {
-    className: "bg-neutral-100 text-neutral-600",
-    dot: "bg-neutral-400",
-  },
-  MEDIUM: {
-    className: "bg-[var(--warning-bg)] text-[var(--warning-fg)]",
-    dot: "bg-[var(--warning)]",
-  },
-  HIGH: {
-    className: "bg-orange-50 text-orange-800",
-    dot: "bg-orange-500",
-  },
-  CRITICAL: {
-    className: "bg-[var(--danger-bg)] text-[var(--danger-fg)]",
-    dot: "bg-[var(--danger)]",
-  },
+const riskTone: Record<RiskLevel, StatusTone> = {
+  NONE: "neutral",
+  LOW: "neutral",
+  MEDIUM: "warning",
+  HIGH: "warning",
+  CRITICAL: "danger",
 };
 
 export interface RiskBadgeProps {
@@ -36,20 +26,23 @@ export function RiskBadge({
   className,
   showDot = true,
 }: RiskBadgeProps) {
-  const key = (level in riskConfig ? level : "NONE") as RiskLevel;
-  const config = riskConfig[key];
+  const key = (level in riskTone ? level : "NONE") as RiskLevel;
+  const tone = riskTone[key];
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full surface-chip px-2 py-0.5 text-[11px] font-medium leading-none",
-        config.className,
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-badge)] px-2 py-0.5 text-[12px] font-medium leading-none",
+        statusToneClasses[tone],
         className
       )}
     >
-      {showDot && (
-        <span className={cn("h-1.5 w-1.5 rounded-full", config.dot)} />
-      )}
+      {showDot ? (
+        <span
+          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDotClasses[tone])}
+          aria-hidden
+        />
+      ) : null}
       {RISK_LABELS[key]}
     </span>
   );

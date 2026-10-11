@@ -121,15 +121,15 @@ export type CuratorMatchView = {
 function statusColor(status: string) {
   switch (status) {
     case "ELIGIBLE":
-      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+      return "bg-[var(--ok-bg)] text-[var(--ok-fg)]";
     case "LIKELY_ELIGIBLE":
-      return "bg-sky-50 text-sky-800 border-sky-200";
+      return "bg-[var(--info-bg)] text-[var(--info-fg)]";
     case "NEEDS_REVIEW":
-      return "bg-amber-50 text-amber-900 border-amber-200";
+      return "bg-[var(--warning-bg)] text-[var(--warning-fg)]";
     case "NOT_ELIGIBLE":
-      return "bg-rose-50 text-rose-800 border-rose-200";
+      return "bg-[var(--danger-bg)] text-[var(--danger-fg)]";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-muted text-[var(--text-secondary)]";
   }
 }
 
@@ -244,15 +244,17 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
     "Не подтверждено источником";
 
   return (
-    <article className="flex flex-col overflow-hidden surface-card">
-      <div className="flex items-start gap-3.5 border-b border-border px-5 py-4">
+    <article className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-card">
+      <div className="flex items-start gap-3 border-b border-[var(--divider)] px-4 py-3.5">
         <UniversityMonogram name={match.universityName} size="sm" />
         <div className="min-w-0 flex-1">
-          <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-foreground">
+          <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground">
             {match.universityName}
           </h3>
-          <p className="mt-0.5 text-[13px] font-medium">{match.programName}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] font-medium text-foreground">
+            {match.programName}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[var(--text-secondary)]">
             {match.city ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
@@ -263,7 +265,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               <span>Город не указан</span>
             )}
             <span>{labelOf(match.degreeLevel)}</span>
-            <span>· {match.academicYear}</span>
+            <span>{match.academicYear}</span>
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge variant="muted">
@@ -276,13 +278,13 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
             <Badge variant="muted">{accessLabel(match)}</Badge>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className="surface-chip rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--brand)]">
-            Совпадение {match.fitScore}/100
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className="rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-semibold tabular-nums text-[var(--brand-fg)]">
+            {match.fitScore}/100
           </span>
           <span
             className={cn(
-              "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              "rounded-[var(--radius-badge)] px-2 py-0.5 text-[11px] font-semibold",
               statusColor(match.eligibilityStatus)
             )}
           >
@@ -299,48 +301,48 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-4 py-3.5 text-sm">
+      <div className="flex flex-1 flex-col gap-3 px-4 py-3.5 text-[13px]">
         {match.aiEnrichment?.failed ? (
-          <p className="surface-well rounded-xl px-3 py-2 text-[13px] text-muted-foreground">
+          <p className="rounded-[var(--radius-control)] bg-muted px-3 py-2 text-[12px] text-[var(--text-secondary)]">
             Автоматическая проверка не завершена. Данные ниже требуют повторного
             обогащения или ручного подтверждения.
           </p>
         ) : null}
         {match.whyIncluded ? (
-          <p className="surface-well rounded-xl px-3 py-2 text-[13px] text-muted-foreground">
+          <p className="rounded-[var(--radius-control)] bg-muted px-3 py-2 text-[12px] text-[var(--text-secondary)]">
             {match.inclusionKind ? (
-              <span className="mr-1 font-semibold uppercase tracking-wide opacity-80">
+              <span className="mr-1 font-semibold uppercase tracking-wide text-muted-foreground">
                 {match.inclusionKind}
               </span>
             ) : null}
             {match.whyIncluded}
           </p>
         ) : null}
-        <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-2.5 text-[12px] sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">Язык преподавания</dt>
-            <dd className="font-medium">{teachingLanguage}</dd>
+            <dt className="text-[var(--text-secondary)]">Язык преподавания</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{teachingLanguage}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Требование по языку</dt>
-            <dd className="font-medium">{languageRequirement}</dd>
+            <dt className="text-[var(--text-secondary)]">Требование по языку</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{languageRequirement}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Стоимость</dt>
-            <dd className="font-medium">{tuitionLabel(match)}</dd>
+            <dt className="text-[var(--text-secondary)]">Стоимость</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{tuitionLabel(match)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Доступ</dt>
-            <dd className="font-medium">{accessLabel(match)}</dd>
-            <dd className="mt-0.5 text-muted-foreground">{selectionLabel(match)}</dd>
+            <dt className="text-[var(--text-secondary)]">Доступ</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{accessLabel(match)}</dd>
+            <dd className="mt-0.5 text-[var(--text-secondary)]">{selectionLabel(match)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Места</dt>
-            <dd className="font-medium">{seatsLabel(match)}</dd>
+            <dt className="text-[var(--text-secondary)]">Места</dt>
+            <dd className="mt-0.5 font-medium text-foreground">{seatsLabel(match)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Дедлайн</dt>
-            <dd className="font-medium">{deadlineLabel(match)}</dd>
+            <dt className="text-[var(--text-secondary)]">Дедлайн</dt>
+            <dd className="mt-0.5 font-medium tabular-nums text-foreground">{deadlineLabel(match)}</dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-muted-foreground">Экзамены</dt>
@@ -399,8 +401,8 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
           </div>
         </dl>
 
-        <details className="rounded-2xl border border-[var(--border)] bg-muted/30 px-3 py-2 text-xs">
-          <summary className="cursor-pointer font-medium text-muted-foreground">
+        <details className="rounded-[var(--radius-control)] border border-border bg-muted/40 px-3 py-2 text-[12px]">
+          <summary className="cursor-pointer font-medium text-[var(--text-secondary)]">
             Подтвердить досье (куратор)
           </summary>
           <form action={verifyProgramDossierFactsAction} className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -411,12 +413,12 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               value={match.programAcademicYearId}
             />
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Категория абитуриента</span>
+              <span className="text-[var(--text-secondary)]">Категория абитуриента</span>
               <select
                 name="applicantCategory"
                 defaultValue={match.applicantCategory || "UNKNOWN"}
                 required
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               >
                 <option value="UNKNOWN" disabled>
                   Выберите категорию
@@ -432,7 +434,7 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               </select>
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Дедлайн</span>
+              <span className="text-[var(--text-secondary)]">Дедлайн</span>
               <input
                 name="deadline"
                 type="date"
@@ -441,33 +443,33 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
                     ? new Date(match.deadline).toISOString().slice(0, 10)
                     : ""
                 }
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Стоимость мин (€, необяз.)</span>
+              <span className="text-[var(--text-secondary)]">Стоимость мин (€, необяз.)</span>
               <input
                 name="tuitionMin"
                 type="number"
                 defaultValue={match.tuitionMin ?? ""}
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Стоимость макс (€, необяз.)</span>
+              <span className="text-[var(--text-secondary)]">Стоимость макс (€, необяз.)</span>
               <input
                 name="tuitionMax"
                 type="number"
                 defaultValue={match.tuitionMax ?? match.tuitionFixed ?? ""}
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">Доступ</span>
+              <span className="text-[var(--text-secondary)]">Доступ</span>
               <select
                 name="accessMode"
                 defaultValue={match.accessMode || "UNKNOWN"}
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               >
                 <option value="UNKNOWN">Не указано</option>
                 <option value="OPEN">Свободный доступ</option>
@@ -475,43 +477,43 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
               </select>
             </label>
             <label className="grid gap-0.5">
-              <span className="text-muted-foreground">
+              <span className="text-[var(--text-secondary)]">
                 Места для выбранной категории
               </span>
               <input
                 name="nonEuSeats"
                 type="number"
                 defaultValue={match.nonEuSeats ?? ""}
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Экзамены</span>
+              <span className="text-[var(--text-secondary)]">Экзамены</span>
               <input
                 name="examsDisplay"
                 type="text"
                 defaultValue={match.examsDisplay ?? ""}
                 placeholder="SAT ≥ 1200 или TOLC-E"
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">
+              <span className="text-[var(--text-secondary)]">
                 Ссылка на официальный источник
               </span>
               <input
                 name="manualSourceUrl"
                 type="url"
                 required
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius-control)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <label className="grid gap-0.5 sm:col-span-2">
-              <span className="text-muted-foreground">Точная цитата</span>
+              <span className="text-[var(--text-secondary)]">Точная цитата</span>
               <textarea
                 name="evidenceQuote"
                 required
-                className="rounded-xl border border-[var(--border)] bg-white px-2 py-1"
+                className="rounded-[var(--radius)] border border-input bg-card px-2 py-1.5"
               />
             </label>
             <Button type="submit" size="sm" className="sm:col-span-2">
@@ -534,11 +536,11 @@ export function CuratorProgramMatchCard({ match }: { match: CuratorMatchView }) 
         ) : null}
 
         {(match.risks.length > 0 || match.riskNotes.length > 0) && (
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">
+          <div className="panel-attention px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--warning-fg)]">
               Риски
             </p>
-            <ul className="mt-1 space-y-1 text-xs text-amber-900">
+            <ul className="mt-1 space-y-1 text-[12px] text-[var(--warning-fg)]">
               {match.riskNotes.map((n) => (
                 <li key={n}>⚠ {n}</li>
               ))}

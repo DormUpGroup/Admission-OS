@@ -62,8 +62,8 @@ export default async function PortalDocumentsPage() {
                 </div>
 
                 {doc.status === "NEEDS_CHANGES" && doc.studentFeedback ? (
-                  <div className="mt-3 rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-900">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-700">
+                  <div className="panel-attention mt-3 px-3 py-2 text-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide">
                       Комментарий куратора
                     </p>
                     <p className="mt-0.5">{doc.studentFeedback}</p>

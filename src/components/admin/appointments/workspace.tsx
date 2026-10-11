@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { markAppointmentClientChangeSeenAction } from "@/server/appointment-actions";
+import { FilterPills } from "@/components/filter-pills";
 import { Button } from "@/components/ui/button";
 import { AppointmentAssignPanel } from "./assign-panel";
 import { AppointmentDetailPanel } from "./detail-panel";
@@ -83,48 +84,34 @@ export function AppointmentsWorkspace({
     });
   }, [selected?.id, selected?.unseenClientChange, router]);
 
+  const viewPillItems = (Object.keys(VIEW_LABELS) as CalendarView[]).map((v) => ({
+    id: v,
+    label: VIEW_LABELS[v],
+    href: viewHrefs[v],
+  }));
+
+  const navChipClass =
+    "inline-flex items-center rounded-[var(--radius-control)] border border-border px-3 py-1 text-[13px] text-[var(--text-secondary)] hover:bg-muted hover:text-foreground";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-black/10 p-0.5">
-            {(Object.keys(VIEW_LABELS) as CalendarView[]).map((v) => (
-              <a
-                key={v}
-                href={viewHrefs[v]}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] ${
-                  view === v
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {VIEW_LABELS[v]}
-              </a>
-            ))}
-          </div>
+          <FilterPills items={viewPillItems} activeId={view} />
           {view !== "list" ? (
             <div className="flex items-center gap-1">
-              <a
-                href={prevHref}
-                className="rounded-full border border-black/10 px-3 py-1 text-[13px] hover:bg-muted"
-              >
+              <a href={prevHref} className={navChipClass}>
                 ←
               </a>
-              <a
-                href={todayHref}
-                className="rounded-full border border-black/10 px-3 py-1 text-[13px] hover:bg-muted"
-              >
+              <a href={todayHref} className={navChipClass}>
                 Сегодня
               </a>
-              <a
-                href={nextHref}
-                className="rounded-full border border-black/10 px-3 py-1 text-[13px] hover:bg-muted"
-              >
+              <a href={nextHref} className={navChipClass}>
                 →
               </a>
             </div>
           ) : null}
-          <p className="text-sm font-medium">{rangeLabel}</p>
+          <p className="text-sm font-medium text-foreground">{rangeLabel}</p>
         </div>
         <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => setAssignOpen(true)}>
           Назначить звонок

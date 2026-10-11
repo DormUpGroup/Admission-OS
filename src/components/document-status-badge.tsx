@@ -1,37 +1,11 @@
 import { cn } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/labels";
+import {
+  statusDotClasses,
+  statusToneClasses,
+  toneForStatus,
+} from "@/lib/status-tones";
 import type { DocumentStatus } from "@/lib/enums";
-
-const config: Record<string, { className: string; dot: string }> = {
-  MISSING: {
-    className: "bg-neutral-100 text-neutral-600",
-    dot: "bg-neutral-400",
-  },
-  REQUESTED: {
-    className: "bg-[var(--info-bg)] text-[var(--info-fg)]",
-    dot: "bg-[var(--info)]",
-  },
-  UPLOADED: {
-    className: "bg-[var(--info-bg)] text-[var(--info-fg)]",
-    dot: "bg-[var(--info)]",
-  },
-  UNDER_REVIEW: {
-    className: "bg-[var(--warning-bg)] text-[var(--warning-fg)]",
-    dot: "bg-[var(--warning)]",
-  },
-  APPROVED: {
-    className: "bg-[var(--ok-bg)] text-[var(--ok-fg)]",
-    dot: "bg-[var(--ok)]",
-  },
-  NEEDS_CHANGES: {
-    className: "bg-[var(--warning-bg)] text-[var(--warning-fg)]",
-    dot: "bg-[var(--warning)]",
-  },
-  EXPIRED: {
-    className: "bg-[var(--danger-bg)] text-[var(--danger-fg)]",
-    dot: "bg-[var(--danger)]",
-  },
-};
 
 export interface DocumentStatusBadgeProps {
   status: DocumentStatus | string;
@@ -43,20 +17,20 @@ export function DocumentStatusBadge({
   className,
 }: DocumentStatusBadgeProps) {
   const key = String(status);
-  const c = config[key] ?? {
-    className: "bg-neutral-100 text-neutral-600",
-    dot: "bg-neutral-400",
-  };
+  const tone = toneForStatus(key);
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full surface-chip px-2 py-0.5 text-[11px] font-medium leading-none",
-        c.className,
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-badge)] px-2 py-0.5 text-[12px] font-medium leading-none",
+        statusToneClasses[tone],
         className
       )}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} />
+      <span
+        className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDotClasses[tone])}
+        aria-hidden
+      />
       {STATUS_LABELS[key] ?? key}
     </span>
   );

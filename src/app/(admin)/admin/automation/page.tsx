@@ -11,6 +11,7 @@ import {
   setAutomationEnabledAction,
 } from "@/server/automation-actions";
 import { PageHeader } from "@/components/page-header";
+import { MetricCard } from "@/components/metric-card";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -209,18 +210,12 @@ export default async function AdminAutomationPage() {
       />
 
       <section className="grid gap-3 sm:grid-cols-2">
-        {[
-          ["Ждут отправки", waitingCount],
-          ["Не дошли", deadCount],
-        ].map(([label, value]) => (
-          <div
-            key={String(label)}
-            className="rounded-lg border border-black/5 bg-white px-4 py-3"
-          >
-            <p className="text-[12px] text-muted-foreground">{label}</p>
-            <p className="text-xl font-semibold tabular-nums">{value}</p>
-          </div>
-        ))}
+        <MetricCard label="Ждут отправки" value={waitingCount} />
+        <MetricCard
+          label="Не дошли"
+          value={deadCount}
+          tone={deadCount > 0 ? "danger" : "neutral"}
+        />
       </section>
       {processingCount > 0 ? (
         <p className="text-[12px] text-muted-foreground">
@@ -228,9 +223,9 @@ export default async function AdminAutomationPage() {
         </p>
       ) : null}
 
-      <section className="space-y-3 rounded-lg border border-black/5 bg-white p-4">
+      <section className="surface-card space-y-3 p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold">Автоответы</h2>
+          <h2 className="text-[15px] font-semibold">Автоответы</h2>
           <p className="text-sm font-medium">
             {repliesOn ? "Включены" : "Выключены"}
           </p>
@@ -282,14 +277,14 @@ export default async function AdminAutomationPage() {
         )}
       </section>
 
-      <section className="space-y-3 rounded-lg border border-black/5 bg-white p-4">
-        <h2 className="text-sm font-semibold">Недоставленные сообщения</h2>
+      <section className="surface-card space-y-3 p-4">
+        <h2 className="text-[15px] font-semibold">Недоставленные сообщения</h2>
         {deadLetters.length === 0 ? (
           <EmptyState title="Все сообщения дошли." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-black/5 text-[12px] text-muted-foreground">
+              <thead className="border-b border-divider text-[12px] text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3 font-medium">Кому</th>
                   <th className="py-2 pr-3 font-medium">Что случилось</th>
@@ -312,7 +307,7 @@ export default async function AdminAutomationPage() {
                   return (
                     <tr
                       key={row.id}
-                      className="border-b border-black/5 align-top"
+                      className="border-b border-divider align-top"
                     >
                       <td className="py-2 pr-3">
                         {recipient.href ? (

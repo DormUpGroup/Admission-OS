@@ -38,7 +38,7 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
 }
 
 const selectClass =
-  "w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground";
+  "w-full rounded-[var(--radius-control)] border border-input bg-card px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground";
 
 export function AppointmentAssignPanel({
   leads,
@@ -121,10 +121,10 @@ export function AppointmentAssignPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="assign-call-title"
-        className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-2xl"
+        className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-card shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-black/5 px-5 py-3">
-          <h2 id="assign-call-title" className="text-sm font-semibold">
+        <div className="flex items-center justify-between border-b border-divider px-5 py-3">
+          <h2 id="assign-call-title" className="text-[15px] font-semibold">
             Назначить звонок
           </h2>
           <button
@@ -211,7 +211,7 @@ export function AppointmentAssignPanel({
               ))}
             </select>
             {!conversationValue ? (
-              <p className="mt-1 text-[11px] text-amber-700">
+              <p className="mt-1 text-[11px] text-[var(--warning-fg)]">
                 Без Telegram подтверждение только вручную в админке.
               </p>
             ) : null}
@@ -226,7 +226,7 @@ export function AppointmentAssignPanel({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="rounded-full border border-black/10 px-2 py-0.5 text-[12px] disabled:opacity-40"
+                  className="rounded-[var(--radius-control)] border border-border px-2 py-0.5 text-[12px] disabled:opacity-40"
                   disabled={safeOffset <= 0}
                   onClick={() => setWeekOffset((o) => Math.max(0, o - 1))}
                 >
@@ -237,7 +237,7 @@ export function AppointmentAssignPanel({
                 </span>
                 <button
                   type="button"
-                  className="rounded-full border border-black/10 px-2 py-0.5 text-[12px] disabled:opacity-40"
+                  className="rounded-[var(--radius-control)] border border-border px-2 py-0.5 text-[12px] disabled:opacity-40"
                   disabled={safeOffset >= weeks.length - 1}
                   onClick={() =>
                     setWeekOffset((o) => Math.min(weeks.length - 1, o + 1))
@@ -248,10 +248,10 @@ export function AppointmentAssignPanel({
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-black/10">
+            <div className="overflow-x-auto rounded-[var(--radius-control)] border border-border">
               <table className="w-full min-w-[560px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="border-b border-black/5 bg-muted/30 text-[12px] text-muted-foreground">
+                  <tr className="border-b border-divider bg-muted/30 text-[12px] text-muted-foreground">
                     <th className="w-14 px-2 py-2 font-medium">Время</th>
                     {visibleDays.map((ymd) => (
                       <th key={ymd} className="px-1 py-2 font-medium">
@@ -264,7 +264,7 @@ export function AppointmentAssignPanel({
                   {HOUR_ROWS.map((hour) => (
                     <tr
                       key={hour}
-                      className="border-b border-black/5 last:border-0"
+                      className="border-b border-divider last:border-0"
                     >
                       <td className="px-2 py-1 font-mono text-[11px] text-muted-foreground">
                         {String(hour).padStart(2, "0")}:00
@@ -286,10 +286,10 @@ export function AppointmentAssignPanel({
                               <button
                                 type="button"
                                 onClick={() => setStartsAt(slot.startsAt)}
-                                className={`w-full rounded-md px-2 py-1.5 text-[12px] ${
+                                className={`w-full rounded-[var(--radius-control)] px-2 py-1.5 text-[12px] ${
                                   selected
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                                    ? "bg-[var(--brand)] text-primary-foreground"
+                                    : "bg-[var(--ok-bg)] text-[var(--ok-fg)] ring-1 ring-[color-mix(in_srgb,var(--ok)_28%,var(--border))] hover:brightness-[0.98]"
                                 }`}
                               >
                                 Свободно
@@ -333,7 +333,7 @@ export function AppointmentAssignPanel({
             />
           </label>
 
-          <div className="space-y-2 border-t border-black/5 pt-3">
+          <div className="space-y-2 border-t border-divider pt-3">
             {state && "error" in state && state.error ? (
               <p className="text-sm text-destructive" role="alert">
                 {state.error}

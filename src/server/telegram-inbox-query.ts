@@ -7,6 +7,7 @@ import {
   resolveConversationFolder,
   type ConversationFolder,
 } from "@/lib/telegram-conversation-kind";
+import { plainTelegramPreview } from "@/lib/telegram-html";
 
 export type TelegramListItemDto = {
   id: string;
@@ -292,7 +293,7 @@ export async function listTelegramConversations(): Promise<{
     const item: TelegramListItemDto = {
       id: c.id,
       title,
-      preview: previewMsg?.body || "—",
+      preview: plainTelegramPreview(previewMsg?.body),
       previewAt: previewMsg?.createdAt?.toISOString() ?? null,
       undelivered:
         !!last &&

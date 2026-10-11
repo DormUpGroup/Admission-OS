@@ -142,7 +142,7 @@ export default async function DataQualityPage() {
       />
 
       <section className="space-y-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-[15px] font-semibold text-foreground">
           Fill-rate по полям
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -27,7 +27,7 @@ export function JourneyRoute({ stages }: { stages: JourneyStageView[] }) {
           <li key={stage.id} className="min-w-0">
             <div
               className={cn(
-                "h-full rounded-[22px] px-3 py-3 sm:px-4 sm:py-4",
+                "h-full rounded-[var(--radius-card)] px-3 py-3 sm:px-4 sm:py-4",
                 STATUS_CLASS[stage.status],
                 active ? "ring-1 ring-[var(--brand)]/25" : ""
               )}

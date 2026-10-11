@@ -16,6 +16,7 @@ export type ChannelListItem = {
   previewAt: string | null;
   badge?: string | null;
   badgeTone?: "warning" | "danger" | "muted" | null;
+  unread?: boolean;
 };
 
 export type ChannelThreadMessage = {
@@ -56,11 +57,11 @@ function formatListTime(iso: string | null) {
 function badgeClass(tone: ChannelListItem["badgeTone"]) {
   switch (tone) {
     case "warning":
-      return "text-[var(--warning-fg)]";
+      return "bg-[var(--warning-bg)] text-[var(--warning-fg)]";
     case "danger":
-      return "text-red-700";
+      return "bg-[var(--danger-bg)] text-[var(--danger-fg)]";
     default:
-      return "text-muted-foreground";
+      return "bg-muted text-[var(--text-secondary)]";
   }
 }
 
@@ -120,27 +121,27 @@ export function ChannelMessenger({
   useReportMobileChat(threadOnPhone);
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-[#eef2f5]">
+    <div className="messenger-shell flex h-full min-h-0 overflow-hidden">
       <aside
         className={cn(
-          "flex w-full shrink-0 flex-col border-r border-black/10 bg-white md:max-w-[360px]",
+          "messenger-sidebar flex w-full shrink-0 flex-col border-r md:max-w-[340px]",
           threadOnPhone && "max-md:hidden",
         )}
       >
-        <div className="space-y-2 border-b border-black/5 p-3">
+        <div className="space-y-2 border-b border-[var(--divider)] p-3">
           {sidebarTop}
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск"
-            className="w-full rounded-full border-0 bg-muted/80 px-3.5 py-2 text-sm outline-none ring-0 placeholder:text-muted-foreground focus:bg-muted"
+            className="messenger-search w-full px-3 py-2 text-[13px] outline-none placeholder:text-muted-foreground"
           />
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <p className="px-4 py-8 text-center text-[13px] text-muted-foreground">
               {query.trim() ? "Ничего не найдено" : emptyListText}
             </p>
           ) : (
@@ -150,28 +151,53 @@ export function ChannelMessenger({
                 <Link
                   key={c.id}
                   href={hrefFor(c.id)}
-                  className={cn(
-                    "flex gap-3 border-b border-black/5 px-3 py-2.5 transition-colors",
-                    selected ? "bg-[var(--brand-soft)]" : "hover:bg-muted/50",
-                  )}
+                  data-selected={selected ? "true" : "false"}
+                  className="messenger-list-item flex gap-3 border-b px-3 py-2.5 transition-colors"
                 >
                   <StudentAvatar name={c.title} size="lg" className="mt-0.5" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[15px] font-medium text-foreground">
+                      <span
+                        className={cn(
+                          "truncate text-[14px] text-foreground",
+                          c.unread ? "font-semibold" : "font-medium",
+                        )}
+                      >
                         {c.title}
                       </span>
-                      <span className="shrink-0 text-[12px] text-muted-foreground">
+                      <span
+                        className={cn(
+                          "shrink-0 text-[11px] tabular-nums",
+                          c.unread
+                            ? "font-medium text-[var(--brand-fg)]"
+                            : "text-muted-foreground",
+                        )}
+                      >
                         {formatListTime(c.previewAt)}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                      {c.preview || "—"}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <p
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-[12px]",
+                          c.unread
+                            ? "font-medium text-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {c.preview || "—"}
+                      </p>
+                      {c.unread ? (
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full bg-[var(--brand)]"
+                          aria-label="Непрочитано"
+                        />
+                      ) : null}
+                    </div>
                     {c.badge ? (
                       <span
                         className={cn(
-                          "mt-1 inline-block text-[11px] font-medium",
+                          "mt-1 inline-flex rounded-[var(--radius-badge)] px-1.5 py-0.5 text-[10px] font-semibold",
                           badgeClass(c.badgeTone),
                         )}
                       >
@@ -188,27 +214,27 @@ export function ChannelMessenger({
 
       <section
         className={cn(
-          "min-w-0 flex-1 flex-col bg-[#e6ebee]",
+          "messenger-thread min-w-0 flex-1 flex-col",
           threadOnPhone ? "flex" : "hidden md:flex",
         )}
       >
         {!active ? (
-          <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center px-6 text-center text-[13px] text-muted-foreground">
             {emptyThreadText}
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b border-black/10 bg-white px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2.5">
+            <header className="flex items-center gap-2 border-b border-[var(--divider)] bg-card px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 md:pt-2.5">
               <Link
                 href={listHref}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg md:hidden"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-lg hover:bg-muted md:hidden"
                 aria-label="К списку диалогов"
               >
                 ←
               </Link>
               <StudentAvatar name={active.title} size="md" />
               <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[15px] font-semibold leading-tight">
+                <h2 className="truncate text-[15px] font-semibold leading-tight text-foreground">
                   {active.title}
                 </h2>
                 <p className="text-[12px] text-muted-foreground">
@@ -218,9 +244,9 @@ export function ChannelMessenger({
               {active.headerExtra}
             </header>
 
-            <div className="flex-1 space-y-0.5 overflow-y-auto px-4 py-3">
+            <div className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3 sm:px-4">
               {active.messages.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
+                <p className="py-8 text-center text-[13px] text-muted-foreground">
                   Напишите первое сообщение
                 </p>
               ) : (
@@ -228,7 +254,7 @@ export function ChannelMessenger({
                   if (m.system) {
                     return (
                       <div key={m.id} className="flex justify-center py-1">
-                        <span className="rounded-full bg-black/5 px-3 py-1 text-[12px] text-muted-foreground">
+                        <span className="messenger-system px-3 py-1 text-[11px]">
                           {m.body}
                         </span>
                       </div>
@@ -272,24 +298,24 @@ export function ChannelMessenger({
                       className={cn(
                         "flex items-end gap-1.5",
                         m.outbound ? "justify-end" : "justify-start",
-                        startCluster && i > 0 ? "mt-2" : null,
+                        startCluster && i > 0 ? "mt-2.5" : null,
                       )}
                     >
                       {!m.outbound ? avatar : null}
                       <div
                         className={cn(
-                          "max-w-[min(85%,420px)] rounded-xl px-3 py-2 text-[14px] leading-relaxed shadow-sm",
+                          "max-w-[min(85%,440px)] rounded-[var(--radius)] px-3 py-2 text-[13px] leading-relaxed",
                           m.outbound
-                            ? "rounded-br-sm bg-[var(--brand-soft)] text-foreground"
-                            : "rounded-bl-sm bg-white text-foreground",
+                            ? "messenger-bubble-out"
+                            : "messenger-bubble-in",
                         )}
                       >
                         <MessageParagraphs body={m.body} />
                         <div
                           className={cn(
-                            "mt-0.5 flex items-center justify-end gap-1.5 text-[11px]",
+                            "mt-1 flex items-center justify-end gap-1.5 text-[10px] tabular-nums",
                             m.outbound
-                              ? "text-foreground/55"
+                              ? "text-[var(--brand-fg)]/70"
                               : "text-muted-foreground",
                           )}
                         >
@@ -305,7 +331,7 @@ export function ChannelMessenger({
             </div>
 
             {compose ? (
-              <div className="border-t border-black/10 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              <div className="messenger-composer border-t px-3 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 {compose}
               </div>
             ) : null}

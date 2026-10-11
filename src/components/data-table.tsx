@@ -9,12 +9,14 @@ export function DataTable({ className, children, ...props }: DataTableProps) {
   return (
     <div
       className={cn(
-        "w-full overflow-x-auto overscroll-x-contain rounded-2xl surface-card",
+        "w-full overflow-x-auto overscroll-x-contain rounded-[var(--radius-card)] border border-border bg-card",
         className
       )}
       {...props}
     >
-      <table className="w-full min-w-[640px] caption-bottom text-[13px]">{children}</table>
+      <table className="w-full min-w-[640px] caption-bottom text-[13px]">
+        {children}
+      </table>
     </div>
   );
 }
@@ -26,7 +28,7 @@ export function DataTableHeader({
   return (
     <thead
       className={cn(
-        "border-b border-border bg-muted/50 [&_tr]:border-b",
+        "border-b border-[var(--divider)] bg-muted/70 [&_tr]:border-b-0",
         className
       )}
       {...props}
@@ -53,7 +55,7 @@ export function DataTableRow({
   return (
     <tr
       className={cn(
-        "border-b border-border transition-colors odd:bg-muted/30 hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "border-b border-[var(--divider)] transition-colors hover:bg-[var(--brand-soft)]/40 data-[state=selected]:bg-[var(--brand-soft)]",
         className
       )}
       {...props}
@@ -68,7 +70,7 @@ export function DataTableHead({
   return (
     <th
       className={cn(
-        "h-9 px-3 text-left align-middle text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
+        "h-10 px-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]",
         className
       )}
       {...props}
@@ -82,7 +84,7 @@ export function DataTableCell({
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn("px-3 py-2 align-middle text-foreground", className)}
+      className={cn("px-3 py-2.5 align-middle text-foreground", className)}
       {...props}
     />
   );

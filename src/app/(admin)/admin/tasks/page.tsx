@@ -4,6 +4,7 @@ import { requireStaff, studentScopeWhere } from "@/server/auth/guards";
 import { completeTaskAction } from "@/server/actions";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { FilterPills } from "@/components/filter-pills";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -204,22 +205,14 @@ export default async function AdminTasksPage({
     <div className="space-y-5">
       <PageHeader title="Задачи" description="Очередь работы по вашим студентам" />
 
-      <div className="flex flex-wrap gap-1">
-        {VIEWS.map((v) => (
-          <Link
-            key={v.key}
-            href={`/admin/tasks?view=${v.key}`}
-            className={cn(
-              "rounded-xl px-2.5 py-1 text-xs font-medium transition-colors",
-              view === v.key
-                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </div>
+      <FilterPills
+        activeId={view}
+        items={VIEWS.map((v) => ({
+          id: v.key,
+          label: v.label,
+          href: `/admin/tasks?view=${v.key}`,
+        }))}
+      />
 
       {tasks.length === 0 ? (
         <EmptyState

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,11 +38,17 @@ type ChannelItem = {
   countKey: keyof Omit<MessageUnreadCounts, "total">;
 };
 
-const primaryItems: NavItem[] = [
+const workspaceItems: NavItem[] = [
   { label: "Рабочая очередь", href: "/admin", icon: LayoutList },
+];
+
+const operationsItems: NavItem[] = [
   { label: "Ученики", href: "/admin/students", icon: Users },
   { label: "Лиды", href: "/admin/leads", icon: Contact },
   { label: "Заявки", href: "/admin/applications", icon: ClipboardList },
+];
+
+const afterMessagesItems: NavItem[] = [
   { label: "Консультации", href: "/admin/appointments", icon: Calendar },
   { label: "Автоматика", href: "/admin/automation", icon: Zap },
   { label: "Настройки", href: "/admin/settings", icon: Settings },
@@ -82,6 +88,58 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  onNavigate,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  active: boolean;
+  onNavigate?: () => void;
+  badge?: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className={cn(
+        "relative flex items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2 text-[13px] font-medium transition-colors",
+        active
+          ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-foreground)]",
+      )}
+    >
+      {active ? (
+        <span
+          className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-[var(--sidebar-active-indicator)]"
+          aria-hidden
+        />
+      ) : null}
+      <Icon
+        className={cn(
+          "h-4 w-4 shrink-0",
+          active ? "opacity-100" : "opacity-70",
+        )}
+      />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {badge}
+    </Link>
+  );
+}
+
+function NavGroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
 export interface AppSidebarProps {
   className?: string;
   userName?: string;
@@ -118,143 +176,162 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full w-[220px] shrink-0 flex-col overflow-hidden rounded-r-[28px] border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
+        "flex h-full w-[232px] shrink-0 flex-col overflow-hidden border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] text-[var(--sidebar-foreground)]",
         className,
       )}
     >
-      <div className="px-4 py-5">
+      <div className="border-b border-[var(--sidebar-border)] px-4 py-4">
         <BrandLogo size="sm" className="mb-2" />
-        <p className="text-[15px] font-semibold tracking-tight text-foreground">
+        <p className="text-[14px] font-semibold tracking-tight text-foreground">
           Сопровождение
         </p>
-        {userName && (
-          <p className="mt-2 truncate text-[11px] text-muted-foreground">
+        {userName ? (
+          <p className="mt-1 truncate text-[11px] text-muted-foreground">
             {userName}
             {userRole ? ` · ${STATUS_LABELS[userRole] ?? userRole}` : ""}
           </p>
-        )}
+        ) : null}
       </div>
+
       <nav className="flex-1 overflow-y-auto px-2 py-3">
-        <ul className="space-y-0.5">
-          {primaryItems.slice(0, 4).map((item) => {
-            const Icon = item.icon;
-            const active = isActive(pathname, item.href);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
-                    active
-                      ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+        <div className="space-y-4">
+          <div>
+            <NavGroupLabel>Рабочее место</NavGroupLabel>
+            <ul className="space-y-0.5">
+              {workspaceItems.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                    onNavigate={onNavigate}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <li>
-            <button
-              type="button"
-              onClick={() => setMessagesOpen((v) => !v)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
-                messagesActive
-                  ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                  : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
-              )}
-              aria-expanded={messagesOpen}
-            >
-              <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-80" />
-              <span className="flex-1 text-left">Сообщения</span>
-              <UnreadBadge count={counts.total} />
-              <ChevronDown
-                className={cn(
-                  "h-3.5 w-3.5 shrink-0 opacity-70 transition-transform",
-                  messagesOpen && "rotate-180",
-                )}
-              />
-            </button>
-            {messagesOpen ? (
-              <ul className="mt-0.5 space-y-0.5 border-l border-[var(--sidebar-border)] ml-4 pl-2">
-                {messageChannels.map((channel) => {
-                  const Icon = channel.icon;
-                  const active = isActive(pathname, channel.href);
-                  const count = counts[channel.countKey];
-                  return (
-                    <li key={channel.href}>
-                      <Link
-                        href={channel.href}
-                        onClick={onNavigate}
-                        className={cn(
-                          "flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[12px] transition-[box-shadow,background,color]",
-                          active
-                            ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                            : "text-[var(--sidebar-foreground)]/75 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
-                        )}
-                      >
-                        <Icon className="h-3 w-3 shrink-0 opacity-80" />
-                        <span className="flex-1">{channel.label}</span>
-                        <UnreadBadge count={count} />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </li>
+          <div>
+            <NavGroupLabel>Операции</NavGroupLabel>
+            <ul className="space-y-0.5">
+              {operationsItems.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                    onNavigate={onNavigate}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          {primaryItems.slice(4).map((item) => {
-            const Icon = item.icon;
-            const active = isActive(pathname, item.href);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
+          <div>
+            <NavGroupLabel>Коммуникации</NavGroupLabel>
+            <ul className="space-y-0.5">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setMessagesOpen((v) => !v)}
                   className={cn(
-                    "flex items-center gap-2 rounded-full px-2.5 py-2 text-[13px] transition-[box-shadow,background,color]",
-                    active
+                    "relative flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2 text-[13px] font-medium transition-colors",
+                    messagesActive
                       ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                      : "text-[var(--sidebar-foreground)]/80 hover:bg-black/[0.04] hover:text-[var(--sidebar-foreground)]",
+                      : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-foreground)]",
                   )}
+                  aria-expanded={messagesOpen}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.href === "/admin/appointments" ? (
-                    <UnreadBadge count={appointmentEventCount} />
+                  {messagesActive ? (
+                    <span
+                      className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-[var(--sidebar-active-indicator)]"
+                      aria-hidden
+                    />
                   ) : null}
-                </Link>
+                  <MessageSquare className="h-4 w-4 shrink-0 opacity-80" />
+                  <span className="flex-1 text-left">Сообщения</span>
+                  <UnreadBadge count={counts.total} />
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 opacity-70 transition-transform",
+                      messagesOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+                {messagesOpen ? (
+                  <ul className="mt-0.5 space-y-0.5 border-l border-[var(--sidebar-border)] ml-4 pl-2">
+                    {messageChannels.map((channel) => {
+                      const Icon = channel.icon;
+                      const active = isActive(pathname, channel.href);
+                      const count = counts[channel.countKey];
+                      return (
+                        <li key={channel.href}>
+                          <Link
+                            href={channel.href}
+                            onClick={onNavigate}
+                            className={cn(
+                              "flex items-center gap-2 rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+                              active
+                                ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
+                                : "text-[var(--text-secondary)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-foreground)]",
+                            )}
+                          >
+                            <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                            <span className="flex-1">{channel.label}</span>
+                            <UnreadBadge count={count} />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
               </li>
-            );
-          })}
-        </ul>
+            </ul>
+          </div>
+
+          <div>
+            <NavGroupLabel>Управление</NavGroupLabel>
+            <ul className="space-y-0.5">
+              {afterMessagesItems.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                    onNavigate={onNavigate}
+                    badge={
+                      item.href === "/admin/appointments" ? (
+                        <UnreadBadge count={appointmentEventCount} />
+                      ) : undefined
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </nav>
+
       {isAdmin ? (
         <div className="border-t border-[var(--sidebar-border)] px-3 py-3">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Служебное
-          </p>
-          <ul className="space-y-0.5 text-[12px] text-muted-foreground">
-            {serviceLinks.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "hover:text-foreground",
-                    isActive(pathname, item.href) && "text-foreground",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+          <NavGroupLabel>Справочники</NavGroupLabel>
+          <ul className="space-y-0.5">
+            {serviceLinks.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "block rounded-[var(--radius-control)] px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+                      active
+                        ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
+                        : "text-muted-foreground hover:bg-[var(--sidebar-accent)] hover:text-foreground",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

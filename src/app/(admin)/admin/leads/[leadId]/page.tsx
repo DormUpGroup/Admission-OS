@@ -4,7 +4,8 @@ import { requireStaff } from "@/server/auth/guards";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { buildLeadCard } from "@/lib/lead-profile";
-import { PageHeader } from "@/components/page-header";
+import { EntityHeader } from "@/components/entity-header";
+import { Button } from "@/components/ui/button";
 import { StudentAvatar } from "@/components/student-avatar";
 import { PromoteLeadButton } from "@/components/admin/promote-lead-button";
 import { DeleteLeadButton } from "@/components/admin/delete-lead-button";
@@ -106,43 +107,42 @@ export default async function LeadProfilePage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link href="/admin/leads" className="text-[13px] text-muted-foreground hover:underline">
-        ← Лиды
-      </Link>
-      <PageHeader
+      <EntityHeader
+        backHref="/admin/leads"
+        backLabel="Лиды"
         title={name}
         description="Коротко из переписки: куда хочет поступать и что уже известно."
+        leading={<StudentAvatar name={name} size="lg" />}
+        badges={<PlatformPresenceBadge hasAccount={false} />}
+        meta={[
+          {
+            value: username ? `@${username}` : "Telegram без username",
+          },
+          {
+            label: "Куратор",
+            value: lead.assignedCurator?.name ?? "не назначен",
+          },
+        ]}
         actions={
           <>
             {primaryChat?.channel === "TELEGRAM" ? (
-              <Link
-                href={`/admin/messages/telegram?conversationId=${primaryChat.id}`}
-                className="rounded-full border border-border px-4 py-2 text-[13px]"
-              >
-                Открыть чат
-              </Link>
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  href={`/admin/messages/telegram?conversationId=${primaryChat.id}`}
+                >
+                  Открыть чат
+                </Link>
+              </Button>
             ) : null}
             {primaryChat ? <PromoteLeadButton conversationId={primaryChat.id} /> : null}
             <DeleteLeadButton leadId={lead.id} name={name} />
           </>
         }
-      >
-        <div className="flex items-center gap-3">
-          <StudentAvatar name={name} size="lg" />
-          <div className="space-y-1">
-            <PlatformPresenceBadge hasAccount={false} />
-            <p className="text-[13px] text-muted-foreground">
-              {username ? `@${username}` : "Telegram без username"}
-              {" · "}
-              куратор {lead.assignedCurator?.name ?? "не назначен"}
-            </p>
-          </div>
-        </div>
-      </PageHeader>
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="rounded-2xl border border-border bg-card px-4 py-3">
-          <h2 className="mb-2 text-[13px] font-medium">Контакты</h2>
+        <section className="surface-card px-4 py-3">
+          <h2 className="mb-2 text-[15px] font-semibold">Контакты</h2>
           <dl className="space-y-2 text-[14px]">
             <Fact label="Telegram" value={username ? `@${username}` : "—"} />
             {email ? <Fact label="Почта" value={email} /> : null}
@@ -154,8 +154,8 @@ export default async function LeadProfilePage({
           </dl>
         </section>
 
-        <section className="rounded-2xl border border-border bg-card px-4 py-3">
-          <h2 className="mb-2 text-[13px] font-medium">Карточка лида</h2>
+        <section className="surface-card px-4 py-3">
+          <h2 className="mb-2 text-[15px] font-semibold">Карточка лида</h2>
           {facts.length === 0 ? (
             <p className="text-[14px] text-muted-foreground">
               В переписке пока нет фактов для карточки.
@@ -171,8 +171,8 @@ export default async function LeadProfilePage({
       </div>
 
       {lead.appointments.length > 0 ? (
-        <section className="rounded-2xl border border-border bg-card px-4 py-3">
-          <h2 className="mb-2 text-[13px] font-medium">Встречи</h2>
+        <section className="surface-card px-4 py-3">
+          <h2 className="mb-2 text-[15px] font-semibold">Встречи</h2>
           <ul className="space-y-2 text-[14px]">
             {lead.appointments.map((appointment) => (
               <li key={appointment.id} className="flex justify-between gap-4">

@@ -32,48 +32,52 @@ export function ProgramMatchCard({
   return (
     <article
       className={cn(
-        "flex flex-col overflow-hidden surface-card",
+        "flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-card",
         className
       )}
     >
-      <div className="flex items-start gap-3.5 px-5 pt-5">
+      <div className="flex items-start gap-3 border-b border-[var(--divider)] px-4 pt-4 pb-3">
         <UniversityMonogram name={match.universityName} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[17px] font-semibold leading-snug tracking-tight text-foreground">
+            <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground">
               {match.universityName}
             </h3>
-            <span className="surface-chip shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-[var(--brand)]">
+            <span className="shrink-0 rounded-[var(--radius-badge)] bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-semibold tabular-nums text-[var(--brand-fg)]">
               {match.score}%
             </span>
           </div>
           {match.city ? (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">{match.city}</p>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">{match.city}</p>
           ) : null}
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3.5 px-5 py-4">
+      <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
         <div>
-          <p className="text-[13px] leading-snug text-foreground">{match.programName}</p>
+          <p className="text-[13px] font-medium leading-snug text-foreground">
+            {match.programName}
+          </p>
           {meta.length > 0 ? (
-            <p className="mt-1 text-[13px] text-muted-foreground">{meta.join(" · ")}</p>
+            <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
+              {meta.join(" · ")}
+            </p>
           ) : null}
         </div>
 
-        <dl className="divide-y divide-border text-[13px]">
+        <dl className="divide-y divide-[var(--divider)] text-[13px]">
           <div className="flex justify-between gap-3 py-2 first:pt-0">
-            <dt className="text-muted-foreground">Дедлайн</dt>
-            <dd className="text-right font-medium">
+            <dt className="text-[var(--text-secondary)]">Дедлайн</dt>
+            <dd className="text-right font-medium tabular-nums">
               {match.deadline ? formatDate(match.deadline) : "Дедлайн уточняется"}
             </dd>
           </div>
           <div className="flex justify-between gap-3 py-2">
-            <dt className="text-muted-foreground">Стоимость</dt>
+            <dt className="text-[var(--text-secondary)]">Стоимость</dt>
             <dd className="text-right font-medium">{tuition}</dd>
           </div>
           <div className="flex justify-between gap-3 py-2 last:pb-0">
-            <dt className="text-muted-foreground">Квота</dt>
+            <dt className="text-[var(--text-secondary)]">Квота</dt>
             <dd className="text-right font-medium">
               {match.quotaSeats != null
                 ? `${match.quotaSeats} мест`

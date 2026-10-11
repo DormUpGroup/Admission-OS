@@ -7,6 +7,7 @@ import {
 } from "@/server/actions";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { FilterPills } from "@/components/filter-pills";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ import {
   DataTableHeader,
   DataTableRow,
 } from "@/components/data-table";
-import { cn, formatDate, fullName } from "@/lib/utils";
+import { formatDate, fullName } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
 const VIEWS = [
@@ -83,22 +84,14 @@ export default async function AdminDocumentsPage({
         description="Входящие загруженные документы на проверку"
       />
 
-      <div className="flex flex-wrap gap-1">
-        {VIEWS.map((v) => (
-          <Link
-            key={v.key}
-            href={`/admin/documents?view=${v.key}`}
-            className={cn(
-              "rounded-xl px-2.5 py-1 text-xs font-medium transition-colors",
-              view === v.key
-                ? "bg-[var(--brand-soft)] text-[var(--brand)]"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </div>
+      <FilterPills
+        activeId={view}
+        items={VIEWS.map((v) => ({
+          id: v.key,
+          label: v.label,
+          href: `/admin/documents?view=${v.key}`,
+        }))}
+      />
 
       {documents.length === 0 ? (
         <EmptyState

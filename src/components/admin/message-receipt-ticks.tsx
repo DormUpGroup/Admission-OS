@@ -60,7 +60,7 @@ export function MessageReceiptTicks({
       <span
         title={title}
         aria-label={title}
-        className={cn("inline-flex text-amber-600/90", className)}
+        className={cn("inline-flex text-[var(--warning-fg)]", className)}
       >
         <Clock className={iconClass} strokeWidth={2.25} />
       </span>
@@ -82,7 +82,7 @@ export function MessageReceiptTicks({
       <span
         title={title}
         aria-label={title}
-        className={cn("inline-flex text-sky-600", className)}
+        className={cn("inline-flex text-[var(--brand-fg)]", className)}
       >
         <CheckCheck className={iconClass} strokeWidth={2.5} />
       </span>
@@ -93,7 +93,7 @@ export function MessageReceiptTicks({
       <span
         title={title}
         aria-label={title}
-        className={cn("inline-flex text-red-600", className)}
+        className={cn("inline-flex text-[var(--danger-fg)]", className)}
       >
         <CircleAlert className={iconClass} strokeWidth={2.25} />
       </span>
@@ -103,7 +103,7 @@ export function MessageReceiptTicks({
     <span
       title={title}
       aria-label={title}
-      className={cn("inline-flex text-orange-600", className)}
+      className={cn("inline-flex text-[var(--warning-fg)]", className)}
     >
       <TriangleAlert className={iconClass} strokeWidth={2.25} />
     </span>

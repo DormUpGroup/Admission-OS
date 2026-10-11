@@ -25,7 +25,7 @@ export function PortalNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <nav className="mx-auto flex max-w-3xl gap-0 overflow-x-auto border-b border-[var(--divider)] px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {ITEMS.map((item) => {
         const active = isActive(pathname, item.href);
         return (
@@ -33,10 +33,10 @@ export function PortalNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] transition-colors",
+              "relative inline-flex min-h-10 shrink-0 items-center whitespace-nowrap px-3 text-[13px] font-medium transition-colors",
               active
-                ? "bg-white font-medium text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-white/70 hover:text-foreground"
+                ? "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--brand)]"
+                : "text-[var(--text-secondary)] hover:text-foreground"
             )}
           >
             {item.label}

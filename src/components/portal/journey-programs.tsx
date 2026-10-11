@@ -14,7 +14,7 @@ export function JourneyPrograms({ programs }: { programs: JourneyProgramsBlock }
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
-        <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
+        <h2 className="text-[18px] font-semibold tracking-tight text-foreground">
           Программы
         </h2>
         <Button asChild variant="ghost" size="sm">
@@ -61,7 +61,7 @@ export function JourneyPrograms({ programs }: { programs: JourneyProgramsBlock }
                     </div>
                     <span
                       className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        "shrink-0 rounded-[var(--radius-badge)] px-2.5 py-1 text-[11px] font-medium",
                         PREVIEW_STATUS_CLASS[preview.status] ??
                           "bg-muted text-muted-foreground"
                       )}

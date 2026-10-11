@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AlertCircle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { assignStudentToMeAction } from "@/server/actions";
@@ -57,6 +58,7 @@ export function StudentAdminSummary({
   missingQuestionnaire?: MissingQuestionnaire | null;
 }) {
   const step = facingTitle(nextStep, curatorAssigned) ?? "Нет следующего шага";
+  const needsAttention = step !== "Нет следующего шага";
   const remindItems = openTasks.flatMap((task) => {
     if (task.type !== "WAITING_DOCUMENT") return [];
     const documentId = documentIdFromWaitingTaskId(task.id);
@@ -92,7 +94,7 @@ export function StudentAdminSummary({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>Сводка</CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" className="rounded-lg">
+            <Button asChild size="sm">
               <Link href={`/admin/messages/site?studentId=${studentId}`}>
                 Написать студенту
               </Link>
@@ -100,7 +102,7 @@ export function StudentAdminSummary({
             {canAssignToMe ? (
               <form action={assignStudentToMeAction}>
                 <input type="hidden" name="studentId" value={studentId} />
-                <Button type="submit" size="sm" variant="outline" className="rounded-lg">
+                <Button type="submit" size="sm" variant="outline">
                   Назначить себе
                 </Button>
               </form>
@@ -109,51 +111,81 @@ export function StudentAdminSummary({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <section className="rounded-lg border border-border bg-muted/40 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Следующий шаг
-          </p>
-          <p className="mt-1 text-[15px] font-medium leading-snug text-foreground">{step}</p>
+        <section
+          className={
+            needsAttention
+              ? "panel-attention flex items-start gap-3 px-4 py-3"
+              : "rounded-[var(--radius)] border border-border bg-muted/50 px-4 py-3"
+          }
+        >
+          <AlertCircle
+            className={
+              needsAttention
+                ? "mt-0.5 h-4 w-4 shrink-0 text-[var(--warning-fg)]"
+                : "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+            }
+          />
+          <div className="min-w-0">
+            <p
+              className={
+                needsAttention
+                  ? "text-[11px] font-semibold uppercase tracking-wide text-[var(--warning-fg)]"
+                  : "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+              }
+            >
+              Следующий шаг
+            </p>
+            <p className="mt-1 text-[15px] font-semibold leading-snug text-foreground">
+              {step}
+            </p>
+          </div>
         </section>
 
         {missingQ ? (
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Анкеты на платформе
-              </p>
-              <p className="mt-1 text-[14px] font-medium">
-                {missingQ === "personal"
-                  ? "Не заполнена анкета №1"
-                  : "Не заполнена анкета №2"}
-              </p>
-              <p className="mt-0.5 text-[13px] text-muted-foreground">
-                Отправим ученику ссылку в кабинет или на создание кабинета.
-              </p>
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-[color-mix(in_srgb,var(--warning)_28%,var(--border))] bg-[var(--warning-bg)] px-4 py-3">
+            <div className="flex items-start gap-2.5">
+              <FileWarning className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning-fg)]" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--warning-fg)]">
+                  Анкеты на платформе
+                </p>
+                <p className="mt-1 text-[14px] font-semibold text-foreground">
+                  {missingQ === "personal"
+                    ? "Не заполнена анкета №1"
+                    : "Не заполнена анкета №2"}
+                </p>
+                <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">
+                  Отправим ученику ссылку в кабинет или на создание кабинета.
+                </p>
+              </div>
             </div>
             <RequestQuestionnaireButton studentId={studentId} />
           </section>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {metrics.map((metric) => (
             <div
               key={metric.label}
-              className="rounded-lg border border-border px-3 py-2.5"
+              className="rounded-[var(--radius-control)] bg-muted/70 px-3 py-2.5"
             >
-              <p className="text-[11px] text-muted-foreground">{metric.label}</p>
-              <p className="mt-0.5 text-[14px] font-medium">{metric.value}</p>
+              <p className="text-[11px] font-medium text-[var(--text-secondary)]">
+                {metric.label}
+              </p>
+              <p className="mt-1 text-[15px] font-semibold tabular-nums text-foreground">
+                {metric.value}
+              </p>
             </div>
           ))}
         </section>
 
-        <section className="rounded-lg border border-border px-4 py-3">
+        <section className="rounded-[var(--radius)] bg-muted/40 px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Куратор
               </p>
-              <p className="mt-1 text-[15px] font-medium">
+              <p className="mt-1 text-[15px] font-semibold text-foreground">
                 {curatorAssigned && curatorName ? curatorName : "Не назначен"}
               </p>
             </div>
@@ -180,23 +212,28 @@ export function StudentAdminSummary({
             Открытые задачи
           </p>
           {tasks.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+            <p className="rounded-[var(--radius)] border border-dashed border-border px-4 py-3 text-[13px] text-muted-foreground">
               Нет открытых задач
             </p>
           ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className="divide-y divide-[var(--divider)] rounded-[var(--radius)] border border-border">
               {tasks.slice(0, 6).map((task) => (
                 <li
                   key={task.id}
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-[14px] font-medium leading-snug">{task.action}</p>
-                    {task.reason && task.reason !== "открытая задача куратора" ? (
-                      <p className="mt-0.5 text-[12px] text-muted-foreground">{task.reason}</p>
+                    <p className="text-[14px] font-medium leading-snug text-foreground">
+                      {task.action}
+                    </p>
+                    {task.reason &&
+                    task.reason !== "открытая задача куратора" ? (
+                      <p className="mt-0.5 text-[12px] text-muted-foreground">
+                        {task.reason}
+                      </p>
                     ) : null}
                   </div>
-                  <Button asChild size="sm" variant="outline" className="shrink-0 rounded-lg">
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
                     <Link href={task.href}>Открыть</Link>
                   </Button>
                 </li>

@@ -57,6 +57,21 @@ export function formatTelegramHtml(text: string): string {
   return out;
 }
 
+/** Plain one-line preview for conversation lists (no markup). */
+export function plainTelegramPreview(text: string | null | undefined): string {
+  if (!text) return "—";
+  return text
+    .replace(/<\/?b>/gi, "")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim() || "—";
+}
+
 export type TelegramTextPart = { bold: boolean; text: string };
 
 /** Same pairing as {@link formatTelegramHtml}, for rendering stored chat text. */

@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { formatTelegramHtml, splitTelegramBold } from "@/lib/telegram-html";
+import {
+  formatTelegramHtml,
+  plainTelegramPreview,
+  splitTelegramBold,
+} from "@/lib/telegram-html";
+
+describe("plainTelegramPreview", () => {
+  it("strips telegram bold tags for list snippets", () => {
+    expect(plainTelegramPreview("<b>Тарифы</b> Комплексное")).toBe(
+      "Тарифы Комплексное",
+    );
+  });
+
+  it("returns an em dash for empty bodies", () => {
+    expect(plainTelegramPreview("")).toBe("—");
+    expect(plainTelegramPreview(null)).toBe("—");
+  });
+});
 
 describe("formatTelegramHtml", () => {
   it("leaves plain text unchanged", () => {

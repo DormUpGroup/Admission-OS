@@ -20,7 +20,7 @@ import {
   DataTableHeader,
   DataTableRow,
 } from "@/components/data-table";
-import { cn } from "@/lib/utils";
+import { FilterPills } from "@/components/filter-pills";
 import type { Prisma } from "@prisma/client";
 
 type SearchParams = {
@@ -162,20 +162,14 @@ export default async function StudentsPage({
       />
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {VIEWS.map((v) => (
-          <Link
-            key={v.id}
-            href={hrefForView(v.id)}
-            className={cn(
-              "rounded-xl px-2.5 py-1 text-xs font-medium border transition-colors",
-              view === v.id
-                ? "border-[var(--brand-muted)] bg-[var(--brand-soft)] text-[var(--brand)]"
-                : "border-border bg-card text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
+        <FilterPills
+          activeId={view}
+          items={VIEWS.map((v) => ({
+            id: v.id,
+            label: v.label,
+            href: hrefForView(v.id),
+          }))}
+        />
         <StudentListFilters
           view={view}
           q={sp.q}

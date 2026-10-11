@@ -6,7 +6,7 @@ import { fullName, formatDate, cn } from "@/lib/utils";
 import { criticalIncomplete } from "@/server/services/readiness";
 import { activityLabel } from "@/server/services/activity";
 import { addRequirementAction, createTaskAction } from "@/server/actions";
-import { PageHeader } from "@/components/page-header";
+import { EntityHeader } from "@/components/entity-header";
 import { MetricCard } from "@/components/metric-card";
 import { RiskBadge } from "@/components/risk-badge";
 import { StatusBadge } from "@/components/status-badge";
@@ -79,32 +79,31 @@ export default async function ApplicationDetailPage({
 
   return (
     <div className="space-y-5">
-      <div className="text-[11px] text-muted-foreground">
-        <Link href="/admin/students" className="hover:underline">
-          Студенты
-        </Link>
-        {" / "}
-        <Link
-          href={`/admin/students/${studentId}`}
-          className="hover:underline"
-        >
-          {fullName(app.student.firstName, app.student.lastName)}
-        </Link>
-        {" / "}
-        <span className="text-foreground">{app.program.name}</span>
-      </div>
-
-      <PageHeader
+      <EntityHeader
+        backHref={`/admin/students/${studentId}`}
+        backLabel={fullName(app.student.firstName, app.student.lastName)}
         title={`${app.program.university.name} — ${app.program.name}`}
-        description={`Набор ${app.intake}${
-          app.hardDeadline ? ` · Жёсткий дедлайн ${formatDate(app.hardDeadline)}` : ""
-        }`}
-        actions={
+        badges={
           <>
             <StatusBadge status={app.status} kind="application" />
             <RiskBadge level={app.riskLevel} />
           </>
         }
+        meta={[
+          { label: "Набор", value: app.intake },
+          ...(app.hardDeadline
+            ? [
+                {
+                  label: "Жёсткий дедлайн",
+                  value: formatDate(app.hardDeadline),
+                },
+              ]
+            : []),
+          {
+            label: "Студент",
+            value: fullName(app.student.firstName, app.student.lastName),
+          },
+        ]}
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -129,22 +128,22 @@ export default async function ApplicationDetailPage({
       </div>
 
       {blockers.length > 0 ? (
-        <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-900">
-          <span className="font-medium">Что мешает: </span>
+        <div className="panel-attention px-3 py-2 text-[13px]">
+          <span className="font-semibold">Что мешает: </span>
           {blockers.map((b) => b.name).join(", ")}
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-1 border-b border-border pb-px">
+      <div className="flex flex-wrap gap-0 border-b border-[var(--divider)]">
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={`${base}?tab=${t.id}`}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
+              "relative px-3 py-2.5 text-[13px] font-medium transition-colors",
               tab === t.id
-                ? "border-neutral-900 text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--brand)]"
+                : "text-[var(--text-secondary)] hover:text-foreground"
             )}
           >
             {t.label}
