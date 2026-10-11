@@ -55,20 +55,33 @@ export async function saveRawSnapshot(input: {
   const data = Buffer.isBuffer(input.content)
     ? input.content
     : Buffer.from(input.content, "utf8");
-  await uploadObject(input.key, data, "text/plain; charset=utf-8");
+  await uploadObject(input.key, data, "text/plain; charset=utf-8", {
+    ifExists: "ignore",
+  });
   return input.key;
+}
+
+function alreadyExists(error: { message: string; statusCode?: string | number }) {
+  return (
+    String(error.statusCode ?? "") === "409" ||
+    /already exists/i.test(error.message)
+  );
 }
 
 async function uploadObject(
   key: string,
   data: Buffer,
   contentType: string,
+  options?: { ifExists?: "error" | "ignore" },
 ) {
   await ensureBucket();
   const { error } = await supabaseAdmin()
     .storage.from(bucket())
     .upload(key, data, { contentType, upsert: false });
-  if (error) throw new Error(error.message);
+  if (!error) return;
+  // Snapshot keys are the content hash. A second write of the same page is the same object.
+  if (options?.ifExists === "ignore" && alreadyExists(error)) return;
+  throw new Error(error.message);
 }
 
 async function downloadObject(storagePath: string) {
