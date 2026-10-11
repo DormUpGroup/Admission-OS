@@ -137,6 +137,68 @@ describe("persistEnrichmentOutput", () => {
     expect(mockFactCreate).not.toHaveBeenCalled();
   });
 
+  it("saves both EU and non-EU seat rows for one applicant", async () => {
+    const euQuote = "50 places for EU citizens";
+    const nonEuQuote = "20 places for non-EU citizens residing abroad";
+    const output: EnrichmentOutput = {
+      campuses: [],
+      access: [],
+      selection: [],
+      admissionExams: [],
+      languageRequirements: [],
+      deadlines: [],
+      tuition: [],
+      seats: [
+        {
+          value: { places: 50 },
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://corsi.unibo.it/x",
+          quote: euQuote,
+          academicYear: "2026/2027",
+          scope: "EU_CITIZEN",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+        {
+          value: { places: 20 },
+          sourceDocumentId: "doc1",
+          sourceUrl: "https://corsi.unibo.it/x",
+          quote: nonEuQuote,
+          academicYear: "2026/2027",
+          scope: "NON_EU_RESIDENT_ABROAD",
+          freshness: "CURRENT",
+          confidence: "HIGH",
+        },
+      ],
+      requiredDocuments: [],
+      importantNotes: [],
+      sourceConflicts: [],
+      unresolvedFields: [],
+      siteNavigationSummary: { hops: [], documentsUsed: [] },
+    };
+
+    const result = await persistEnrichmentOutput({
+      programId: "p1",
+      programAcademicYearId: "pay1",
+      academicYear: "2026/2027",
+      applicantCategory: "NON_EU_RESIDENT_ABROAD",
+      output,
+      documentTexts: new Map([["doc1", `${euQuote}. ${nonEuQuote}.`]]),
+      extractionMethod: "OPENAI_test",
+    });
+
+    expect(result.quoteRejectCount).toBe(0);
+    expect(result.savedFields).toEqual(["SEATS"]);
+    expect(result.savedFactIds).toHaveLength(2);
+    expect(mockFactCreate).toHaveBeenCalledTimes(2);
+    const scopes = mockFactCreate.mock.calls.map(
+      (call) =>
+        (call[0] as { data: { applicantCategoryScope: string } }).data
+          .applicantCategoryScope,
+    );
+    expect(scopes).toEqual(["EU_CITIZEN", "NON_EU_RESIDENT_ABROAD"]);
+  });
+
   it("never overwrites MANUAL_VERIFIED", async () => {
     mockFactFindMany.mockResolvedValueOnce([
       {

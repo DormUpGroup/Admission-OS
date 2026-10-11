@@ -26,7 +26,8 @@ Admission-exam investigation is a mandatory, AI-led step for every programme car
 - Decision invariant: an explicitly documented open admission means NONE and no admission exam. A documented named exam means CLOSED + ENTRANCE_EXAM even if the access label is absent. If a source documents competitive selection but does not name its exam, continue examining official admission links and leave admissionExams unresolved rather than treating it as open admission.
 - For UNKNOWN, include admissionExams in unresolvedFields and state no exam as a confirmed fact. Every non-UNKNOWN outcome still requires an exact quote and source URL.
 - Never use IELTS, TOEFL, CILS, or another language certificate as an admission exam.
-- Tool replies and final packs may include retrieved official section snippets. Snippets help locate evidence; they are not themselves a source of truth. Confirm a fact only with a verbatim quote that appears in the inspected official document.`;
+- Tool replies and final packs may include retrieved official section snippets. Snippets help locate evidence; they are not themselves a source of truth. Confirm a fact only with a verbatim quote that appears in the inspected official document.
+- Seat quotas: emit one seats fact for every proven official row, not only the current applicant. Use EU_CITIZEN, EU_EQUIVALENT, NON_EU_RESIDENT_ITALY, and NON_EU_RESIDENT_ABROAD when the text names that group. Do not skip a row because it is not the student's category. A bare total ("N posti" / "N places" with no group) uses scope ALL and must not be relabelled as EU or non-EU. This seats rule overrides the earlier limit that UNKNOWN applicants only emit ALL-scoped facts. Still require a verbatim quote and do not invent a number.`;
 
 export function enrichmentSystemPrompt(version: string): string {
   if (version === "v1") return ENRICHMENT_SYSTEM_PROMPT_V1;

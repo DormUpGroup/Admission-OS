@@ -145,10 +145,14 @@ export async function persistEnrichmentOutput(input: {
   for (const [group, facts] of groups) {
     const field = FIELD_TO_PROGRAM_FACT[group];
     for (const fact of facts) {
-      if (!allowCategorySpecific && fact.scope !== "ALL") {
+      // Seats are stored for every proven group. Which number decides
+      // eligibility is a later choice; language and exams stay category-filtered.
+      const keepEveryScope = group === "seats";
+      if (!keepEveryScope && !allowCategorySpecific && fact.scope !== "ALL") {
         continue;
       }
       if (
+        !keepEveryScope &&
         input.applicantCategory !== "UNKNOWN" &&
         fact.scope !== "ALL" &&
         !factAppliesToCategory(fact.scope, input.applicantCategory)

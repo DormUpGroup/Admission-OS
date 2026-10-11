@@ -16,6 +16,7 @@ import { labelOf } from "@/lib/labels";
 import { updateIntakeSeatLimitAction } from "@/server/actions";
 import { AddIntakeForm } from "@/components/settings/add-intake-form";
 import {
+  CURRENT_INTAKE,
   formatIntakeLabel,
   occupiedSeatsForIntake,
 } from "@/server/services/accompaniment";
@@ -39,12 +40,13 @@ export default async function AdminSettingsPage({
   ]);
 
   const knownIntakes = [
-    ...new Set([
-      ...cohorts.map((c) => c.intake),
-      ...students.map((s) => s.intake),
-      "2027/28",
-    ]),
+    ...new Set(
+      [...cohorts.map((c) => c.intake), ...students.map((s) => s.intake)].filter(
+        Boolean
+      )
+    ),
   ];
+  if (knownIntakes.length === 0) knownIntakes.push(CURRENT_INTAKE);
 
   return (
     <div className="space-y-5 max-w-2xl">

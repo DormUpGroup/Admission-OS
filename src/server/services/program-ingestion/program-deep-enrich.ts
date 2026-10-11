@@ -13,6 +13,7 @@ import {
   extractHtmlMainText,
   fieldCoverageScore,
   parseCallText,
+  quoteStatesPlaceCount,
   type CallTextParse,
 } from "@/server/services/program-ingestion/call-text-parse";
 import { upsertSourceDocument } from "@/server/services/program-ingestion/snapshot";
@@ -311,8 +312,8 @@ async function persistScopedQuotaFacts(
           discriminator: row.originalGroup,
         }),
         evidenceValidated:
-          mapped &&
-          validateEvidenceQuote(row.snippet, plainText).accepted,
+          validateEvidenceQuote(row.snippet, plainText).accepted &&
+          (mapped || quoteStatesPlaceCount(row.places, row.snippet)),
       });
     }
 

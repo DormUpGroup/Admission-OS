@@ -265,7 +265,7 @@ function toolSchema(name: string) {
     properties.title = {
       type: "string",
       description:
-        "One Russian sentence. Example: Назначьте куратора и подберите программы бакалавриата по кулинарии на набор 2027/28.",
+        "One Russian sentence. Example: Назначьте куратора и подберите программы бакалавриата по кулинарии на набор 2026/27.",
     };
     required.push("title");
   } else if (name === "program.match_job.start") {

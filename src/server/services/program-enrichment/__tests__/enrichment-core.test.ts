@@ -20,6 +20,7 @@ describe("exam-search prompt", () => {
     const prompt = enrichmentSystemPrompt("v3");
     expect(prompt).toContain("mandatory, AI-led step");
     expect(prompt).toContain("admissionExams in unresolvedFields");
+    expect(prompt).toContain("one seats fact for every proven official row");
   });
 });
 

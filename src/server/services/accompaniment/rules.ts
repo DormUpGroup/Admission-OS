@@ -1,5 +1,8 @@
 import { AccompanimentStatus } from "@/lib/enums";
 
+/** Accompaniment cohort the agency is filling now. */
+export const CURRENT_INTAKE = "2026/27";
+
 export function normalizeIntakeKey(intake: string | null | undefined): string {
   const raw = (intake ?? "").trim();
   if (!raw) return "";

@@ -7,16 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { CURRENT_INTAKE } from "@/server/services/accompaniment/rules";
 
 export default async function NewStudentPage() {
   const session = await requireStaff();
-  const curators =
+  const [curators, activeCohort] = await Promise.all([
     session.user.role === "ADMIN"
-      ? await prisma.user.findMany({
+      ? prisma.user.findMany({
           where: { role: { in: ["ADMIN", "CURATOR"] } },
           orderBy: { name: "asc" },
         })
-      : [];
+      : Promise.resolve([]),
+    prisma.intakeCohort.findFirst({
+      where: { isActive: true },
+      select: { intake: true },
+    }),
+  ]);
+  const defaultIntake = activeCohort?.intake || CURRENT_INTAKE;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -73,7 +80,7 @@ export default async function NewStudentPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="intake">Набор</Label>
-              <Input id="intake" name="intake" defaultValue="2027/28" required />
+              <Input id="intake" name="intake" defaultValue={defaultIntake} required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="targetField">Целевое направление</Label>

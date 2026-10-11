@@ -386,4 +386,31 @@ describe("bando-url-discover", () => {
       parsed.quotaRows.find((row) => row.category === "EU_EQUIVALENT")?.places
     ).toBe(50);
   });
+
+  it("does not turn an ordinal application window into a seat count", () => {
+    const parsed = parseCallText(
+      "STUDENT CATEGORY SCHOOL QUALIFICATION PROCEDURE 1st APPLICATION WINDOW 2nd APPLICATION WINDOW",
+      "https://uni.example.it/call",
+    );
+    expect(parsed.quotaRows).toEqual([]);
+  });
+
+  it("keeps an unmapped posti count as a number", () => {
+    const parsed = parseCallText(
+      "Sono disponibili 60 posti per il corso di laurea.",
+      "https://uni.example.it/call",
+    );
+    expect(parsed.quotaRows).toEqual([
+      expect.objectContaining({ category: "UNMAPPED", places: 60 }),
+    ]);
+  });
+
+  it("reads di cui as the reserved seat count", () => {
+    const parsed = parseCallText(
+      "Sono disponibili 60 posti, di cui 15 riservati agli studenti stranieri residenti all'estero.",
+      "https://uni.example.it/call",
+    );
+    expect(parsed.quotaRows.some((row) => row.places === 15)).toBe(true);
+    expect(parsed.quotaRows.some((row) => row.places === 60)).toBe(false);
+  });
 });

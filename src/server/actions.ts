@@ -31,6 +31,7 @@ import {
   type MessageAttachment,
 } from "@/lib/message-attachments";
 import { verifyProgramDossierFacts } from "@/server/services/program-matching/manual-fact-verification";
+import { CURRENT_INTAKE } from "@/server/services/accompaniment/rules";
 
 export async function createStudentAction(formData: FormData) {
   const session = await requireStaff();
@@ -41,7 +42,7 @@ export async function createStudentAction(formData: FormData) {
   const country = String(formData.get("country") || "") || null;
   const nationality = String(formData.get("nationality") || "") || null;
   const studyLevel = String(formData.get("studyLevel") || "BACHELOR");
-  const intake = String(formData.get("intake") || "2027/28");
+  const intake = String(formData.get("intake") || CURRENT_INTAKE);
   const targetField = String(formData.get("targetField") || "") || null;
   const preferredLanguage = String(formData.get("preferredLanguage") || "") || null;
   const curatorId = String(formData.get("curatorId") || "") || session.user.id;
@@ -83,7 +84,16 @@ export async function createApplicationAction(formData: FormData) {
   const programId = String(formData.get("programId") || "");
   const programAcademicYearId =
     String(formData.get("programAcademicYearId") || "") || null;
-  const intake = String(formData.get("intake") || "2027/28");
+  const submittedIntake = String(formData.get("intake") || "").trim();
+  const studentIntake = submittedIntake
+    ? null
+    : (
+        await prisma.student.findUnique({
+          where: { id: studentId },
+          select: { intake: true },
+        })
+      )?.intake;
+  const intake = submittedIntake || studentIntake || CURRENT_INTAKE;
   const hardDeadline = String(formData.get("hardDeadline") || "");
   const targetSubmissionDate = String(formData.get("targetSubmissionDate") || "");
   const applicationRound = String(formData.get("applicationRound") || "") || null;

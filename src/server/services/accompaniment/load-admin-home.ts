@@ -14,6 +14,7 @@ import {
   canChangeIntakeLimit,
   canRejectAccompaniment,
   compareNewAnketas,
+  CURRENT_INTAKE,
   formatIntakeLabel,
   normalizeIntakeKey,
   occupiedSeatsForIntake,
@@ -152,7 +153,7 @@ export async function loadAdminHome(input: {
     normalizeIntakeKey(input.intake) ||
     (activeCohort ? normalizeIntakeKey(activeCohort.intake) : "") ||
     intakeKeys[0] ||
-    "2027/28";
+    CURRENT_INTAKE;
 
   const selectedCohort =
     cohorts.find((c) => normalizeIntakeKey(c.intake) === selectedKey) ?? null;

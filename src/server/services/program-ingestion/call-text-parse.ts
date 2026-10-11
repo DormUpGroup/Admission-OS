@@ -637,36 +637,39 @@ function quotaCategories(group: string): ScopedQuotaRow["category"][] {
   return [...new Set<ScopedQuotaRow["category"]>(categories)];
 }
 
+/** A seat count is only the digits written as N posti/places/seats or "di cui N". */
+export function explicitPlaceCount(chunk: string): number | null {
+  const nested = chunk.match(/\b(?:of\s+which|di\s+cui)\s+(\d{1,4})\b/i);
+  const direct = chunk.match(/\b(\d{1,4})\s*(?:places|posti|seats)\b/i);
+  const raw = nested?.[1] ?? direct?.[1];
+  if (!raw) return null;
+  const places = Number(raw);
+  if (!Number.isFinite(places) || places <= 0 || places > 5000) return null;
+  return places;
+}
+
+export function quoteStatesPlaceCount(
+  places: number,
+  quote: string | null | undefined,
+): boolean {
+  if (!quote || !Number.isFinite(places)) return false;
+  const n = String(Math.trunc(places));
+  return (
+    new RegExp(`\\b${n}\\s*(?:places|posti|seats)\\b`, "i").test(quote) ||
+    new RegExp(`\\b(?:of\\s+which|di\\s+cui)\\s+${n}\\b`, "i").test(quote)
+  );
+}
+
 function quotaRowsFromChunks(chunks: string[]): ScopedQuotaRow[] {
   const rows: ScopedQuotaRow[] = [];
   for (const chunk of chunks) {
-    if (!/\b(?:places|posti|seats|category|categoria|marco\s+polo)\b/i.test(chunk)) {
-      continue;
-    }
-    const numbers = [...chunk.matchAll(/\b(\d{1,4})\b/g)].map((match) => ({
-      value: Number(match[1]),
-      raw: match[1],
-    }));
-    if (numbers.length === 0) continue;
+    const places = explicitPlaceCount(chunk);
+    if (places == null || !quoteStatesPlaceCount(places, chunk)) continue;
     const code = chunk.match(/\b(?:category|categoria|cat\.?)\s*(\d{3,4})\b/i)?.[1];
     const placeMentions = chunk.match(/\b(?:places|posti|seats)\b/gi) || [];
-    if (!code && placeMentions.length > 1) continue;
-    const candidates = code
-      ? numbers.filter((number) => number.raw !== code)
-      : numbers;
-    const directPlaces = chunk.match(/\b(\d{1,4})\s*(?:places|posti|seats)\b/i)?.[1];
-    // "150 places (of which 10 are reserved for non-EU ...)" is a
-    // frequent bando formulation.  The nested count is the quota for that
-    // category; using 150 would overstate non-EU availability.
-    const nestedReservedPlaces = chunk.match(
-      /\bof\s+which\s+(\d{1,4})\s+(?:are\s+)?(?:reserved|for)\b/i
-    )?.[1];
-    const places = nestedReservedPlaces
-      ? Number(nestedReservedPlaces)
-      : directPlaces
-        ? Number(directPlaces)
-        : candidates.at(-1)?.value;
-    if (places == null || places > 5000) continue;
+    if (!code && placeMentions.length > 1 && !/\b(?:of\s+which|di\s+cui)\s+\d{1,4}\b/i.test(chunk)) {
+      continue;
+    }
     const originalGroup = chunk
       .replace(/\b(?:category|categoria|cat\.?)\s*\d{3,4}\b/i, "")
       .replace(/\b\d{1,4}\s*(?:places|posti|seats)\b/i, "")

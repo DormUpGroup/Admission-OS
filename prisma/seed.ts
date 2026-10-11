@@ -102,9 +102,9 @@ async function main() {
 
   const template = await prisma.applicationTemplate.create({
     data: {
-      name: "Bologna Economics 2027/28",
+      name: "Bologna Economics 2026/27",
       programId: bolognaEcon.id,
-      intake: "2027/28",
+      intake: "2026/27",
       items: {
         create: [
           { name: "Passport", type: "DOCUMENT", isCritical: true },
@@ -156,7 +156,7 @@ async function main() {
         country: s.country,
         nationality: s.country,
         studyLevel: "BACHELOR",
-        intake: "2027/28",
+        intake: "2026/27",
         targetField: "Economics",
         preferredLanguage: "English",
         status: "ACTIVE",
@@ -181,7 +181,7 @@ async function main() {
       studyLevel: "BACHELOR",
       preferredLanguage: "English",
       targetField: "Economics",
-      intake: "2027/28",
+      intake: "2026/27",
       questionnairePersonalJson: JSON.stringify({
         firstNameLatin: "Alina",
         lastNameLatin: "Sokolova",
@@ -276,7 +276,7 @@ async function main() {
         studentId: alina.id,
         programId: prog.id,
         status: "PREPARING",
-        intake: "2027/28",
+        intake: "2026/27",
         applicationRound: "First call",
         admissionType: "Standard",
         requiredExam: "SAT",
@@ -449,7 +449,7 @@ async function main() {
           studentId: student.id,
           programId: prog.id,
           status,
-          intake: "2027/28",
+          intake: "2026/27",
           applicationRound: "First call",
           hardDeadline,
           targetSubmissionDate: daysFromNow(
@@ -576,7 +576,7 @@ async function main() {
 
   await prisma.intakeCohort.create({
     data: {
-      intake: "2027/28",
+      intake: "2026/27",
       seatLimit: null,
       isActive: true,
     },
@@ -637,7 +637,7 @@ async function main() {
         country: pending.country,
         nationality: pending.country,
         studyLevel: "BACHELOR",
-        intake: "2027/28",
+        intake: "2026/27",
         targetField: pending.directions[0],
         preferredLanguage: "Итальянский",
         preferredCities: JSON.stringify(["Milano", "Roma"]),

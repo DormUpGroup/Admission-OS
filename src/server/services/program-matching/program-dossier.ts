@@ -21,7 +21,10 @@ import {
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { inferPublicPrivateFromUniversityName } from "@/server/services/program-ingestion/infer-public-private";
-import { sanitizeTuitionPair } from "@/server/services/program-ingestion/call-text-parse";
+import {
+  quoteStatesPlaceCount,
+  sanitizeTuitionPair,
+} from "@/server/services/program-ingestion/call-text-parse";
 import type { SelectionRegime } from "@/server/services/program-ingestion/admission-regime";
 import type { ApplicantCategory } from "@/lib/program-matching/types";
 import {
@@ -456,19 +459,11 @@ function buildProgramDossier(
       ? quotaSeats
       : null;
 
-  // Keep every proven quota available to the card. The card compares the
-  // source year with the student's intake and only labels a prior cycle as an
-  // orientation; matching still uses the strict resolver above.
+  // Category-scoped quotas stay on the resolver above. A quote that states
+  // "N posti" is still a number to print, even when the applicant group is
+  // unmapped and the stored row is only a draft.
   const indicativeSeatOptions = factRows
-    .filter(
-      (fact) =>
-        fact.field === "SEATS" &&
-        !fact.superseded &&
-        fact.freshness === "CURRENT" &&
-        fact.decisionStatus === "ELIGIBLE" &&
-        !!fact.evidenceQuote &&
-        !!fact.sourceUrl
-    )
+    .filter((fact) => fact.field === "SEATS" && !fact.superseded)
     .map((fact) => ({
       places: numericValue(parseFactJson(fact.normalizedValueJson), [
         "places",
@@ -487,7 +482,7 @@ function buildProgramDossier(
         academicYear: string | null;
         quote: string | null;
         sourceUrl: string | null;
-      } => fact.places != null
+      } => fact.places != null && quoteStatesPlaceCount(fact.places, fact.quote)
     )
     .filter(
       (fact, index, all) =>
