@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BrandLogo } from "@/components/brand-logo";
+import { MatchReadyToasts } from "@/components/admin/match-ready-toasts";
 import { MobileChatScreenProvider } from "@/components/admin/mobile-chat-screen";
 import { logoutAction } from "@/server/auth-actions";
 import type { MessageUnreadCounts } from "@/lib/message-unread-counts";
@@ -117,6 +118,7 @@ export function AdminShell({
             {children}
           </MobileChatScreenProvider>
         </main>
+        <MatchReadyToasts />
       </div>
     </div>
   );

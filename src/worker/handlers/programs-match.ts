@@ -1,3 +1,4 @@
+import type { ProgramMatchJob } from "@prisma/client";
 import { MATCHING_ENGINE_VERSION } from "@/lib/program-matching/config";
 import {
   OutboxTerminalError,
@@ -9,6 +10,7 @@ import {
   jobIdFromProgramsMatchPayload,
   PROGRAM_MATCH_JOB_STATUS,
 } from "@/server/services/program-matching/match-job";
+import { notifyProgramMatchReady } from "@/server/services/program-matching/match-ready-notice";
 import { persistProgramMatches } from "@/server/services/program-matching/program-matching";
 import type { OutboxHandler } from "../dispatch";
 
@@ -28,12 +30,24 @@ export const handleProgramsMatch: OutboxHandler = async (db, event) => {
   if (!job) {
     throw new OutboxTerminalError(`ProgramMatchJob ${jobId} was not found`);
   }
-  if (
-    job.status === PROGRAM_MATCH_JOB_STATUS.SUCCEEDED ||
-    job.status === PROGRAM_MATCH_JOB_STATUS.FAILED
-  ) {
+  if (job.status === PROGRAM_MATCH_JOB_STATUS.FAILED) {
     return;
   }
+
+  if (job.status !== PROGRAM_MATCH_JOB_STATUS.SUCCEEDED) {
+    await runProgramMatch(db, event, jobId, leaseToken, job);
+  }
+
+  await notifyProgramMatchReady(db, { studentId: job.studentId, jobId });
+};
+
+async function runProgramMatch(
+  db: DbClient,
+  event: Parameters<OutboxHandler>[1],
+  jobId: string,
+  leaseToken: string,
+  job: ProgramMatchJob,
+) {
 
   const startedAt = job.startedAt ?? new Date();
   await db.programMatchJob.update({

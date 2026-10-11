@@ -30,6 +30,12 @@ import { StudentAvatar } from "@/components/student-avatar";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { GenerateProgramMatchesButton } from "@/components/generate-program-matches-button";
+import { ProgramMatchTabMark } from "@/components/admin/program-match-tab-mark";
+import { ScrollToActivity } from "@/components/scroll-to-activity";
+import {
+  findLatestProgramMatchJob,
+  isActiveProgramMatchJobStatus,
+} from "@/server/services/program-matching/match-job";
 import { ResetProgramMatchesButton } from "@/components/reset-program-matches-button";
 import { ResetUniversitalyCacheButton } from "@/components/reset-universitaly-cache-button";
 import {
@@ -106,6 +112,7 @@ export default async function StudentProfilePage({
     callFreshness?: string;
     deadlineBefore?: string;
     matchView?: string;
+    event?: string;
   }>;
 }) {
   const session = await requireStaff();
@@ -183,7 +190,7 @@ export default async function StudentProfilePage({
   const needsProgramCatalog = tab === "programs" || tab === "applications";
   const needsTemplates = tab === "applications";
 
-  const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications, curators] =
+  const [programs, templates, persistedMatches, shortlist, matchingProfile, curatorNotifications, curators, latestMatchJob] =
     await Promise.all([
       needsProgramCatalog
         ? prisma.program.findMany({
@@ -211,7 +218,15 @@ export default async function StudentProfilePage({
             select: { id: true, name: true },
           })
         : Promise.resolve([]),
+      findLatestProgramMatchJob(studentId),
     ]);
+  const matchTabStatus = !latestMatchJob
+    ? "idle"
+    : isActiveProgramMatchJobStatus(latestMatchJob.status)
+      ? "running"
+      : latestMatchJob.status === "SUCCEEDED"
+        ? "done"
+        : "idle";
 
   const programmeIntake = formatIntakeLabel(
     matchingProfile?.targetAcademicYear ?? DEFAULT_TARGET_ACADEMIC_YEAR
@@ -508,13 +523,19 @@ export default async function StudentProfilePage({
             key={t.id}
             href={`/admin/students/${studentId}?tab=${t.id}`}
             className={cn(
-              "relative shrink-0 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors md:min-w-0 md:flex-1 md:text-center",
+              "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors md:min-w-0 md:flex-1",
               tab === t.id
                 ? "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--brand)]"
                 : "text-[var(--text-secondary)] hover:text-foreground"
             )}
           >
             {t.label}
+            {t.id === "programs" ? (
+              <ProgramMatchTabMark
+                studentId={studentId}
+                initialStatus={matchTabStatus}
+              />
+            ) : null}
           </Link>
         ))}
       </div>
@@ -1612,12 +1633,21 @@ export default async function StudentProfilePage({
             <CardTitle>Хронология активности</CardTitle>
           </CardHeader>
           <CardContent>
+            <ScrollToActivity id={sp.event} />
             <ActivityTimeline
+              highlightId={sp.event}
               items={student.activities.map((a) => ({
                 id: a.id,
                 type: a.type,
                 title: activityLabel(a.type as ActivityType, a.metadata),
-                description: a.metadata,
+                description:
+                  a.type === "PROGRAM_MATCH_GENERATED"
+                    ? "Список на вкладке «Программы»."
+                    : a.metadata,
+                href:
+                  a.type === "PROGRAM_MATCH_GENERATED"
+                    ? `/admin/students/${studentId}?tab=programs#program-match-results`
+                    : null,
                 actorName: a.user?.name,
                 createdAt: a.createdAt,
               }))}

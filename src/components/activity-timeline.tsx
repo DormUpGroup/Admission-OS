@@ -7,18 +7,21 @@ export interface ActivityItem {
   description?: string | null;
   actorName?: string | null;
   createdAt: Date | string;
+  href?: string | null;
 }
 
 export interface ActivityTimelineProps {
   items: ActivityItem[];
   className?: string;
   emptyMessage?: string;
+  highlightId?: string;
 }
 
 export function ActivityTimeline({
   items,
   className,
   emptyMessage = "Пока нет событий",
+  highlightId,
 }: ActivityTimelineProps) {
   if (items.length === 0) {
     return (
@@ -31,7 +34,14 @@ export function ActivityTimeline({
   return (
     <ol className={cn("relative space-y-0", className)}>
       {items.map((item, index) => (
-        <li key={item.id} className="relative flex gap-3 pb-4 last:pb-0">
+        <li
+          key={item.id}
+          id={`activity-${item.id}`}
+          className={cn(
+            "relative flex scroll-mt-24 gap-3 rounded-xl pb-4 last:pb-0",
+            highlightId === item.id && "bg-muted px-2 py-2",
+          )}
+        >
           {index < items.length - 1 ? (
             <span className="absolute left-[5px] top-3 bottom-0 w-px bg-border" />
           ) : null}
@@ -49,6 +59,14 @@ export function ActivityTimeline({
               <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
                 {item.description}
               </p>
+            ) : null}
+            {item.href ? (
+              <a
+                href={item.href}
+                className="mt-1 inline-block text-xs font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+              >
+                Открыть программы
+              </a>
             ) : null}
             {item.actorName ? (
               <p className="mt-1 text-[11px] text-muted-foreground">
