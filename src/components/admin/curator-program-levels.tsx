@@ -13,6 +13,7 @@ import {
   labelOf,
 } from "@/lib/labels";
 import {
+  formatAcademicYearShort,
   humanizeLanguage,
   previousYearCallNote,
 } from "@/server/services/student-journey/humanize";
@@ -174,11 +175,9 @@ function indicativeSeatsForMatch(match: CuratorMatchView) {
 
 function indicativeSeatsNote(match: CuratorMatchView): string | null {
   const sourceYear = indicativeSeatsForMatch(match)[0]?.academicYear;
-  if (!sourceYear) return null;
-  return (
-    previousYearCallNote(sourceYear, match.intake, null) ??
-    `Ориентир по местам за ${sourceYear}`
-  );
+  const short = formatAcademicYearShort(sourceYear);
+  if (!short) return null;
+  return `ориентир ${short}`;
 }
 
 function hasConfirmedSeats(match: CuratorMatchView): boolean {
@@ -199,34 +198,6 @@ function hasConfirmedSeats(match: CuratorMatchView): boolean {
       statusValue?.nonEu != null ||
       statusValue?.eu != null,
   );
-}
-
-function intakeAvailabilityText(match: CuratorMatchView): {
-  value: string | null;
-  reason: string;
-} {
-  if (match.callFreshness === "current") {
-    return {
-      value: `Опубликован набор ${match.academicYear}`,
-      reason: "",
-    };
-  }
-  if (match.callFreshness === "indicative") {
-    return {
-      value: null,
-      reason:
-        previousYearCallNote(
-          match.indicativeFromYear || match.academicYear,
-          match.intake,
-          match.indicativeFromYear,
-        ) ??
-        `Набор ${match.intake}: условия ещё не опубликованы`,
-    };
-  }
-  return {
-    value: null,
-    reason: fieldReason(match, "admissionCall"),
-  };
 }
 
 function fieldReason(
@@ -259,20 +230,6 @@ function fieldReason(
     );
   }
   return "Нужна ручная проверка куратора";
-}
-
-function missingSeatsText(match: CuratorMatchView): string {
-  const reason = match.fieldStatuses?.seats?.reason;
-  if (
-    reason === "OFFICIAL_SOURCE_NOT_FOUND" ||
-    reason === "SOURCE_FETCH_FAILED" ||
-    reason === "SCANNED_PDF_NEEDS_OCR" ||
-    reason === "ONLY_PREVIOUS_YEAR_AVAILABLE" ||
-    reason === "NOT_PUBLISHED_FOR_TARGET_YEAR"
-  ) {
-    return fieldReason(match, "seats");
-  }
-  return "Число мест в бандо не указано";
 }
 
 /** Verification of admission data — independent from fitScore. */
@@ -832,8 +789,7 @@ export function matchRequirementSummary(match: CuratorMatchView) {
     seats && !hasConfirmedSeats(match) && statedSeatsForIntake(match).length === 0
       ? indicativeSeatsNote(match)
       : null;
-  const intake = intakeAvailabilityText(match);
-  return { language, access, exams, seats, seatsOrientir, intake };
+  return { language, access, exams, seats, seatsOrientir };
 }
 
 export function CuratorProgramLevelsCard({
@@ -846,7 +802,7 @@ export function CuratorProgramLevelsCard({
   catalog?: boolean;
 }) {
   const teaching = teachingLanguageText(match);
-  const { language, access, exams, seats, seatsOrientir, intake } =
+  const { language, access, exams, seats, seatsOrientir } =
     matchRequirementSummary(match);
   const verification = verificationPresentation(match);
   const shortlistLabel = match.onShortlist
@@ -855,7 +811,7 @@ export function CuratorProgramLevelsCard({
 
   const metaLine = [
     labelOf(match.degreeLevel),
-    match.academicYear,
+    formatAcademicYearShort(match.academicYear),
     teaching,
   ]
     .filter(Boolean)
@@ -949,16 +905,10 @@ export function CuratorProgramLevelsCard({
             applicantCategory={match.applicantCategory}
           />
           <RequirementCell
-            label={`Набор ${match.intake || match.academicYear}`}
-            value={intake.value}
-            reason={intake.reason}
-            note={
-              seats
-                ? seatsOrientir
-                  ? `${seats} · ${seatsOrientir}`
-                  : seats
-                : missingSeatsText(match)
-            }
+            label={`Набор ${formatAcademicYearShort(match.intake || match.academicYear) ?? "—"}`}
+            value={seats}
+            reason="не указано"
+            note={seatsOrientir}
             evidence={[
               ...evidenceForCondition(match, ["SEATS"]),
               ...indicativeSeatEvidence(match),
