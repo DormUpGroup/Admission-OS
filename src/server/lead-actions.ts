@@ -14,6 +14,29 @@ import { enqueueOutbox } from "@/server/commands/outbox";
  * The card disappears in this request. Scanning webhook logs and notifications
  * continues after the response, so the button does not wait on it.
  */
+export async function deleteLeadsAction(
+  leadIds: string[],
+): Promise<{ deleted: number; failed: Array<{ id: string; error: string }> }> {
+  await requireStaff();
+  const ids = [...new Set(leadIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return { deleted: 0, failed: [] };
+
+  let deleted = 0;
+  const failed: Array<{ id: string; error: string }> = [];
+  for (const id of ids) {
+    try {
+      await deleteLeadAction(id);
+      deleted += 1;
+    } catch (caught: unknown) {
+      failed.push({
+        id,
+        error: caught instanceof Error ? caught.message : "Не удалось удалить",
+      });
+    }
+  }
+  return { deleted, failed };
+}
+
 export async function deleteLeadAction(leadId: string): Promise<void> {
   await requireStaff();
   const id = leadId.trim();

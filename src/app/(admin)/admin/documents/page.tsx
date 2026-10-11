@@ -5,20 +5,16 @@ import {
   approveDocumentAction,
   needsChangesAction,
 } from "@/server/actions";
+import {
+  DocumentsReviewTable,
+  toDocumentReviewRow,
+} from "@/components/admin/documents-review-table";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { FilterPills } from "@/components/filter-pills";
 import { DocumentStatusBadge } from "@/components/document-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeader,
-  DataTableRow,
-} from "@/components/data-table";
 import { formatDate, fullName } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
 
@@ -77,6 +73,8 @@ export default async function AdminDocumentsPage({
     orderBy: [{ uploadedAt: "desc" }, { updatedAt: "desc" }],
   });
 
+  const rows = documents.map(toDocumentReviewRow);
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -100,168 +98,89 @@ export default async function AdminDocumentsPage({
         />
       ) : (
         <>
-        <ul className="space-y-2 md:hidden">
-          {documents.map((doc) => {
-            const related = [
-              ...new Set(
-                doc.requirements.map(
-                  (r) =>
-                    `${r.application.program.university.name} — ${r.application.program.name}`
-                )
-              ),
-            ];
-            const canReview =
-              doc.status === "UPLOADED" || doc.status === "UNDER_REVIEW";
-            return (
-              <li key={doc.id} className="surface-card space-y-2 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium">{doc.name}</p>
-                    <Link
-                      href={`/admin/students/${doc.studentId}`}
-                      className="text-[13px] text-muted-foreground hover:underline"
-                    >
-                      {fullName(doc.student.firstName, doc.student.lastName)}
-                    </Link>
-                  </div>
-                  <DocumentStatusBadge status={doc.status} />
-                </div>
-                <p className="text-[12px] text-muted-foreground">
-                  {formatDate(doc.uploadedAt)}
-                  {related.length ? ` · ${related.join(", ")}` : ""}
-                </p>
-                {doc.fileUrl ? (
-                  <a
-                    href={doc.fileUrl}
-                    className="text-[13px] text-sky-700 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Открыть файл
-                  </a>
-                ) : null}
-                {canReview ? (
-                  <div className="space-y-2">
-                    <form action={approveDocumentAction.bind(null, doc.id)}>
-                      <Button type="submit" size="sm" variant="secondary" className="w-full">
-                        Одобрить
-                      </Button>
-                    </form>
-                    <form action={needsChangesAction} className="flex flex-col gap-2">
-                      <input type="hidden" name="documentId" value={doc.id} />
-                      <Input name="reason" placeholder="Причина…" required />
-                      <Button type="submit" size="sm" variant="outline" className="w-full">
-                        Нужны правки
-                      </Button>
-                    </form>
-                  </div>
-                ) : (
-                  <Link
-                    href={`/admin/students/${doc.studentId}?tab=documents`}
-                    className="text-xs text-muted-foreground hover:underline"
-                  >
-                    Открыть хранилище
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <div className="hidden md:block">
-        <DataTable>
-          <DataTableHeader>
-            <DataTableRow>
-              <DataTableHead>Студент</DataTableHead>
-              <DataTableHead>Документ</DataTableHead>
-              <DataTableHead>Загружен</DataTableHead>
-              <DataTableHead>Связано</DataTableHead>
-              <DataTableHead>Статус</DataTableHead>
-              <DataTableHead>Действие</DataTableHead>
-            </DataTableRow>
-          </DataTableHeader>
-          <DataTableBody>
+          <ul className="space-y-2 md:hidden">
             {documents.map((doc) => {
               const related = [
                 ...new Set(
                   doc.requirements.map(
                     (r) =>
-                      `${r.application.program.university.name} — ${r.application.program.name}`
-                  )
+                      `${r.application.program.university.name} — ${r.application.program.name}`,
+                  ),
                 ),
               ];
               const canReview =
                 doc.status === "UPLOADED" || doc.status === "UNDER_REVIEW";
-
               return (
-                <DataTableRow key={doc.id}>
-                  <DataTableCell>
-                    <Link
-                      href={`/admin/students/${doc.studentId}`}
-                      className="font-medium hover:underline"
-                    >
-                      {fullName(doc.student.firstName, doc.student.lastName)}
-                    </Link>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium">{doc.name}</span>
-                      {doc.fileUrl ? (
-                        <a
-                          href={doc.fileUrl}
-                          className="text-[11px] text-sky-700 hover:underline"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Открыть файл
-                        </a>
-                      ) : null}
-                    </div>
-                  </DataTableCell>
-                  <DataTableCell className="tabular-nums text-muted-foreground">
-                    {formatDate(doc.uploadedAt)}
-                  </DataTableCell>
-                  <DataTableCell className="max-w-[200px] text-xs text-muted-foreground">
-                    {related.length ? related.join(", ") : "—"}
-                  </DataTableCell>
-                  <DataTableCell>
-                    <DocumentStatusBadge status={doc.status} />
-                  </DataTableCell>
-                  <DataTableCell>
-                    {canReview ? (
-                      <div className="flex flex-col gap-2">
-                        <form action={approveDocumentAction.bind(null, doc.id)}>
-                          <Button type="submit" size="sm" variant="secondary">
-                            Одобрить
-                          </Button>
-                        </form>
-                        <form action={needsChangesAction} className="flex gap-1">
-                          <input type="hidden" name="documentId" value={doc.id} />
-                          <Input
-                            name="reason"
-                            placeholder="Причина…"
-                            className="h-7 w-36"
-                            required
-                          />
-                          <Button type="submit" size="sm" variant="outline">
-                            Нужны правки
-                          </Button>
-                        </form>
-                      </div>
-                    ) : (
+                <li key={doc.id} className="surface-card space-y-2 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium">{doc.name}</p>
                       <Link
-                        href={`/admin/students/${doc.studentId}?tab=documents`}
-                        className="text-xs text-muted-foreground hover:underline"
+                        href={`/admin/students/${doc.studentId}`}
+                        className="text-[13px] text-muted-foreground hover:underline"
                       >
-                        Открыть хранилище
+                        {fullName(doc.student.firstName, doc.student.lastName)}
                       </Link>
-                    )}
-                  </DataTableCell>
-                </DataTableRow>
+                    </div>
+                    <DocumentStatusBadge status={doc.status} />
+                  </div>
+                  <p className="text-[12px] text-muted-foreground">
+                    {formatDate(doc.uploadedAt)}
+                    {related.length ? ` · ${related.join(", ")}` : ""}
+                  </p>
+                  {doc.fileUrl ? (
+                    <a
+                      href={doc.fileUrl}
+                      className="text-[13px] text-sky-700 hover:underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Открыть файл
+                    </a>
+                  ) : null}
+                  {canReview ? (
+                    <div className="space-y-2">
+                      <form action={approveDocumentAction.bind(null, doc.id)}>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="secondary"
+                          className="w-full"
+                        >
+                          Одобрить
+                        </Button>
+                      </form>
+                      <form
+                        action={needsChangesAction}
+                        className="flex flex-col gap-2"
+                      >
+                        <input type="hidden" name="documentId" value={doc.id} />
+                        <Input name="reason" placeholder="Причина…" required />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                        >
+                          Нужны правки
+                        </Button>
+                      </form>
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/admin/students/${doc.studentId}?tab=documents`}
+                      className="text-xs text-muted-foreground hover:underline"
+                    >
+                      Открыть хранилище
+                    </Link>
+                  )}
+                </li>
               );
             })}
-          </DataTableBody>
-        </DataTable>
-        </div>
+          </ul>
+          <div className="hidden md:block">
+            <DocumentsReviewTable rows={rows} />
+          </div>
         </>
       )}
     </div>
