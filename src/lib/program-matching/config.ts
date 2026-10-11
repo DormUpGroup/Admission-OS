@@ -10,7 +10,7 @@ export const TARGET_ACADEMIC_YEARS = [
 
 export type AcademicYear = (typeof TARGET_ACADEMIC_YEARS)[number];
 
-export const DEFAULT_TARGET_ACADEMIC_YEAR: AcademicYear = "2027/2028";
+export const DEFAULT_TARGET_ACADEMIC_YEAR: AcademicYear = "2026/2027";
 
 /**
  * Fit priorities for Immigrome ops:

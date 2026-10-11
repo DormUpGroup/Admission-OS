@@ -61,6 +61,8 @@ import {
   hasMatchingProfile,
   parsePreferredCities,
 } from "@/server/services/program-match";
+import { DEFAULT_TARGET_ACADEMIC_YEAR } from "@/lib/program-matching/config";
+import { formatIntakeLabel } from "@/server/services/accompaniment/rules";
 import { buildMatchingProfile } from "@/server/services/program-matching/program-matching";
 import { listPersistedMatches } from "@/server/services/program-matching/program-matching";
 import { listStudentShortlist } from "@/server/services/program-matching/shortlist";
@@ -211,6 +213,9 @@ export default async function StudentProfilePage({
         : Promise.resolve([]),
     ]);
 
+  const programmeIntake = formatIntakeLabel(
+    matchingProfile?.targetAcademicYear ?? DEFAULT_TARGET_ACADEMIC_YEAR
+  );
   const preferredCities = parsePreferredCities(student.preferredCities);
   const questionnaireDone = hasQuestionnaire(student);
   const matchingReady = hasMatchingProfile(student);
@@ -236,7 +241,7 @@ export default async function StudentProfilePage({
           application.programId === m.programAcademicYear.program.id
       )?.id,
       studentId,
-      intake: student.intake,
+      intake: programmeIntake,
     })
   );
 
@@ -371,7 +376,7 @@ export default async function StudentProfilePage({
           hasValue: !tuitionMissing,
           indicativeFromYear: pay.indicativeFromYear,
           academicYear: pay.academicYear,
-          intake: student.intake,
+          intake: programmeIntake,
           verified: tuitionVerified,
         }),
       };

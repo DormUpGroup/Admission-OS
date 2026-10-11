@@ -16,7 +16,6 @@ import type {
 } from "@/lib/program-matching/types";
 import {
   UNKNOWN,
-  normalizeAcademicYear,
   parseIeltsFromText,
   parseSatFromText,
 } from "./compare";
@@ -167,8 +166,7 @@ export function buildMatchingProfileFromStudent(student: StudentInput): Matching
   pushMissing("Budget / max tuition", UNKNOWN);
   if (!programs.englishLevel) missingFields.push("English level");
 
-  const targetAcademicYear =
-    normalizeAcademicYear(student.intake) || DEFAULT_TARGET_ACADEMIC_YEAR;
+  const targetAcademicYear = DEFAULT_TARGET_ACADEMIC_YEAR;
 
   return {
     studentId: student.id,

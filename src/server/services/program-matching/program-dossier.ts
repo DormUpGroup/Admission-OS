@@ -1,4 +1,8 @@
-import { PARSER_VERSION, PROGRAM_DOSSIER_TTL_DAYS } from "@/lib/program-matching/config";
+import {
+  DEFAULT_TARGET_ACADEMIC_YEAR,
+  PARSER_VERSION,
+  PROGRAM_DOSSIER_TTL_DAYS,
+} from "@/lib/program-matching/config";
 import { parseJsonArray } from "@/lib/parse-json-array";
 import type { ProgramFieldStatusMap } from "@/lib/program-matching/field-status";
 import {
@@ -675,7 +679,7 @@ function buildProgramDossier(
     dossier: dossierSnapshot,
     trace: enrichmentTrace ?? {
       officialUrl: pay.program.officialUrl,
-      targetIntakeYear: "2027/2028",
+      targetIntakeYear: DEFAULT_TARGET_ACADEMIC_YEAR,
       payAcademicYear: pay.academicYear,
       fetchFailed: false,
       enrichFailed: !pay.dossierEnrichedAt,

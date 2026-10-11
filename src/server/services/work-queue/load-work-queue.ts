@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { DEFAULT_TARGET_ACADEMIC_YEAR } from "@/lib/program-matching/config";
+import { formatIntakeLabel } from "@/server/services/accompaniment/rules";
 import type { UserRole } from "@/lib/enums";
 import { parseMessageAttachments } from "@/lib/message-attachments";
 import {
@@ -213,7 +215,7 @@ export async function loadWorkQueue(input: {
           hasValue: !tuitionMissing,
           indicativeFromYear: pay?.indicativeFromYear,
           academicYear: pay?.academicYear,
-          intake: s.intake,
+          intake: formatIntakeLabel(DEFAULT_TARGET_ACADEMIC_YEAR),
           verified: tuitionVerified,
         }),
       };
@@ -250,7 +252,7 @@ export async function loadWorkQueue(input: {
           hasValue: !tuitionMissing,
           indicativeFromYear: pay.indicativeFromYear,
           academicYear: pay.academicYear,
-          intake: s.intake,
+          intake: formatIntakeLabel(DEFAULT_TARGET_ACADEMIC_YEAR),
           verified: tuitionVerified,
         }),
       });
